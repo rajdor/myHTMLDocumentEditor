@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="fine-line-editor">
+<title>Refilling the pick and mix wall</title>
+<style>body { margin: 0; }
+:root {
+  /* core */
+  --ink: #12355B;
+  --ink-soft: #3D5A7A;
+  --redline: #B23C0B;
+  --fill: #EAF1F8;
+  --fill-red: #FDF1EA;
+  --fill-plain: #FFFFFF;
+  --paper: #FFFFFF;
+  --dots: #CFDBE8;
+  --shadow: rgba(18, 53, 91, 0.20);
+  /* semantic */
+  --note: #1F5FA8;      --note-fill: #E6F0FB;
+  --good: #1E6B45;      --good-fill: #E3F4EA;
+  --bad: #A1162B;       --bad-fill: #FBE4E7;
+  --warning: #8A5300;   --warning-fill: #FFF1D1;
+  --alert: #B54708;     --alert-fill: #FEEBDD;
+  --critical: #8E1027;  --critical-fill: #FBE4E7;
+  --new: #1E6B45;       --new-fill: #E3F4EA;
+  --changed: #8A5300;   --changed-fill: #FFF1D1;
+  --retire: #5F6B7A;    --retire-fill: #F1F3F5;
+  --comment: #3A3A3A;   --comment-fill: #FFFDF0;  --comment-line: #D9C66A;  --comment-pin: #FFF6C2;
+  --neutral: #5F6B7A;   --neutral-fill: #F1F3F5;
+  /* navy tint scale */
+  --t10: #E7EBEF; --t20: #D0D7DE; --t30: #B8C2CE; --t40: #A0AEBD; --t50: #889AAD;
+  --t60: #71869D; --t70: #59728C; --t80: #415D7C; --t90: #2A496B; --t100: #12355B;
+  --font: 'Architects Daughter', cursive;
+}
+
+/* board */
+.wb-board {
+  position: relative; overflow: hidden;
+  background-color: var(--paper);
+  background-image: radial-gradient(var(--dots) 1.2px, transparent 1.2px);
+  background-size: 20px 20px;
+  font-family: var(--font); color: var(--ink);
+}
+.wb-board > * { position: absolute; }
+
+/* text */
+.wb-title { font-size: 38px; line-height: 44px; color: var(--ink); }
+.wb-subtitle { font-size: 18px; line-height: 26px; color: var(--ink-soft); }
+.wb-arrow-label { font-size: 17px; line-height: 22px; color: var(--ink-soft); }
+.wb-note { font-size: 21px; line-height: 30px; color: var(--redline); }
+.wb-question { font-size: 21px; line-height: 30px; color: var(--redline); }
+.wb-legend { font-size: 17px; line-height: 22px; color: var(--ink); }
+
+/* boxes */
+.wb-box, .wb-layer {
+  box-sizing: border-box; padding: 8px;
+  display: flex; align-items: center; justify-content: center; gap: 8px; text-align: center;
+  font-family: var(--font); font-size: 22px; line-height: 26px; font-weight: 700;
+  color: var(--ink); background: var(--fill);
+  border: 1.5px solid var(--ink); border-radius: 3px;
+  box-shadow: 2px 3px 0 var(--shadow);
+}
+.wb-box.is-focus, .wb-layer.is-focus { background: var(--fill-red); color: var(--redline); }
+.wb-box.is-external { background: var(--fill-plain); border-style: dashed; }
+.wb-group { box-sizing: border-box; border: 1.5px dashed var(--ink-soft); border-radius: 3px; }
+
+/* lifecycle states */
+.wb-box.is-new     { background: var(--new-fill);     border-color: var(--new);     color: var(--new); }
+.wb-box.is-changed { background: var(--changed-fill); border-color: var(--changed); color: var(--changed); }
+.wb-box.is-retire  { background: var(--retire-fill);  border-color: var(--retire);  color: var(--retire); border-style: dashed; box-shadow: none; }
+
+/* status boxes */
+.wb-box.is-note     { background: var(--note-fill);     border-color: var(--note);     color: var(--note); }
+.wb-box.is-good     { background: var(--good-fill);     border-color: var(--good);     color: var(--good); }
+.wb-box.is-bad      { background: var(--bad-fill);      border-color: var(--bad);      color: var(--bad); }
+.wb-box.is-warning  { background: var(--warning-fill);  border-color: var(--warning);  color: var(--warning); }
+.wb-box.is-alert    { background: var(--alert-fill);    border-color: var(--alert);    color: var(--alert); border-width: 2.5px; }
+.wb-box.is-critical { background: var(--critical-fill); border-color: var(--critical); color: var(--critical); border: 4px double var(--critical); }
+
+/* badge: small pill, sits on a box's top edge */
+.wb-badge {
+  box-sizing: border-box; height: 24px; padding: 0 10px;
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: var(--font); font-size: 14px; line-height: 20px; font-weight: 700;
+  border: 1.5px solid currentColor; border-radius: 12px; background: var(--paper); white-space: nowrap;
+}
+.wb-badge.is-note { color: var(--note); background: var(--note-fill); }
+.wb-badge.is-good { color: var(--good); background: var(--good-fill); }
+.wb-badge.is-bad { color: var(--bad); background: var(--bad-fill); }
+.wb-badge.is-warning { color: var(--warning); background: var(--warning-fill); }
+.wb-badge.is-alert { color: #FFFFFF; background: var(--alert); border-color: var(--alert); }
+.wb-badge.is-critical { color: #FFFFFF; background: var(--critical); border-color: var(--critical); }
+.wb-badge.is-new { color: var(--new); background: var(--new-fill); }
+.wb-badge.is-changed { color: var(--changed); background: var(--changed-fill); }
+.wb-badge.is-retire { color: var(--retire); background: var(--retire-fill); border-style: dashed; }
+.wb-badge.is-neutral { color: var(--neutral); background: var(--neutral-fill); }
+
+/* marker: 28px icon disc, sits on a box's top right corner */
+.wb-marker {
+  box-sizing: border-box; width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid currentColor; background: var(--paper);
+}
+.wb-marker svg { width: 18px; height: 18px; }
+.wb-marker.is-note { color: var(--note); background: var(--note-fill); }
+.wb-marker.is-good { color: var(--good); background: var(--good-fill); }
+.wb-marker.is-bad { color: var(--bad); background: var(--bad-fill); }
+.wb-marker.is-warning { color: var(--warning); background: var(--warning-fill); }
+.wb-marker.is-alert { color: #FFFFFF; background: var(--alert); border-color: var(--alert); }
+.wb-marker.is-critical { color: #FFFFFF; background: var(--critical); border-color: var(--critical); }
+.wb-marker.is-new { color: var(--new); background: var(--new-fill); }
+.wb-marker.is-changed { color: var(--changed); background: var(--changed-fill); }
+.wb-marker.is-retire { color: var(--retire); background: var(--retire-fill); border-style: dashed; }
+
+/* callout: titled panel of text */
+.wb-callout {
+  box-sizing: border-box; padding: 12px 14px;
+  display: flex; gap: 10px; align-items: flex-start;
+  font-family: var(--font); font-size: 17px; line-height: 22px;
+  border: 1.5px solid currentColor; border-radius: 3px; box-shadow: 2px 3px 0 var(--shadow);
+}
+.wb-callout svg { width: 22px; height: 22px; flex: none; margin-top: 1px; }
+.wb-callout b { display: block; font-size: 19px; line-height: 24px; }
+.wb-callout span { color: var(--ink); }
+.wb-callout.is-note { color: var(--note); background: var(--note-fill); }
+.wb-callout.is-good { color: var(--good); background: var(--good-fill); }
+.wb-callout.is-bad { color: var(--bad); background: var(--bad-fill); }
+.wb-callout.is-warning { color: var(--warning); background: var(--warning-fill); }
+.wb-callout.is-alert { color: var(--alert); background: var(--alert-fill); border-width: 2.5px; }
+.wb-callout.is-critical { color: var(--critical); background: var(--critical-fill); border: 4px double var(--critical); }
+.wb-callout.is-new { color: var(--new); background: var(--new-fill); }
+.wb-callout.is-changed { color: var(--changed); background: var(--changed-fill); }
+.wb-callout.is-retire { color: var(--retire); background: var(--retire-fill); border-style: dashed; box-shadow: none; }
+
+/* comment: cream card with a pinned icon on its left edge.
+   Inside a board it is absolutely placed; elsewhere give it position: relative.
+   Keep 16px clear to its left for the pin. */
+.wb-comment {
+  box-sizing: border-box; padding: 12px 14px 12px 26px;
+  font-family: var(--font); font-size: 17px; line-height: 22px; color: var(--comment);
+  background: var(--comment-fill); border: 1.5px solid var(--comment-line); border-radius: 12px;
+  box-shadow: 2px 3px 0 rgba(18, 53, 91, 0.10);
+}
+.wb-comment b { display: block; font-size: 14px; line-height: 18px; color: var(--neutral); }
+.wb-comment-pin {
+  position: absolute; left: -16px; top: 10px;
+  box-sizing: border-box; width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--comment-pin); border: 1.5px solid var(--comment-line); color: var(--comment);
+}
+.wb-comment-pin svg { width: 18px; height: 18px; }
+
+/* percentage: tint tile, meter, Harvey ball */
+.wb-tile {
+  box-sizing: border-box; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font); font-size: 20px; font-weight: 700;
+  border: 1.5px solid var(--ink); border-radius: 3px; color: var(--ink);
+}
+.wb-tile.on-dark { color: #FFFFFF; }
+.wb-meter {
+  box-sizing: border-box; height: 20px; padding: 2px;
+  border: 1.5px solid var(--ink); border-radius: 3px; background: var(--paper);
+}
+.wb-meter > i { display: block; height: 100%; background: var(--ink); border-radius: 1px; }
+.wb-meter.is-good > i { background: var(--good); }
+.wb-meter.is-warning > i { background: var(--warning); }
+.wb-meter.is-bad > i { background: var(--bad); }
+.wb-ball {
+  box-sizing: border-box; width: 28px; height: 28px; border-radius: 50%;
+  border: 1.5px solid var(--ink);
+  background: conic-gradient(var(--ink) calc(var(--p) * 1%), var(--paper) 0);
+}
+
+/* lines */
+.wb-divider { height: 0; border-top: 1.5px dashed var(--ink-soft); opacity: 0.35; }
+.wb-swatch { width: 40px; height: 40px; box-sizing: border-box; border-radius: 50%; border: 1.5px solid #9AA0A6; }
+.wb-arrow { overflow: visible; fill: none; stroke: var(--ink); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.wb-arrow.is-note { stroke: var(--redline); stroke-dasharray: 6 6; }
+.wb-arrow.is-planned { stroke-dasharray: 8 6; }
+.wb-arrow.is-async { stroke-dasharray: 1 6; }
+.wb-arrow.is-retire { stroke: var(--neutral); stroke-dasharray: 8 6; }
+
+
+@font-face { font-family: 'Architects Daughter'; font-style: normal; font-weight: 400; font-display: swap; src: url(data:font/woff2;base64,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) format('woff2'); }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { font: 15px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #1c2b3a; background: #fff; }
+.page { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 40px; max-width: 1560px; margin: 0 auto; padding: 32px 32px 80px; }
+nav { position: sticky; top: 24px; align-self: start; max-height: calc(100vh - 48px); overflow: auto; font-size: 14px; border-right: 1.5px solid var(--dots); padding-right: 16px; }
+nav b { display: block; font: 400 22px/1.2 var(--font); color: var(--ink); margin-bottom: 10px; }
+nav ol { list-style: none; margin: 0; padding: 0; counter-reset: n; }
+nav li { counter-increment: n; }
+nav a { display: block; padding: 4px 0; color: var(--ink-soft); text-decoration: none; }
+nav a::before { content: counter(n) ". "; color: #8a9bb0; }
+nav li.u { counter-increment: none; }
+nav li.u > a::before { content: none; }
+nav a:hover { color: var(--redline); }
+nav ol ol { padding-left: 14px; margin: 0 0 4px; }
+nav ol ol a { font-size: 13px; padding: 2px 0; }
+nav ol ol a::before { content: none; }
+main { min-width: 0; }
+h1 { font: 400 40px/1.15 var(--font); color: var(--ink); margin: 0 0 4px; }
+.sub { color: var(--ink-soft); margin: 0 0 32px; }
+h2 { font: 400 28px/1.2 var(--font); color: var(--ink); margin: 56px 0 12px; padding-top: 12px; border-top: 1.5px dashed var(--dots); }
+h3 { font-size: 16px; color: var(--ink); margin: 28px 0 8px; }
+h4 { font-size: 14px; font-weight: 600; color: var(--ink-soft); margin: 20px 0 6px; }
+.h2sub { color: var(--ink-soft); margin: -4px 0 18px; }
+pre { font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace; color: var(--ink); background: #f6f9fc; border: 1px solid var(--dots); border-radius: 3px; padding: 10px 12px; margin: 10px 0 16px; max-width: 900px; overflow-x: auto; white-space: pre; tab-size: 4; }
+p { margin: 8px 0; max-width: 900px; }
+.bluf { font-size: 17px; border-left: 4px solid var(--ink); padding: 4px 0 4px 16px; }
+.cap { font-size: 13px; color: var(--ink-soft); margin: 6px 0 16px; max-width: none; }
+ul, ol { margin: 8px 0; padding-left: 22px; max-width: 900px; }
+td ul { margin: 0; padding-left: 16px; }
+.tw { overflow-x: auto; margin: 10px 0 18px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+table.dense { font-size: 12.5px; line-height: 1.4; }
+th { text-align: left; font-weight: 600; color: var(--ink); background: var(--fill); border: 1px solid var(--dots); padding: 6px 8px; vertical-align: bottom; }
+td { border: 1px solid var(--dots); padding: 6px 8px; vertical-align: top; }
+tr.grp td { background: #f6f9fc; font-weight: 600; color: var(--ink-soft); font-size: 13px; padding: 4px 8px; }
+.id { display: inline-block; font: 600 11px/1.5 ui-monospace, Menlo, Consolas, monospace; color: var(--ink); background: var(--fill); border-radius: 3px; padding: 0 4px; margin-right: 2px; white-space: nowrap; }
+.src { color: #6b7d92; font-size: .92em; }
+table.matrix { table-layout: fixed; min-width: 980px; }
+table.matrix th:first-child { width: 230px; }
+table.matrix th { font-size: 11px; padding: 6px 3px; text-align: center; }
+table.matrix th:first-child { text-align: left; padding-left: 8px; }
+table.matrix td.hit { text-align: center; color: var(--ink); padding: 2px; }
+table.balls td:not(:first-child), table.balls th:not(:first-child) { text-align: center; }
+table.balls .wb-ball { display: inline-block; vertical-align: middle; }
+.fig { margin: 16px 0 0; overflow: hidden; border: 1px solid var(--dots); border-radius: 3px; }
+.fig .wb-board { transform-origin: 0 0; }
+.wb-box > span { display: block; }
+.wb-legend.lg { font-size: 15px; color: var(--ink-soft); opacity: .8; }
+.er-verb { background: var(--paper); text-align: center; }
+@media (max-width: 900px) { .page { grid-template-columns: 1fr; gap: 8px; padding: 16px; } nav { position: static; border-right: 0; border-bottom: 1.5px solid var(--dots); padding: 0 0 12px; max-height: none; } }
+@media print { pre { white-space: pre-wrap; } nav { display: none; } .page { display: block; } h2 { break-after: avoid; } tr { break-inside: avoid; } }
+
+
+table.lop { border-collapse: separate; border-spacing: 0; border: 1.5px solid var(--ink); border-radius: 3px; box-shadow: 2px 3px 0 var(--shadow); font-size: 13px; line-height: 1.45; table-layout: fixed; min-width: 860px; margin: 16px 0 6px; }
+table.lop th, table.lop td { border: 0; border-top: 1px solid var(--dots); border-left: 1px solid var(--dots); padding: 8px 10px; vertical-align: top; background: none; }
+table.lop thead th { border-top: 0; background: var(--fill); font: 400 22px/1.3 var(--font); color: var(--ink); text-align: center; vertical-align: middle; }
+table.lop tr > :first-child { border-left: 0; }
+table.lop thead th:first-child { width: 120px; }
+table.lop tbody th { font-weight: 600; color: var(--ink-soft); font-size: 13px; background: #f6f9fc; text-align: left; }
+table.lop .g { font-weight: 600; color: var(--ink-soft); font-size: 12px; margin: 6px 0 2px; }
+table.lop .g:first-child { margin-top: 0; }
+table.spine { border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: 13px; line-height: 1.5; margin: 12px 0 18px; min-width: 760px; }
+table.spine th { font: 400 20px/1.3 var(--font); color: var(--ink); background: var(--fill); border: 0; padding: 6px 12px 6px 26px; text-align: left; vertical-align: middle; clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%, 14px 50%); }
+table.spine th:first-child { clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%); }
+table.spine td { border: 0; border-left: 1px solid var(--dots); border-bottom: 1px solid var(--dots); padding: 8px 12px 8px 22px; vertical-align: top; }
+table.spine td:last-child { border-right: 1px solid var(--dots); }
+.for { color: var(--ink-soft); }
+table.lvl td:first-child { text-align: center; }
+table.lvl .wb-tile { display: inline-flex; }
+
+
+main { counter-reset: sec; }
+main h2 { counter-increment: sec; scroll-margin-top: calc(var(--ch, 0px) + 12px); }
+main h2::before { content: counter(sec) ". "; }
+main h3, main h4 { scroll-margin-top: calc(var(--ch, 0px) + 12px); }
+.wb-box > svg, .wb-layer > svg { width: 22px; height: 22px; flex: none; }
+.wb-badge svg { width: 14px; height: 14px; }
+.er-verb { padding: 0 6px; white-space: nowrap; }
+dl.qa { margin: 8px 0 16px; max-width: 900px; }
+dl.qa dt { position: relative; padding-left: 32px; margin-top: 14px; font-weight: 600; color: var(--ink); }
+dl.qa dt:first-child { margin-top: 0; }
+dl.qa dd { position: relative; margin: 4px 0 0; padding-left: 32px; }
+dl.qa dt::before, dl.qa dd::before { position: absolute; left: 0; top: 1px; font: 600 11px/1.6 ui-monospace, Menlo, Consolas, monospace; border-radius: 3px; padding: 0 5px; }
+dl.qa dt::before { content: "Q"; color: var(--ink); background: var(--fill); }
+dl.qa dd::before { content: "A"; color: var(--ink-soft); background: #f6f9fc; }
+.dg { margin: 16px 0 0; }
+.dg svg { display: block; max-width: 100%; height: auto; }
+
+/* Links use the browser's own style: the surrounding font, standard blue (purple once visited) and an underline. */
+a.link-card { display: inline-flex; align-items: center; gap: 4px 10px; flex-wrap: wrap; max-width: 100%; margin: 6px 0; padding: 8px 12px 8px 40px; position: relative; border: 1.5px solid var(--ink); border-radius: 3px; background: var(--fill); box-shadow: 2px 3px 0 var(--shadow); color: var(--ink); text-decoration: none; font-size: 14px; line-height: 1.35; vertical-align: middle; }
+a.link-card::before { content: ""; position: absolute; left: 12px; top: 50%; width: 20px; height: 20px; margin-top: -10px; background: var(--ink); -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M165.66%2C90.34a8%2C8%2C0%2C0%2C1%2C0%2C11.32l-64%2C64a8%2C8%2C0%2C0%2C1-11.32-11.32l64-64A8%2C8%2C0%2C0%2C1%2C165.66%2C90.34ZM215.6%2C40.4a56%2C56%2C0%2C0%2C0-79.2%2C0L106.34%2C70.45a8%2C8%2C0%2C0%2C0%2C11.32%2C11.32l30.06-30a40%2C40%2C0%2C0%2C1%2C56.57%2C56.56l-30.07%2C30.06a8%2C8%2C0%2C0%2C0%2C11.31%2C11.32L215.6%2C119.6a56%2C56%2C0%2C0%2C0%2C0-79.2ZM138.34%2C174.22l-30.06%2C30.06a40%2C40%2C0%2C1%2C1-56.56-56.57l30.05-30.05a8%2C8%2C0%2C0%2C0-11.32-11.32L40.4%2C136.4a56%2C56%2C0%2C0%2C0%2C79.2%2C79.2l30.06-30.07a8%2C8%2C0%2C0%2C0-11.32-11.31Z%22%2F%3E%3C%2Fsvg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M165.66%2C90.34a8%2C8%2C0%2C0%2C1%2C0%2C11.32l-64%2C64a8%2C8%2C0%2C0%2C1-11.32-11.32l64-64A8%2C8%2C0%2C0%2C1%2C165.66%2C90.34ZM215.6%2C40.4a56%2C56%2C0%2C0%2C0-79.2%2C0L106.34%2C70.45a8%2C8%2C0%2C0%2C0%2C11.32%2C11.32l30.06-30a40%2C40%2C0%2C0%2C1%2C56.57%2C56.56l-30.07%2C30.06a8%2C8%2C0%2C0%2C0%2C11.31%2C11.32L215.6%2C119.6a56%2C56%2C0%2C0%2C0%2C0-79.2ZM138.34%2C174.22l-30.06%2C30.06a40%2C40%2C0%2C1%2C1-56.56-56.57l30.05-30.05a8%2C8%2C0%2C0%2C0-11.32-11.32L40.4%2C136.4a56%2C56%2C0%2C0%2C0%2C79.2%2C79.2l30.06-30.07a8%2C8%2C0%2C0%2C0-11.32-11.31Z%22%2F%3E%3C%2Fsvg%3E") center / contain no-repeat; }
+a.link-card[data-kind="image"]::before { -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M216%2C40H40A16%2C16%2C0%2C0%2C0%2C24%2C56V200a16%2C16%2C0%2C0%2C0%2C16%2C16H216a16%2C16%2C0%2C0%2C0%2C16-16V56A16%2C16%2C0%2C0%2C0%2C216%2C40Zm0%2C16V158.75l-26.07-26.06a16%2C16%2C0%2C0%2C0-22.63%2C0l-20%2C20-44-44a16%2C16%2C0%2C0%2C0-22.62%2C0L40%2C149.37V56ZM40%2C172l52-52%2C80%2C80H40Zm176%2C28H194.63l-36-36%2C20-20L216%2C181.38V200ZM144%2C100a12%2C12%2C0%2C1%2C1%2C12%2C12A12%2C12%2C0%2C0%2C1%2C144%2C100Z%22%2F%3E%3C%2Fsvg%3E"); mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M216%2C40H40A16%2C16%2C0%2C0%2C0%2C24%2C56V200a16%2C16%2C0%2C0%2C0%2C16%2C16H216a16%2C16%2C0%2C0%2C0%2C16-16V56A16%2C16%2C0%2C0%2C0%2C216%2C40Zm0%2C16V158.75l-26.07-26.06a16%2C16%2C0%2C0%2C0-22.63%2C0l-20%2C20-44-44a16%2C16%2C0%2C0%2C0-22.62%2C0L40%2C149.37V56ZM40%2C172l52-52%2C80%2C80H40Zm176%2C28H194.63l-36-36%2C20-20L216%2C181.38V200ZM144%2C100a12%2C12%2C0%2C1%2C1%2C12%2C12A12%2C12%2C0%2C0%2C1%2C144%2C100Z%22%2F%3E%3C%2Fsvg%3E"); }
+a.link-card[data-kind="video"]::before { -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M164.44%2C105.34l-48-32A8%2C8%2C0%2C0%2C0%2C104%2C80v64a8%2C8%2C0%2C0%2C0%2C12.44%2C6.66l48-32a8%2C8%2C0%2C0%2C0%2C0-13.32ZM120%2C129.05V95l25.58%2C17ZM216%2C40H40A16%2C16%2C0%2C0%2C0%2C24%2C56V168a16%2C16%2C0%2C0%2C0%2C16%2C16H216a16%2C16%2C0%2C0%2C0%2C16-16V56A16%2C16%2C0%2C0%2C0%2C216%2C40Zm0%2C128H40V56H216V168Zm16%2C40a8%2C8%2C0%2C0%2C1-8%2C8H32a8%2C8%2C0%2C0%2C1%2C0-16H224A8%2C8%2C0%2C0%2C1%2C232%2C208Z%22%2F%3E%3C%2Fsvg%3E"); mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M164.44%2C105.34l-48-32A8%2C8%2C0%2C0%2C0%2C104%2C80v64a8%2C8%2C0%2C0%2C0%2C12.44%2C6.66l48-32a8%2C8%2C0%2C0%2C0%2C0-13.32ZM120%2C129.05V95l25.58%2C17ZM216%2C40H40A16%2C16%2C0%2C0%2C0%2C24%2C56V168a16%2C16%2C0%2C0%2C0%2C16%2C16H216a16%2C16%2C0%2C0%2C0%2C16-16V56A16%2C16%2C0%2C0%2C0%2C216%2C40Zm0%2C128H40V56H216V168Zm16%2C40a8%2C8%2C0%2C0%2C1-8%2C8H32a8%2C8%2C0%2C0%2C1%2C0-16H224A8%2C8%2C0%2C0%2C1%2C232%2C208Z%22%2F%3E%3C%2Fsvg%3E"); }
+a.link-card[data-kind="audio"]::before { -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M155.51%2C24.81a8%2C8%2C0%2C0%2C0-8.42.88L77.25%2C80H32A16%2C16%2C0%2C0%2C0%2C16%2C96v64a16%2C16%2C0%2C0%2C0%2C16%2C16H77.25l69.84%2C54.31A8%2C8%2C0%2C0%2C0%2C160%2C224V32A8%2C8%2C0%2C0%2C0%2C155.51%2C24.81ZM32%2C96H72v64H32ZM144%2C207.64%2C88%2C164.09V91.91l56-43.55Zm54-106.08a40%2C40%2C0%2C0%2C1%2C0%2C52.88%2C8%2C8%2C0%2C0%2C1-12-10.58%2C24%2C24%2C0%2C0%2C0%2C0-31.72%2C8%2C8%2C0%2C0%2C1%2C12-10.58ZM248%2C128a79.9%2C79.9%2C0%2C0%2C1-20.37%2C53.34%2C8%2C8%2C0%2C0%2C1-11.92-10.67%2C64%2C64%2C0%2C0%2C0%2C0-85.33%2C8%2C8%2C0%2C1%2C1%2C11.92-10.67A79.83%2C79.83%2C0%2C0%2C1%2C248%2C128Z%22%2F%3E%3C%2Fsvg%3E"); mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M155.51%2C24.81a8%2C8%2C0%2C0%2C0-8.42.88L77.25%2C80H32A16%2C16%2C0%2C0%2C0%2C16%2C96v64a16%2C16%2C0%2C0%2C0%2C16%2C16H77.25l69.84%2C54.31A8%2C8%2C0%2C0%2C0%2C160%2C224V32A8%2C8%2C0%2C0%2C0%2C155.51%2C24.81ZM32%2C96H72v64H32ZM144%2C207.64%2C88%2C164.09V91.91l56-43.55Zm54-106.08a40%2C40%2C0%2C0%2C1%2C0%2C52.88%2C8%2C8%2C0%2C0%2C1-12-10.58%2C24%2C24%2C0%2C0%2C0%2C0-31.72%2C8%2C8%2C0%2C0%2C1%2C12-10.58ZM248%2C128a79.9%2C79.9%2C0%2C0%2C1-20.37%2C53.34%2C8%2C8%2C0%2C0%2C1-11.92-10.67%2C64%2C64%2C0%2C0%2C0%2C0-85.33%2C8%2C8%2C0%2C1%2C1%2C11.92-10.67A79.83%2C79.83%2C0%2C0%2C1%2C248%2C128Z%22%2F%3E%3C%2Fsvg%3E"); }
+a.link-card b { font-weight: 600; }
+a.link-card span { color: var(--ink-soft); font-size: 12.5px; overflow-wrap: anywhere; }
+a.link-card:hover { border-color: var(--redline); }
+a.link-card:hover::before { background: var(--redline); }
+@media print { main a[href^="http"]:not(.link-card)::after { content: " (" attr(href) ")"; font-size: .85em; color: var(--ink-soft); } }
+
+/* Notes: a margin appears when the document has notes and the margin is switched on (main.notes-on). Beside each note: a bold bar and a note icon; the log opens over the margin. */
+:root { --note-fill: #FFF9C4; --note-bar: #F2B705; --note-ink: #5C4A00; --margin: 270px; }
+main.notes-on:has(.note) { padding-right: var(--margin); background: linear-gradient(var(--dots), var(--dots)) no-repeat right calc(var(--margin) - 18px) top 0 / 1.5px 100%; }
+.note { position: relative; }
+main:not(.notes-on) .note::after, main:not(.notes-on) .note-log { display: none; }
+.note::after { content: ""; position: absolute; top: 2px; bottom: 2px; right: -20px; width: 5px; border-radius: 2px; background: var(--note-bar); }
+.note-log { position: absolute; top: 0; left: calc(100% + 30px); width: calc(var(--margin) - 44px); z-index: 5; }
+.note-log > summary { list-style: none; cursor: pointer; width: 26px; height: 26px; border-radius: 3px; background: var(--note-fill); border: 1.5px solid var(--note-bar); position: relative; }
+.note-log > summary::-webkit-details-marker { display: none; }
+.note-log > summary::before { content: ""; position: absolute; inset: 3px; background: var(--note-ink); -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M88%2C96a8%2C8%2C0%2C0%2C1%2C8-8h64a8%2C8%2C0%2C0%2C1%2C0%2C16H96A8%2C8%2C0%2C0%2C1%2C88%2C96Zm8%2C40h64a8%2C8%2C0%2C0%2C0%2C0-16H96a8%2C8%2C0%2C0%2C0%2C0%2C16Zm32%2C16H96a8%2C8%2C0%2C0%2C0%2C0%2C16h32a8%2C8%2C0%2C0%2C0%2C0-16ZM224%2C48V156.69A15.86%2C15.86%2C0%2C0%2C1%2C219.31%2C168L168%2C219.31A15.86%2C15.86%2C0%2C0%2C1%2C156.69%2C224H48a16%2C16%2C0%2C0%2C1-16-16V48A16%2C16%2C0%2C0%2C1%2C48%2C32H208A16%2C16%2C0%2C0%2C1%2C224%2C48ZM48%2C208H152V160a8%2C8%2C0%2C0%2C1%2C8-8h48V48H48Zm120-40v28.7L196.69%2C168Z%22%2F%3E%3C%2Fsvg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M88%2C96a8%2C8%2C0%2C0%2C1%2C8-8h64a8%2C8%2C0%2C0%2C1%2C0%2C16H96A8%2C8%2C0%2C0%2C1%2C88%2C96Zm8%2C40h64a8%2C8%2C0%2C0%2C0%2C0-16H96a8%2C8%2C0%2C0%2C0%2C0%2C16Zm32%2C16H96a8%2C8%2C0%2C0%2C0%2C0%2C16h32a8%2C8%2C0%2C0%2C0%2C0-16ZM224%2C48V156.69A15.86%2C15.86%2C0%2C0%2C1%2C219.31%2C168L168%2C219.31A15.86%2C15.86%2C0%2C0%2C1%2C156.69%2C224H48a16%2C16%2C0%2C0%2C1-16-16V48A16%2C16%2C0%2C0%2C1%2C48%2C32H208A16%2C16%2C0%2C0%2C1%2C224%2C48ZM48%2C208H152V160a8%2C8%2C0%2C0%2C1%2C8-8h48V48H48Zm120-40v28.7L196.69%2C168Z%22%2F%3E%3C%2Fsvg%3E") center / contain no-repeat; }
+.note-log[open] > summary { background: var(--note-bar); }
+.note-entries { margin-top: 6px; background: var(--note-fill); border: 1px solid #EAD97A; border-left: 4px solid var(--note-bar); border-radius: 3px; padding: 8px 10px; box-shadow: 2px 3px 0 var(--shadow); font-size: 13px; line-height: 1.45; color: var(--note-ink); }
+.note-entries p { margin: 0 0 4px; max-width: none; }
+.note-entries .note-date { margin-top: 8px; font-size: 12px; }
+.note-entries .note-date:first-child { margin-top: 0; }
+.note-entries .note-who { font-weight: 700; }
+@media (max-width: 1100px) { :root { --margin: 64px; } .note-log { left: calc(100% + 30px); width: 26px; } .note-log[open] .note-entries { position: absolute; right: 0; width: 260px; } }
+@media print {
+  details.note-log::details-content { content-visibility: visible; display: block; }
+  .note-log > summary { display: none; }
+  .note-entries { margin-top: 0; box-shadow: none; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+<nav aria-label="Index" data-depth="2"><b>Index</b><ol><li><a href="#purpose-and-scope">Purpose and scope</a></li><li><a href="#roles-and-responsibilities">Roles and responsibilities</a></li><li><a href="#definitions">Definitions</a></li><li><a href="#before-you-start">Before you start</a><ol><li><a href="#equipment">Equipment</a></li><li><a href="#checks">Checks</a></li></ol></li><li><a href="#procedure">Procedure</a><ol><li><a href="#step-1-receive">Step 1: Receive</a></li><li><a href="#step-2-check-allergens">Step 2: Check allergens</a></li><li><a href="#step-3-rotate-and-refill">Step 3: Rotate and refill</a></li><li><a href="#step-4-label-and-record">Step 4: Label and record</a></li></ol></li><li><a href="#shelf-label-format">Shelf label format</a></li><li><a href="#bin-map-and-allergen-matrix">Bin map and allergen matrix</a></li><li><a href="#common-questions">Common questions</a></li><li><a href="#records-and-references">Records and references</a></li><li><a href="#revision-history">Revision history</a></li></ol></nav>
+<main class="notes-on">
+<h1>Refilling the pick and mix wall</h1>
+<p class="sub">Standard operating procedure for shop staff. Version 1.0</p>
+<p class="bluf">Every delivery of loose sweets goes through four steps before it reaches the wall: receive, check allergens, rotate and refill, then label and record. The allergen check is the step that must never be skipped.</p>
+<h2 id="purpose-and-scope">Purpose and scope</h2>
+<p class="h2sub">Why this procedure exists and where it applies.</p>
+<p>This procedure keeps the pick and mix wall <b>full, fresh and safe</b>. It applies to every loose product sold from a bin on the wall, from the moment a delivery arrives until the refill is recorded.</p>
+<p>It does <i>not</i> cover pre-packed products on the shelves, or the chocolate counter, which has its own procedure.</p>
+<h2 id="roles-and-responsibilities">Roles and responsibilities</h2>
+<p class="h2sub">Who does each step, who checks it and who owns it.</p>
+<div class="tw"><table class="lop"><thead><tr><th><br></th><th>Shop assistant</th><th>Shift lead</th><th>Shop manager</th></tr></thead><tbody>
+<tr><th scope="row">Receive</th><td>Checks the delivery against the order</td><td>Signs the docket</td><td rowspan="4">Owns the procedure and the allergen matrix</td></tr>
+<tr><th scope="row">Check allergens</th><td>Reads the supplier label</td><td>Confirms the match with the matrix</td></tr>
+<tr><th scope="row">Rotate and refill</th><td>Rotates stock and tops up the bin</td><td>Spot checks one bin in five</td></tr>
+<tr><th scope="row">Label and record</th><td>Prints the bin label</td><td>Signs the refill log</td></tr>
+<tr><th scope="row">Review</th><td colspan="3">All three review this procedure together every six months, or after any allergen incident.</td></tr>
+</tbody></table></div>
+<h2 id="definitions">Definitions</h2>
+<div class="tw"><table class="dense"><thead><tr><th>Term</th><th>Our definition</th><th>Industry reference and definition</th></tr></thead><tbody>
+<tr><td>Allergen</td><td>A substance in food that can cause an allergic reaction in some people.</td><td><b><a href="https://www.fao.org/fao-who-codexalimentarius/codex-texts/codes-of-practice/" target="_blank" rel="noopener noreferrer">Codex CXC 80-2020, Code of Practice on Food Allergen Management for Food Business Operators, section 2.3</a></b><br>A substance that is normally harmless but can trigger an immune response in some people; in food, a protein that causes a reaction in people who are sensitised to it.</td></tr>
+<tr><td>Allergen cross-contact</td><td>An allergen getting into a food that is not meant to contain it.</td><td><b><a href="https://www.fao.org/fao-who-codexalimentarius/codex-texts/codes-of-practice/" target="_blank" rel="noopener noreferrer">Codex CXC 80-2020, Code of Practice on Food Allergen Management for Food Business Operators, section 2.3</a></b><br>An allergenic food or ingredient that is unintentionally incorporated into another food that is not intended to contain it.</td></tr>
+<tr><td>Allergen profile</td><td>The full list of allergens in a product.</td><td><b><a href="https://www.fao.org/fao-who-codexalimentarius/codex-texts/codes-of-practice/" target="_blank" rel="noopener noreferrer">Codex CXC 80-2020, Code of Practice on Food Allergen Management for Food Business Operators, section 2.3</a></b><br>All the allergens present in a food, whether added on purpose or present unintentionally, including the case where there are none.</td></tr>
+<tr><td>Visibly clean</td><td>Nothing left on a surface or tool that the eye can see.</td><td><b><a href="https://www.fao.org/fao-who-codexalimentarius/codex-texts/codes-of-practice/" target="_blank" rel="noopener noreferrer">Codex CXC 80-2020, Code of Practice on Food Allergen Management for Food Business Operators, section 2.3</a></b><br>Having no visible food, debris or other residue.</td></tr>
+<tr><td>Stock rotation</td><td>Using or selling older stock before newer stock.</td><td>No industry reference used.</td></tr>
+</tbody></table></div>
+<h2 id="before-you-start">Before you start</h2>
+<p class="h2sub">Have everything to hand before you open a delivery box.</p>
+<h3 id="equipment">Equipment</h3>
+<ul><li>A clean scoop and tongs for <b>each</b> bin you will refill</li><li>Food safe gloves</li><li>The allergen matrix and the refill log</li><li>The label printer, loaded with bin labels</li></ul>
+<h3 id="checks">Checks</h3>
+<ul><li><span class="id">CHK-01</span> Hands washed and gloves on</li><li><span class="id">CHK-02</span> Scoops and tongs are visibly clean and dry</li><li><span class="id">CHK-03</span> The quarantine shelf in the back room is empty and labelled</li></ul>
+<h2 id="procedure">Procedure</h2>
+<p class="h2sub">Four steps, always in this order.</p>
+<div class="dg" data-drawio="&lt;mxfile host=&quot;Diagram Editor&quot; agent=&quot;Diagram Editor 1.1.0&quot; version=&quot;24.0.0&quot; type=&quot;device&quot;&gt;
+&lt;diagram name=&quot;Process flow&quot; id=&quot;d1&quot;&gt;
+&lt;mxGraphModel dx=&quot;0&quot; dy=&quot;0&quot; grid=&quot;1&quot; gridSize=&quot;8&quot; guides=&quot;1&quot; page=&quot;0&quot; pageWidth=&quot;1184&quot; pageHeight=&quot;440&quot; tooltips=&quot;1&quot; connect=&quot;1&quot; arrows=&quot;1&quot; fold=&quot;1&quot; pageScale=&quot;1&quot; math=&quot;0&quot; shadow=&quot;0&quot;&gt;
+&lt;root&gt;
+&lt;mxCell id=&quot;0&quot;/&gt;
+&lt;mxCell id=&quot;1&quot; parent=&quot;0&quot;/&gt;
+&lt;mxCell id=&quot;c1&quot; value=&quot;&quot; style=&quot;rounded=0;html=1;fillColor=#ffffff;strokeColor=none;deDots=1;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;&lt;mxGeometry x=&quot;0&quot; y=&quot;0&quot; width=&quot;1184&quot; height=&quot;440&quot; as=&quot;geometry&quot;/&gt;&lt;/mxCell&gt;
+&lt;mxCell id=&quot;c3&quot; value=&quot;&amp;lt;span&amp;gt;Supplier&amp;lt;br&amp;gt;delivery&amp;lt;/span&amp;gt;&quot; style=&quot;rounded=1;absoluteArcSize=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#12355B;fontColor=#12355B;strokeWidth=1.5;dashed=1;deState=external;deShadow=1;deShadowColor=#12355B;deShadowOpacity=20;deShadowDx=2;deShadowDy=3;fontSize=22;fontStyle=1;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;deMode=blueprint;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;&lt;mxGeometry x=&quot;64&quot; y=&quot;150&quot; width=&quot;160&quot; height=&quot;72&quot; as=&quot;geometry&quot;/&gt;&lt;/mxCell&gt;
+&lt;mxCell id=&quot;c4&quot; value=&quot;&amp;lt;span&amp;gt;1. Receive&amp;lt;/span&amp;gt;&quot; style=&quot;rounded=1;absoluteArcSize=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#EAF1F8;strokeColor=#12355B;fontColor=#12355B;strokeWidth=1.5;deShadow=1;deShadowColor=#12355B;deShadowOpacity=20;deShadowDx=2;deShadowDy=3;fontSize=22;fontStyle=1;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;deMode=blueprint;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;&lt;mxGeometry x=&quot;288&quot; y=&quot;150&quot; width=&quot;160&quot; height=&quot;72&quot; as=&quot;geometry&quot;/&gt;&lt;/mxCell&gt;
+&lt;mxCell id=&quot;c5&quot; value=&quot;&amp;lt;span&amp;gt;2. Check&amp;lt;br&amp;gt;allergens&amp;lt;/span&amp;gt;&quot; style=&quot;rounded=1;absoluteArcSize=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FDF1EA;strokeColor=#12355B;fontColor=#B23C0B;strokeWidth=1.5;deState=focus;deShadow=1;deShadowColor=#12355B;deShadowOpacity=20;deShadowDx=2;deShadowDy=3;fontSize=22;fontStyle=1;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;deMode=blueprint;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;&lt;mxGeometry x=&quot;512&quot; y=&quot;150&quot; width=&quot;160&quot; height=&quot;72&quot; as=&quot;geometry&quot;/&gt;&lt;/mxCell&gt;
+&lt;mxCell id=&quot;c6&quot; value=&quot;&amp;lt;span&amp;gt;3. Rotate&amp;lt;br&amp;gt;and refill&amp;lt;/span&amp;gt;&quot; style=&quot;rounded=1;absoluteArcSize=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#EAF1F8;strokeColor=#12355B;fontColor=#12355B;strokeWidth=1.5;deShadow=1;deShadowColor=#12355B;deShadowOpacity=20;deShadowDx=2;deShadowDy=3;fontSize=22;fontStyle=1;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;deMode=blueprint;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;&lt;mxGeometry x=&quot;736&quot; y=&quot;150&quot; width=&quot;160&quot; height=&quot;72&quot; as=&quot;geometry&quot;/&gt;&lt;/mxCell&gt;
+&lt;mxCell id=&quot;c7&quot; value=&quot;&amp;lt;span&amp;gt;4. Label&amp;lt;br&amp;gt;and record&amp;lt;/span&amp;gt;&quot; style=&quot;rounded=1;absoluteArcSize=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#EAF1F8;strokeColor=#12355B;fontColor=#12355B;strokeWidth=1.5;deShadow=1;deShadowColor=#12355B;deShadowOpacity=20;deShadowDx=2;deShadowDy=3;fontSize=22;fontStyle=1;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;deMode=blueprint;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;&lt;mxGeometry x=&quot;960&quot; y=&quot;150&quot; width=&quot;160&quot; height=&quot;72&quot; as=&quot;geometry&quot;/&gt;&lt;/mxCell&gt;
+&lt;mxCell id=&quot;c8&quot; value=&quot;&amp;lt;span&amp;gt;Quarantine&amp;lt;br&amp;gt;shelf&amp;lt;/span&amp;gt;&quot; style=&quot;rounded=1;absoluteArcSize=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#FBE4E7;strokeColor=#A1162B;fontColor=#A1162B;strokeWidth=1.5;deShadow=1;deShadowColor=#12355B;deShadowOpacity=20;deShadowDx=2;deShadowDy=3;deState=bad;deIcon=x-circle;fontSize=22;fontStyle=1;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;deMode=blueprint;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;&lt;mxGeometry x=&quot;512&quot; y=&quot;320&quot; width=&quot;160&quot; height=&quot;72&quot; as=&quot;geometry&quot;/&gt;&lt;/mxCell&gt;
+&lt;mxCell id=&quot;c12&quot; value=&quot;&quot; style=&quot;edgeStyle=none;html=1;rounded=0;startArrow=none;endArrow=block;endFill=1;endSize=8;strokeWidth=2.5;strokeColor=#12355B;exitX=1.000;exitY=0.500;exitDx=0;exitDy=0;entryX=0.006;entryY=0.500;entryDx=0;entryDy=0;fontSize=17;fontColor=#3D5A7A;labelBackgroundColor=none;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;deMode=blueprint;&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;c3&quot; target=&quot;c4&quot;&gt;&lt;mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot;&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;
+&lt;mxCell id=&quot;c13&quot; value=&quot;&quot; style=&quot;edgeStyle=none;html=1;rounded=0;startArrow=none;endArrow=block;endFill=1;endSize=8;strokeWidth=2.5;strokeColor=#12355B;exitX=1.000;exitY=0.500;exitDx=0;exitDy=0;entryX=0.006;entryY=0.500;entryDx=0;entryDy=0;fontSize=17;fontColor=#3D5A7A;labelBackgroundColor=none;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;deMode=blueprint;&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;c4&quot; target=&quot;c5&quot;&gt;&lt;mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot;&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;
+&lt;mxCell id=&quot;c14&quot; value=&quot;&quot; style=&quot;edgeStyle=none;html=1;rounded=0;startArrow=none;endArrow=block;endFill=1;endSize=8;strokeWidth=2.5;strokeColor=#12355B;exitX=1.000;exitY=0.500;exitDx=0;exitDy=0;entryX=0.006;entryY=0.500;entryDx=0;entryDy=0;fontSize=17;fontColor=#3D5A7A;labelBackgroundColor=none;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;deMode=blueprint;&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;c5&quot; target=&quot;c6&quot;&gt;&lt;mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot;&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;
+&lt;mxCell id=&quot;c15&quot; value=&quot;&quot; style=&quot;edgeStyle=none;html=1;rounded=0;startArrow=none;endArrow=block;endFill=1;endSize=8;strokeWidth=2.5;strokeColor=#12355B;exitX=1.000;exitY=0.500;exitDx=0;exitDy=0;entryX=0.006;entryY=0.500;entryDx=0;entryDy=0;fontSize=17;fontColor=#3D5A7A;labelBackgroundColor=none;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;deMode=blueprint;&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;c6&quot; target=&quot;c7&quot;&gt;&lt;mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot;&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;
+&lt;mxCell id=&quot;c16&quot; value=&quot;&quot; style=&quot;edgeStyle=none;html=1;rounded=0;startArrow=none;endArrow=block;endFill=1;endSize=8;strokeWidth=2.5;strokeColor=#12355B;exitX=0.500;exitY=1.000;exitDx=0;exitDy=0;entryX=0.500;entryY=0.014;entryDx=0;entryDy=0;fontSize=17;fontColor=#3D5A7A;labelBackgroundColor=none;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;deMode=blueprint;&quot; edge=&quot;1&quot; parent=&quot;1&quot; source=&quot;c5&quot; target=&quot;c8&quot;&gt;&lt;mxGeometry relative=&quot;1&quot; as=&quot;geometry&quot;&gt;&lt;/mxGeometry&gt;&lt;/mxCell&gt;
+&lt;mxCell id=&quot;c2&quot; value=&quot;Refilling the pick and mix wall&quot; style=&quot;text;html=1;whiteSpace=nowrap;align=left;verticalAlign=top;strokeColor=none;fillColor=none;fontSize=38;fontColor=#12355B;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;deMode=blueprint;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;&lt;mxGeometry x=&quot;64&quot; y=&quot;32&quot; width=&quot;526&quot; height=&quot;44&quot; as=&quot;geometry&quot;/&gt;&lt;/mxCell&gt;
+&lt;mxCell id=&quot;c9&quot; value=&quot;label and matrix disagree&quot; style=&quot;text;html=1;whiteSpace=nowrap;align=left;verticalAlign=top;strokeColor=none;fillColor=none;fontSize=17;fontColor=#3D5A7A;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;deMode=blueprint;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;&lt;mxGeometry x=&quot;604&quot; y=&quot;256&quot; width=&quot;236&quot; height=&quot;22&quot; as=&quot;geometry&quot;/&gt;&lt;/mxCell&gt;
+&lt;mxCell id=&quot;c10&quot; value=&quot;match&quot; style=&quot;text;html=1;whiteSpace=nowrap;align=center;verticalAlign=top;strokeColor=none;fillColor=none;fontSize=17;fontColor=#3D5A7A;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;deMode=blueprint;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;&lt;mxGeometry x=&quot;664&quot; y=&quot;150&quot; width=&quot;80&quot; height=&quot;22&quot; as=&quot;geometry&quot;/&gt;&lt;/mxCell&gt;
+&lt;mxCell id=&quot;c11&quot; value=&quot;nothing goes on the wall from here&quot; style=&quot;text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;strokeColor=none;fillColor=none;fontSize=21;fontColor=#B23C0B;deNote=annotation;fontFamily=Architects Daughter;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DArchitects%2BDaughter;deMode=blueprint;&quot; vertex=&quot;1&quot; parent=&quot;1&quot;&gt;&lt;mxGeometry x=&quot;736&quot; y=&quot;330&quot; width=&quot;324&quot; height=&quot;60&quot; as=&quot;geometry&quot;/&gt;&lt;/mxCell&gt;
+&lt;/root&gt;
+&lt;/mxGraphModel&gt;
+&lt;/diagram&gt;
+&lt;/mxfile&gt;
+"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 -12 1208 464" width="1208" height="464" role="img" aria-label="The four steps, and where a product goes when its label and the matrix disagree."><title>The four steps, and where a product goes when its label and the matrix disagree.</title><rect x="-12" y="-12" width="1208" height="464" fill="#ffffff"></rect><g><g data-id="c1"><path d="M0,0H1184V440H0Z" fill="#ffffff" stroke="none" stroke-width="1" stroke-linejoin="round"></path><defs><pattern id="demwik1pvm1hr9a-deDots2" width="20" height="20" x="0" y="0" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1.2" fill="#CFDBE8"></circle></pattern></defs><path d="M0,0H1184V440H0Z" fill="url(#demwik1pvm1hr9a-deDots2)" stroke="none" class="deDots"></path></g><g data-id="c3"><g opacity="0.2" transform="translate(2,3)" class="deShadow"><path d="M67,150H221Q224,150 224,153V219Q224,222 221,222H67Q64,222 64,219V153Q64,150 67,150Z" fill="#12355B" stroke="#12355B" stroke-width="1.5" stroke-linejoin="round"></path></g><path d="M67,150H221Q224,150 224,153V219Q224,222 221,222H67Q64,222 64,219V153Q64,150 67,150Z" fill="#FFFFFF" stroke="#12355B" stroke-width="1.5" stroke-dasharray="4.5 4.5" stroke-linejoin="round"></path><text x="144" y="180.72" text-anchor="middle" xml:space="preserve"><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="22" fill="#12355B" font-weight="bold">Supplier</tspan></text><text x="144" y="207.12" text-anchor="middle" xml:space="preserve"><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="22" fill="#12355B" font-weight="bold">delivery</tspan></text></g><g data-id="c4"><g opacity="0.2" transform="translate(2,3)" class="deShadow"><path d="M291,150H445Q448,150 448,153V219Q448,222 445,222H291Q288,222 288,219V153Q288,150 291,150Z" fill="#12355B" stroke="#12355B" stroke-width="1.5" stroke-linejoin="round"></path></g><path d="M291,150H445Q448,150 448,153V219Q448,222 445,222H291Q288,222 288,219V153Q288,150 291,150Z" fill="#EAF1F8" stroke="#12355B" stroke-width="1.5" stroke-linejoin="round"></path><text x="368" y="193.92000000000002" text-anchor="middle" xml:space="preserve"><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="22" fill="#12355B" font-weight="bold">1.</tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="22" fill="#12355B" font-weight="bold"> </tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="22" fill="#12355B" font-weight="bold">Receive</tspan></text></g><g data-id="c5"><g opacity="0.2" transform="translate(2,3)" class="deShadow"><path d="M515,150H669Q672,150 672,153V219Q672,222 669,222H515Q512,222 512,219V153Q512,150 515,150Z" fill="#12355B" stroke="#12355B" stroke-width="1.5" stroke-linejoin="round"></path></g><path d="M515,150H669Q672,150 672,153V219Q672,222 669,222H515Q512,222 512,219V153Q512,150 515,150Z" fill="#FDF1EA" stroke="#12355B" stroke-width="1.5" stroke-linejoin="round"></path><text x="592" y="180.72" text-anchor="middle" xml:space="preserve"><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="22" fill="#B23C0B" font-weight="bold">2.</tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="22" fill="#B23C0B" font-weight="bold"> </tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="22" fill="#B23C0B" font-weight="bold">Check</tspan></text><text x="592" y="207.12" text-anchor="middle" xml:space="preserve"><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="22" fill="#B23C0B" font-weight="bold">allergens</tspan></text></g><g data-id="c6"><g opacity="0.2" transform="translate(2,3)" class="deShadow"><path d="M739,150H893Q896,150 896,153V219Q896,222 893,222H739Q736,222 736,219V153Q736,150 739,150Z" fill="#12355B" stroke="#12355B" stroke-width="1.5" stroke-linejoin="round"></path></g><path d="M739,150H893Q896,150 896,153V219Q896,222 893,222H739Q736,222 736,219V153Q736,150 739,150Z" fill="#EAF1F8" stroke="#12355B" stroke-width="1.5" stroke-linejoin="round"></path><text x="816" y="180.72" text-anchor="middle" xml:space="preserve"><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="22" fill="#12355B" font-weight="bold">3.</tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="22" fill="#12355B" font-weight="bold"> </tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="22" fill="#12355B" font-weight="bold">Rotate</tspan></text><text x="816" y="207.12" text-anchor="middle" xml:space="preserve"><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="22" fill="#12355B" font-weight="bold">and</tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="22" fill="#12355B" font-weight="bold"> </tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="22" fill="#12355B" font-weight="bold">refill</tspan></text></g><g data-id="c7"><g opacity="0.2" transform="translate(2,3)" class="deShadow"><path d="M963,150H1117Q1120,150 1120,153V219Q1120,222 1117,222H963Q960,222 960,219V153Q960,150 963,150Z" fill="#12355B" stroke="#12355B" stroke-width="1.5" stroke-linejoin="round"></path></g><path d="M963,150H1117Q1120,150 1120,153V219Q1120,222 1117,222H963Q960,222 960,219V153Q960,150 963,150Z" fill="#EAF1F8" stroke="#12355B" stroke-width="1.5" stroke-linejoin="round"></path><text x="1040" y="180.72" text-anchor="middle" xml:space="preserve"><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="22" fill="#12355B" font-weight="bold">4.</tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="22" fill="#12355B" font-weight="bold"> </tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="22" fill="#12355B" font-weight="bold">Label</tspan></text><text x="1040" y="207.12" text-anchor="middle" xml:space="preserve"><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="22" fill="#12355B" font-weight="bold">and</tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="22" fill="#12355B" font-weight="bold"> </tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="22" fill="#12355B" font-weight="bold">record</tspan></text></g><g data-id="c8"><g opacity="0.2" transform="translate(2,3)" class="deShadow"><path d="M515,320H669Q672,320 672,323V389Q672,392 669,392H515Q512,392 512,389V323Q512,320 515,320Z" fill="#12355B" stroke="#12355B" stroke-width="1.5" stroke-linejoin="round"></path></g><path d="M515,320H669Q672,320 672,323V389Q672,392 669,392H515Q512,392 512,389V323Q512,320 515,320Z" fill="#FBE4E7" stroke="#A1162B" stroke-width="1.5" stroke-linejoin="round"></path><path d="M537.48,353.74L535.22,356L537.48,358.26A0.69,0.69 0 0 1 536.51,359.24L534.25,356.97L531.98,359.24A0.69,0.69 0 0 1 531.01,358.26L533.27,356L531.01,353.74A0.69,0.69 0 0 1 531.98,352.76L534.25,355.03L536.51,352.76A0.69,0.69 0 0 1 537.48,353.74ZM543.18,356A8.94,8.94 0 1 1 534.25,347.06A8.95,8.95 0 0 1 543.18,356ZM541.81,356A7.56,7.56 0 1 0 534.25,363.56A7.57,7.57 0 0 0 541.81,356Z" fill="#A1162B" stroke="none" class="deIcon"></path><text x="607" y="350.72" text-anchor="middle" xml:space="preserve"><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="22" fill="#A1162B" font-weight="bold">Quarantine</tspan></text><text x="607" y="377.12" text-anchor="middle" xml:space="preserve"><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="22" fill="#A1162B" font-weight="bold">shelf</tspan></text></g><g data-id="c12"><path d="M224,186L280.65,186" fill="none" stroke="#12355B" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"></path><path d="M288,186L277.5,190.725L277.5,181.275Z" fill="#12355B" stroke="#12355B" stroke-width="2.5" stroke-linejoin="round"></path></g><g data-id="c13"><path d="M448,186L504.65,186" fill="none" stroke="#12355B" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"></path><path d="M512,186L501.5,190.725L501.5,181.275Z" fill="#12355B" stroke="#12355B" stroke-width="2.5" stroke-linejoin="round"></path></g><g data-id="c14"><path d="M672,186L728.65,186" fill="none" stroke="#12355B" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"></path><path d="M736,186L725.5,190.725L725.5,181.275Z" fill="#12355B" stroke="#12355B" stroke-width="2.5" stroke-linejoin="round"></path></g><g data-id="c15"><path d="M896,186L952.65,186" fill="none" stroke="#12355B" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"></path><path d="M960,186L949.5,190.725L949.5,181.275Z" fill="#12355B" stroke="#12355B" stroke-width="2.5" stroke-linejoin="round"></path></g><g data-id="c16"><path d="M592,222L592,312.65" fill="none" stroke="#12355B" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"></path><path d="M592,320L587.275,309.5L596.725,309.5Z" fill="#12355B" stroke="#12355B" stroke-width="2.5" stroke-linejoin="round"></path></g><g data-id="c2"><text x="66" y="70.48" text-anchor="start" xml:space="preserve"><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="38" fill="#12355B">Refilling</tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="38" fill="#12355B"> </tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="38" fill="#12355B">the</tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="38" fill="#12355B"> </tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="38" fill="#12355B">pick</tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="38" fill="#12355B"> </tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="38" fill="#12355B">and</tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="38" fill="#12355B"> </tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="38" fill="#12355B">mix</tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="38" fill="#12355B"> </tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="38" fill="#12355B">wall</tspan></text></g><g data-id="c9"><text x="606" y="274.32" text-anchor="start" xml:space="preserve"><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="17" fill="#3D5A7A">label</tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="17" fill="#3D5A7A"> </tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="17" fill="#3D5A7A">and</tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="17" fill="#3D5A7A"> </tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="17" fill="#3D5A7A">matrix</tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="17" fill="#3D5A7A"> </tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="17" fill="#3D5A7A">disagree</tspan></text></g><g data-id="c10"><text x="704" y="168.32" text-anchor="middle" xml:space="preserve"><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="17" fill="#3D5A7A">match</tspan></text></g><g data-id="c11"><text x="738" y="352.16" text-anchor="start" xml:space="preserve"><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="21" fill="#B23C0B">nothing</tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="21" fill="#B23C0B"> </tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="21" fill="#B23C0B">goes</tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="21" fill="#B23C0B"> </tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="21" fill="#B23C0B">on</tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="21" fill="#B23C0B"> </tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="21" fill="#B23C0B">the</tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="21" fill="#B23C0B"> </tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="21" fill="#B23C0B">wall</tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="21" fill="#B23C0B"> </tspan><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="21" fill="#B23C0B">from</tspan></text><text x="738" y="377.36" text-anchor="start" xml:space="preserve"><tspan font-family="'Architects Daughter', 'Comic Sans MS', cursive" font-size="21" fill="#B23C0B">here</tspan></text></g></g></svg></div><p class="cap">Figure 1. The four steps, and where a product goes when its label and the matrix disagree.</p>
+<h3 id="step-1-receive">Step 1: Receive</h3>
+<ol><li><span class="id">R-01</span> Check each box against the order: product, quantity and best before date.</li><li><span class="id">R-02</span> Refuse any box that is damaged, open or past its date.</li><li><span class="id">R-03</span> Ask the shift lead to sign the delivery docket.</li></ol>
+<h3 id="step-2-check-allergens">Step 2: Check allergens</h3>
+<div class="note"><div class="note-body"><ol><li><span class="id">C-01</span> Read the allergen statement on the supplier label.</li><li><span class="id">C-02</span> Find the product in the allergen matrix and compare its <a href="#definitions">allergen profile</a> with the label.</li><li><span class="id">C-03</span> Ask the shift lead to confirm the match before the box leaves the back room.</li></ol></div><details class="note-log"><summary></summary><div class="note-entries"><p class="note-date"><b>2026.11.16</b></p><p><b class="note-who">AB</b> Should C-03 need a second signature when the supplier has changed the recipe?</p></div></details></div>
+<h4 id="if-the-label-and-the-matrix-disagree">If the label and the matrix disagree</h4>
+<p>Stop. Put the box on the quarantine shelf, tell the shop manager, and do not refill the bin until the matrix has been updated.</p>
+<h3 id="step-3-rotate-and-refill">Step 3: Rotate and refill</h3>
+<ol><li><span class="id">F-01</span> Lift the bin liner and move the older sweets to the front.</li><li><span class="id">F-02</span> Pour the new stock in behind the old, using the scoop for that bin only.</li><li><span class="id">F-03</span> Wipe the lid and the front of the bin.</li></ol>
+<h3 id="step-4-label-and-record">Step 4: Label and record</h3>
+<ol><li><span class="id">L-01</span> Print a new bin label and replace the old one.</li><li><span class="id">L-02</span> Fill in the refill log: bin, product, best before date, your initials and the time.</li></ol>
+<h2 id="shelf-label-format">Shelf label format</h2>
+<p class="h2sub">What the label printer needs for each bin.</p>
+<pre>BIN:        A2<br>PRODUCT:    Milk chocolate buttons<br>CONTAINS:   Milk, Soy<br>BEST BEFORE: 2027-03-31<br>REFILLED:   2026-11-16 09:40 AB</pre>
+<h2 id="bin-map-and-allergen-matrix">Bin map and allergen matrix</h2>
+<p class="h2sub">One row per bin. The matrix is the record the allergen check compares against.</p>
+<div class="note"><div class="note-body"><div class="tw"><table><thead><tr><th>Row</th><th>Bin</th><th>Product</th><th>Allergens on the supplier label</th><th>Zone</th></tr></thead><tbody>
+<tr><td rowspan="2">Top</td><td>A1</td><td>Fruit jellies</td><td>None declared</td><td rowspan="2">Nut free</td></tr>
+<tr><td>A2</td><td>Milk chocolate buttons</td><td>Milk, Soy</td></tr>
+<tr><td rowspan="2">Middle</td><td>B1</td><td>Peanut brittle pieces</td><td>Peanuts</td><td rowspan="2">Contains nuts</td></tr>
+<tr><td>B2</td><td>Hazelnut pralines</td><td>Tree nuts, Milk</td></tr>
+</tbody></table></div></div><details class="note-log"><summary></summary><div class="note-entries"><p class="note-date"><b>2026.11.16</b></p><p><b class="note-who">CD</b> Bin B1 and B2 share a scoop rack. Move the rack or add a second one.</p></div></details></div>
+<p class="cap">Table 1. An extract of the matrix. The full matrix is kept behind the counter.</p>
+<h2 id="common-questions">Common questions</h2>
+<dl class="qa"><dt>A customer asks whether a sweet contains nuts. What do I say?</dt><dd>Read the bin label to them and offer to show the supplier label. Never answer from memory.</dd><dt>A scoop was put back in the wrong bin. What now?</dt><dd>Treat it as allergen cross-contact. Remove both scoops for washing and tell the shift lead, who decides whether the bin must be emptied.</dd><dt>The label printer is not working.</dt><dd>Write the label by hand in the same format, and note it in the refill log.</dd></dl>
+<h2 id="records-and-references">Records and references</h2>
+<div class="tw"><table><thead><tr><th>Record</th><th>Kept by</th><th>Kept for</th></tr></thead><tbody><tr><td>Delivery docket</td><td>Shift lead</td><td>12 months</td></tr><tr><td>Refill log</td><td>Shift lead</td><td>12 months</td></tr><tr><td>Allergen matrix</td><td>Shop manager</td><td>Current version, plus the last two</td></tr></tbody></table></div>
+<p>This procedure draws on:</p>
+<ul><li><a href="https://doi.org/10.4060/cc6125en" target="_blank" rel="noopener noreferrer">Codex Alimentarius, General Principles of Food Hygiene (CXC 1-1969)</a></li><li><a href="https://www.fao.org/fao-who-codexalimentarius/codex-texts/codes-of-practice/" target="_blank" rel="noopener noreferrer">Codex Alimentarius, Code of Practice on Food Allergen Management for Food Business Operators (CXC 80-2020), in the list of Codex codes of practice</a></li></ul>
+<h2 id="revision-history">Revision history</h2>
+<div class="tw"><table><thead><tr><th>Version</th><th>Date</th><th>Change</th><th>Approved by</th></tr></thead><tbody><tr><td>1.0</td><td>2026-11-16</td><td>First issue</td><td>Shop manager</td></tr></tbody></table></div>
+</main>
+</div>
+</body>
+</html>

@@ -63,3 +63,5 @@ export async function caretCell(pg, table, r, c, atEnd = true) {
 export const where = (pg) => pg.evaluate(() => { const n = getSelection().anchorNode; if (!n) return 'none'; const e = n.nodeType === 1 ? n : n.parentElement; const c = e.closest('td,th'); return c ? c.parentElement.rowIndex + ':' + c.cellIndex : 'outside:' + (e.closest('#doc > *') || e).tagName; });
 export const shape = (pg, t = 0) => pg.evaluate((t) => [...document.querySelectorAll('#doc table')[t].rows].map(r => [...r.cells].map(c => (c.colSpan > 1 ? 'c' + c.colSpan : '') + (c.rowSpan > 1 ? 'r' + c.rowSpan : '') || '.').join(' ')).join(' | '), t);
 export const click = (pg, action) => pg.click('#chrome button[data-a="' + action + '"]');
+// Step the Show Index Levels button until it shows the level wanted.
+export async function idxTo(pg, v) { for (let i = 0; i < 3 && await pg.$eval('#s-index', s => s.value) !== String(v); i++) { await pg.click('#s-index'); await sleep(40); } }

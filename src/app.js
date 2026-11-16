@@ -41,7 +41,7 @@ function indexHtml(root, depth) {
 function rebuild() {
   const seen = {};
   heads(doc).forEach(h => { const base = slug(h.textContent); let s = base, k = 1; while (seen[s]) s = base + '-' + (++k); seen[s] = 1; h.id = s; });
-  idx.innerHTML = indexHtml(doc, idxDepth); $('#s-index').value = String(idxDepth); notesUI();
+  idx.innerHTML = indexHtml(doc, idxDepth); { const ib = $('#s-index'); ib.value = String(idxDepth); ib.lastElementChild.textContent = idxDepth; } notesUI();
   const h1 = $('h1', doc); document.title = (h1 ? h1.textContent.trim() : 'Document') + ' - editor';
 }
 idx.addEventListener('click', e => { const a = e.target.closest('a'); if (!a) return; e.preventDefault(); const t = document.getElementById(a.getAttribute('href').slice(1)); if (t) t.scrollIntoView({ behavior: 'smooth' }); });
@@ -51,7 +51,7 @@ function status() { const sv = $('[data-a="save"]'); sv.classList.toggle('has', 
 function helpInfo() { const i = $('#help-info'); if (i) i.textContent = 'Editor v' + VERSION + ' | Document: ' + fname + (dirty ? ' (unsaved changes)' : '') + (statusEl.textContent ? ' | ' + statusEl.textContent : ''); }
 function keepGoing(what) { return !dirty || confirm('This document has unsaved changes. Save it first if you want to keep them.\n\nOK: discard the changes and ' + what + '.\nCancel: go back to the document.'); }
 function touch() {
-  dirty = true; status(); clearTimeout(timer);
+  checkFix(doc); dirty = true; status(); clearTimeout(timer);
   timer = setTimeout(() => { histSnap(); try { localStorage.setItem('fle-draft', clean().innerHTML); } catch (e) { } }, 400);
 }
 doc.addEventListener('input', touch);
@@ -101,11 +101,16 @@ function styleUI() {
   } else label = inCell() ? 'Grid cell' : 'Paragraph';
   first.textContent = label; box.value = v;
   const inTable = !!n.closest('td,th'); $$('#tbar button.t').forEach(x => x.classList.toggle('dim', !inTable));
+  const tops = $('#tbar .tops'); if (tops.hidden === inTable) { tops.hidden = !inTable; chromeHeight(); } // the row, column and merge buttons show only in a table
   [['bold', 'bold'], ['italic', 'italic'], ['ul', 'insertUnorderedList'], ['ol', 'insertOrderedList']].forEach(([a, c]) => { let on = false; try { on = document.queryCommandState(c); } catch (e) { } $('[data-a="' + a + '"]').classList.toggle('on', on); });
+  const bx = boxAt(n); $('#s-boxtype').value = bx ? boxType(bx) : '';
+  const ck = inCheck(); $('[data-a="check"]').classList.toggle('on', ck); if (ck) $('[data-a="ul"]').classList.remove('on');
 }
 function live() { const s = getSelection(); if (s.rangeCount && doc.contains(s.anchorNode)) { let n = s.anchorNode; if (n.nodeType !== 1) n = n.parentElement; if (!n.closest('.fig')) lastRange = s.getRangeAt(0).cloneRange(); } }
 function restore() { doc.focus(); if (lastRange) { const s = getSelection(); s.removeAllRanges(); s.addRange(lastRange); } }
-function curBlock() { let n = lastRange ? lastRange.startContainer : null; if (!n) return null; if (n.nodeType !== 1) n = n.parentElement; while (n && n.parentNode !== doc && !(n.parentNode.classList && n.parentNode.classList.contains('note-body'))) n = n.parentNode; return n && n.closest('.note-log') ? n.closest('.note') : n; }
+/* Blocks sit in the document itself, in a margin note or in a box. */
+function holds(p) { return !!(p && p.classList && (p.classList.contains('note-body') || p.classList.contains('box'))); }
+function curBlock() { let n = lastRange ? lastRange.startContainer : null; if (!n) return null; if (n.nodeType !== 1) n = n.parentElement; while (n && n.parentNode !== doc && !holds(n.parentNode)) n = n.parentNode; return n && n.closest('.note-log') ? n.closest('.note') : n; }
 function cmd(c, v) { restore(); document.execCommand(c, false, v); touch(); }
 function setBlock(v) {
   live();
@@ -398,6 +403,7 @@ const REP = {
   italic: () => { let w = false; try { w = document.queryCommandState('italic'); } catch (e) { } return [w ? 'Italic' : 'Italic off', () => { restore(); setInline('italic', 'i,em', w); }]; },
   ul: () => { let w = false; try { w = document.queryCommandState('insertUnorderedList'); } catch (e) { } return [w ? 'Bulleted list' : 'Bulleted list off', () => { restore(); if (document.queryCommandState('insertUnorderedList') !== w) document.execCommand('insertUnorderedList'); }]; },
   ol: () => { let w = false; try { w = document.queryCommandState('insertOrderedList'); } catch (e) { } return [w ? 'Numbered list' : 'Numbered list off', () => { restore(); if (document.queryCommandState('insertOrderedList') !== w) document.execCommand('insertOrderedList'); }]; },
+  check: () => { const w = inCheck(); return [w ? 'Checklist' : 'Checklist off', () => { restore(); if (inCheck() !== w) checkList(); }]; },
   clear: () => ['Clear format', clearFormat],
   note: () => ['Note', addNote], code: () => ['Insert code block', addCode], qa: () => ['Insert Q&A list', addQa],
   tag: () => ['ID tag', () => { restore(); let n = getSelection().anchorNode; if (n && n.nodeType !== 1) n = n.parentElement; if (n && n.closest('span.id')) return; ACT.tag(); }],
@@ -417,6 +423,104 @@ document.addEventListener('keydown', e => {
 }, true);
 doc.addEventListener('mouseup', e => { if (e.altKey && !e.ctrlKey && !e.metaKey && e.button === 0 && !paint && lastCmd && !(e.target.closest && e.target.closest('.fig,.dg,.note-log'))) setTimeout(repeatLast, 0); });
 
+/* ---------- boxes ----------
+   A box is for the reader: a note, information, tip, warning or critical message set apart from the text. It is a
+   container (div.box.box-TYPE), inserted empty and then typed or pasted into; the blocks in it keep their own styles. Its first line is the label
+   (p.box-h): it starts as the type's name and can be edited. The icon and colours come from the style sheet. */
+const BOXES = { note: 'Note', info: 'Information', tip: 'Tip', warning: 'Warning', critical: 'Critical' };
+function boxType(b) { return Object.keys(BOXES).find(k => b.classList.contains('box-' + k)) || 'note'; }
+function boxLabel(b) { const h = b.firstElementChild; return h && h.classList.contains('box-h') ? h : null; }
+function boxAt(n) { if (n && n.nodeType !== 1) n = n.parentElement; const b = n && n.closest('.box'); return b && doc.contains(b) && !b.closest('.fig,.dg') ? b : null; }
+function plainLabel(h) { h.classList.remove('box-h'); if (!h.getAttribute('class')) h.removeAttribute('class'); }
+/* Take the box away and leave what it held. The label goes too, unless it was given its own wording. */
+function unbox(b) { const h = boxLabel(b); if (h) { const t = h.textContent.trim(); if (!t || t === BOXES[boxType(b)]) h.remove(); else plainLabel(h); } b.replaceWith(...b.childNodes); }
+function boxFix(root) {
+  $$('.box', root).forEach(b => {
+    if (b.closest('.fig,.dg')) return;
+    if (b.parentNode.closest && b.parentNode.closest('.box')) { unbox(b); return; } // no box inside a box
+    if (!b.hasAttribute('role')) b.setAttribute('role', 'note');
+    if (![...b.children].some(c => !c.classList.contains('box-h') && (c.textContent.trim() || c.querySelector('img,svg,table,input') || c.matches('.dg,.fig,pre,p,ul,ol,dl,h2,h3,h4')))) { const s = getSelection(), here = s.rangeCount && b.contains(s.anchorNode), q = mk('p'); b.replaceWith(q); if (here) caret(q); }
+  });
+  $$('.box-h', root).forEach(h => { const p = h.parentNode; if (!(p.classList && p.classList.contains('box') && p.firstElementChild === h)) plainLabel(h); });
+}
+/* The Box list: outside a box it inserts a new, empty box after the current block, ready to type or paste into;
+   inside a box it changes the box's type; Remove box takes the box away and keeps what it held. */
+function setBox(v) {
+  live(); restore(); const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode)) return;
+  const keep = [s.anchorNode, s.anchorOffset, s.focusNode, s.focusOffset];
+  const done = () => { if (doc.contains(keep[0]) && doc.contains(keep[2])) { try { s.setBaseAndExtent(...keep); lastRange = s.getRangeAt(0).cloneRange(); } catch (e) { } } touch(); styleUI(); };
+  const cur = boxAt(s.anchorNode);
+  if (v === 'none') { if (cur) { unbox(cur); done(); } return; }
+  if (!BOXES[v]) return;
+  if (cur) { // the label changes too, if it still says the old type
+    const h = boxLabel(cur), was = BOXES[boxType(cur)]; Object.keys(BOXES).forEach(k => cur.classList.remove('box-' + k)); cur.classList.add('box-' + v);
+    if (h && h.textContent.trim() === was && was !== BOXES[v]) { const inLabel = h.contains(keep[0]); h.textContent = BOXES[v]; if (inLabel) caret(h, true); }
+    done(); return;
+  }
+  const box = el('<div class="box box-' + v + '" role="note"><p class="box-h"></p><p><br></p></div>'); box.firstChild.textContent = BOXES[v];
+  let b = curBlock(); if (b && b.tagName === 'H1' && b.nextElementSibling && b.nextElementSibling.matches('p.sub')) b = b.nextElementSibling; // not between the title and its subtitle
+  if (b && b.tagName === 'P' && !b.className && !hasContent(b)) b.replaceWith(box); else if (b) b.after(box); else doc.appendChild(box);
+  caret(box.lastChild); touch(); styleUI();
+}
+/* ---------- checklists ----------
+   A checklist is a bulleted list with the class "check". Each item starts with a real checkbox, so a saved document
+   needs no script: the browser ticks the box and the style sheet places it. A tick made in the editor is written to
+   the box's checked attribute, so it is saved with the document. checkFix keeps every item to exactly one leading box
+   and removes boxes anywhere else. */
+function checkFix(root) {
+  // the browser makes a new list inside the paragraph it came from, which is not valid HTML and saves as stray empty paragraphs: lift the list out
+  $$('p > ul, p > ol', root).forEach(l => {
+    const p = l.parentNode; if (p.closest('.fig,.dg') || [...p.childNodes].some(n => n !== l && (n.nodeType === 1 ? n.nodeName !== 'BR' : n.data.trim()))) return;
+    const s = getSelection(), k = s.rangeCount && l.contains(s.anchorNode) && l.contains(s.focusNode) ? [s.anchorNode, s.anchorOffset, s.focusNode, s.focusOffset] : null;
+    p.replaceWith(l); if (k) { s.setBaseAndExtent(...k); lastRange = s.getRangeAt(0).cloneRange(); }
+  });
+  boxFix(root);
+  $$('ol.check', root).forEach(l => { l.classList.remove('check'); if (!l.getAttribute('class')) l.removeAttribute('class'); });
+  const keep = new Set();
+  $$('ul.check > li', root).forEach(li => {
+    if (li.closest('.fig,.dg')) return;
+    let box = [...li.children].find(c => c.matches('input[type=checkbox]'));
+    if (!box) { box = document.createElement('input'); box.setAttribute('type', 'checkbox'); }
+    if (li.firstChild !== box) li.prepend(box);
+    [...box.attributes].forEach(a => { if (a.name !== 'type' && a.name !== 'checked') box.removeAttribute(a.name); });
+    if (!box.nextSibling) li.appendChild(document.createElement('br'));
+    keep.add(box);
+  });
+  $$('input', root).forEach(i => { if (!keep.has(i) && !i.closest('.fig,.dg')) i.remove(); });
+  const s = getSelection(); if (s.rangeCount && s.isCollapsed && s.anchorNode.nodeType === 1 && s.anchorOffset === 0 && keep.has(s.anchorNode.firstChild)) s.collapse(s.anchorNode, 1);
+}
+/* Make or remove a list. The browser moves a plain cursor to the start of the item; it goes back where it was. */
+function listCmd(c) {
+  restore(); const s = getSelection(), at = () => { let n = s.rangeCount ? s.anchorNode : null; if (n && n.nodeType !== 1) n = n.parentElement; return n && n.closest('li,p,h1,h2,h3,h4'); };
+  let b = s.isCollapsed ? at() : null, text = '', k = 0;
+  if (b && doc.contains(b)) { const r = document.createRange(); r.selectNodeContents(b); text = r.toString(); r.setEnd(s.anchorNode, s.anchorOffset); k = r.toString().length; } else b = null;
+  document.execCommand(c); checkFix(doc);
+  const a = b && s.isCollapsed ? at() : null; if (!a || !doc.contains(a) || a.textContent !== text) return;
+  const w = document.createTreeWalker(a, NodeFilter.SHOW_TEXT); let n;
+  while ((n = w.nextNode())) { if (k <= n.length) { s.collapse(n, k); lastRange = s.getRangeAt(0).cloneRange(); return; } k -= n.length; }
+}
+function listAt() { const s = getSelection(); let n = s.rangeCount ? s.anchorNode : null; if (n && n.nodeType !== 1) n = n.parentElement; const li = n && n.closest('li'); return li && doc.contains(li) && !li.closest('.fig,.dg') ? li.parentNode : null; }
+function inCheck() { const l = listAt(); return !!(l && l.matches('ul.check')); }
+/* The cursor at the very start of a checklist item, just after its box. */
+function checkStart() {
+  const s = getSelection(); if (!s.rangeCount || !s.isCollapsed || !inCheck()) return null;
+  let n = s.anchorNode; if (n.nodeType !== 1) n = n.parentElement; const li = n.closest('li'), box = li.firstChild; if (!box || box.nodeName !== 'INPUT') return null;
+  const r = document.createRange(); r.setStartAfter(box); r.setEnd(s.anchorNode, s.anchorOffset);
+  return r.toString() === '' && !r.cloneContents().querySelector('br,img,input') ? li : null;
+}
+function checkList() {
+  restore(); if (qaItem(lastRange)) return;
+  let l = listAt();
+  if (l && l.matches('ul.check')) listCmd('insertUnorderedList');
+  else { if (!l || l.tagName !== 'UL') { listCmd('insertUnorderedList'); l = listAt(); } if (l && l.tagName === 'UL') l.classList.add('check'); }
+  touch(); styleUI();
+}
+doc.addEventListener('mousedown', e => { if (e.target.matches && e.target.matches('ul.check > li > input')) e.preventDefault(); });
+doc.addEventListener('click', e => {
+  const b = e.target; if (!(b.matches && b.matches('ul.check > li > input')) || b.closest('.fig,.dg')) return;
+  e.preventDefault(); const on = !b.hasAttribute('checked'); clearTimeout(timer); histSnap();
+  setTimeout(() => { b.toggleAttribute('checked', on); b.checked = on; touch(); }, 0); // after the click, or the browser puts the box back
+});
 /* ---------- clipboard ----------
    Copy and cut put the selection on the clipboard as the document's own clean HTML (marked data-fle-clip), so paste
    brings it back exactly: inline formatting, headings, lists, tables, code and diagrams. HTML from other programs is
@@ -437,6 +541,8 @@ function clipClean(box) {
   $$('[id]', box).forEach(n => { if (!n.closest('.fig,.dg,svg')) n.removeAttribute('id'); });
 }
 function clipFrom(r) {
+  r = r.cloneRange(); // a selection that starts at the start of a checklist item takes the item's box with it, so its tick is kept
+  { let n = r.startContainer; if (n.nodeType !== 1) n = n.parentElement; const li = n && n.closest('ul.check > li'), cb = li && li.firstChild; if (cb && cb.nodeName === 'INPUT' && !r.collapsed && !li.contains(r.endContainer)) { const t = document.createRange(); t.setStartAfter(cb); t.setEnd(r.startContainer, r.startOffset); if (t.toString() === '') r.setStartBefore(cb); } }
   const box = document.createElement('div'); box.appendChild(r.cloneContents());
   const last = box.lastChild; if (r.endOffset === 0 && last && last.nodeType === 1 && box.children.length > 1 && !hasContent(last)) last.remove();
   const first = box.firstChild; if (first && first.nodeType === 1 && box.children.length > 1 && !hasContent(first)) first.remove();
@@ -507,8 +613,16 @@ function clipRead(html) {
 }
 /* What a table cell, list item, Q&A item or note line can take: the lines of the pasted blocks, formatting kept. */
 function clipLines(box) {
-  const LEAF = 'p,h1,h2,h3,h4,li,dt,dd,td,th,pre';
-  return $$(LEAF, box).filter(x => !$(LEAF, x) && hasContent(x)).map(x => x.innerHTML.replace(/(<br>\s*)+$/, '')).join('<br>');
+  // every block is a line, and so is any text that sits beside blocks rather than in one, so nothing copied is left out
+  const BREAK = BLOCKS + ',li,dt,dd,td,th,tr,thead,tbody,tfoot,summary', out = []; let run = '';
+  const flush = () => { const t = document.createElement('div'); t.innerHTML = run; if (hasContent(t)) out.push(run.replace(/^(\s*<br>)+/, '').replace(/(<br>\s*)+$/, '')); run = ''; };
+  const walk = n => n.childNodes.forEach(c => {
+    if (c.nodeType === 3) run += esc(c.data);
+    else if (c.nodeType !== 1 || c.matches('.dg,.fig')) return;
+    else if (c.matches(BREAK)) { flush(); walk(c); flush(); }
+    else run += c.outerHTML;
+  });
+  walk(box); flush(); return out.join('<br>');
 }
 function clipAdopt(nodes) {
   nodes.forEach(n => {
@@ -540,7 +654,7 @@ function clipInsert(box) {
   if (cellEl() || at.closest('li,dt,dd,.note-log')) { const h = clipLines(box); if (h) insertInline(h); return; }
   if (!s.isCollapsed) document.execCommand('delete');
   const r = getSelection().getRangeAt(0); let cur = r.startContainer; if (cur === doc) cur = doc.childNodes[r.startOffset] || doc.lastChild;
-  while (cur && cur.parentNode !== doc && !(cur.parentNode.classList && cur.parentNode.classList.contains('note-body'))) cur = cur.parentNode;
+  while (cur && cur.parentNode !== doc && !holds(cur.parentNode)) cur = cur.parentNode;
   const nodes = [...box.childNodes]; clipAdopt(nodes);
   if (!cur || cur.nodeType !== 1) doc.append(...nodes);
   else if (cur.matches('p,h1,h2,h3,h4') && cur.contains(r.startContainer)) {
@@ -943,11 +1057,20 @@ document.addEventListener('keydown', e => {
   if (dgSel && !ctrl && !e.target.closest('#chrome')) { if (k === 'Delete' || k === 'Backspace') { e.preventDefault(); dgDelete(); return; } if (k === 'Enter') { e.preventDefault(); openDiagram(dgSel); return; } if (k === 'Escape') { dgSelect(null); return; } }
   if (ctrl && k.toLowerCase() === 's') { e.preventDefault(); save(e.shiftKey); return; }
   if (ctrl && k.toLowerCase() === 'o') { e.preventDefault(); open(); return; }
+  if (k === 'Backspace' && !ctrl && !e.altKey && !editing && !board && checkStart()) { e.preventDefault(); clearTimeout(timer); histSnap(); document.execCommand('insertUnorderedList'); touch(); styleUI(); return; }
   if (k === 'Tab' && !ctrl && !e.altKey && !editing) { const c = cellEl(); if (c) { e.preventDefault(); cellTab(c, e.shiftKey); return; } }
   if ((k === 'ArrowDown' || k === 'ArrowUp') && !e.shiftKey && !ctrl && !e.altKey && !editing) { const c = cellEl(); if (c && cellArrow(c, k === 'ArrowDown')) { e.preventDefault(); return; } }
   if (k === 'Enter' && !ctrl && !e.altKey && !editing) { const q = qaItem(); if (q) { e.preventDefault(); qaEnter(q, e.shiftKey); return; } }
   if (!editing && !ctrl && !e.altKey && (k === 'Enter' || k === 'Tab')) { const pre = blockOf(getSelection().anchorNode); if (pre) { e.preventDefault(); if (k === 'Tab') { if (!e.shiftKey) codeInsert('\t'); } else if (e.shiftKey) { document.execCommand('insertLineBreak'); touch(); } else codeEnter(pre); return; } }
   if (k === 'Enter' && !e.shiftKey && !ctrl && !e.altKey && !editing) { const s1 = getSelection(); let n1 = s1.anchorNode; if (n1 && n1.nodeType !== 1) n1 = n1.parentElement; const lp = n1 && n1.closest('.note-entries > p'); if (lp && doc.contains(lp)) { e.preventDefault(); const who = initials(); if (!who) return; const line = mk('p', '', '<b class="note-who"></b>&nbsp;'); line.firstChild.textContent = who; lp.after(line); caret(line, true); touch(); return; } }
+  if (k === 'Enter' && !e.shiftKey && !ctrl && !e.altKey && !editing && !inCell()) {
+    const s2 = getSelection(); let n2 = s2.anchorNode; if (n2 && n2.nodeType !== 1) n2 = n2.parentElement; const bp = n2 && n2.closest('.box > p');
+    if (bp && doc.contains(bp) && !bp.closest('.fig,.dg')) {
+      const bx = bp.parentNode;
+      if (bp.classList.contains('box-h')) { e.preventDefault(); clearTimeout(timer); histSnap(); const q = mk('p'); bp.after(q); caret(q); touch(); styleUI(); return; } // from the label into the box
+      if (!bp.textContent.trim() && !bp.querySelector('img') && !bp.nextElementSibling && bp.previousElementSibling) { e.preventDefault(); clearTimeout(timer); histSnap(); bp.remove(); const q = mk('p'); bx.after(q); if (bx.children.length === 1 && boxLabel(bx)) bx.remove(); caret(q); touch(); styleUI(); return; } // an empty last line leaves the box
+    }
+  }
   if (k === 'Enter' && !e.shiftKey && !ctrl && !e.altKey && !editing && !inCell()) { const s0 = getSelection(); let n0 = s0.anchorNode; if (n0 && n0.nodeType !== 1) n0 = n0.parentElement; const pb = n0 && n0.closest('.note-body > p'); if (pb && !pb.textContent.trim() && !pb.nextElementSibling && pb.previousElementSibling) { e.preventDefault(); const note = pb.closest('.note'); pb.remove(); const q = mk('p'); note.after(q); caret(q); touch(); styleUI(); return; } }
   if (k === 'Enter' && !e.shiftKey && !ctrl && !e.altKey && !editing && !inCell()) { const p = styledParaEnd(); if (p) { e.preventDefault(); const n = mk('p'); p.after(n); caret(n); touch(); styleUI(); return; } }
   if (k === 'Enter' && !ctrl && !e.altKey && !editing && inCell()) { e.preventDefault(); document.execCommand('insertLineBreak'); touch(); return; }
@@ -1086,7 +1209,7 @@ function build(opts) {
 }
 function prepView() { dgSel = null; $('#gbar').hidden = true; $$('.dg, .fig', doc).forEach(f => f.classList.remove('ed-dsel')); fit(); chromeHeight(); }
 function prep() {
-  migrateGrids(doc);
+  checkFix(doc); migrateGrids(doc);
   dgSelect(null); $$('.dg, .fig', doc).forEach(f => { f.setAttribute('contenteditable', 'false'); f.setAttribute('title', 'Double-click to edit'); });
   $$('.wb-board', doc).forEach(b => { if (!b.parentNode.classList.contains('fig')) { const f = el('<div class="fig"></div>'); b.replaceWith(f); f.appendChild(b); } });
   $$('.fig', doc).forEach(f => f.setAttribute('contenteditable', 'false'));
@@ -1095,7 +1218,7 @@ function prep() {
   undo = []; rebuild(); fit();
 }
 function sanitize(root) {
-  $$('script,iframe,object,embed,base,form,input,button,textarea,select,frame,frameset,applet,meta,link', root).forEach(n => n.remove());
+  $$('script,iframe,object,embed,base,form,input,button,textarea,select,frame,frameset,applet,meta,link', root).forEach(n => { if (!n.matches('ul.check > li > input[type=checkbox]')) n.remove(); }); // a checklist's own boxes stay
   $$('*', root).forEach(n => [...n.attributes].forEach(a => {
     const k = a.name.toLowerCase(), v = a.value.replace(/[\s\u0000-\u001f]+/g, '').toLowerCase();
     if (k.startsWith('on') || k === 'srcdoc' || k === 'formaction' || (/^(href|src|xlink:href|action|data|poster|background)$/.test(k) && (v.startsWith('javascript:') || v.startsWith('vbscript:') || v.startsWith('data:text/html')))) n.removeAttribute(a.name);
@@ -1170,10 +1293,10 @@ function fresh() { if (!keepGoing('start a new document')) return; handle = null
 /* ---------- toolbar wiring ---------- */
 const ACT = {
   new: fresh, open: open, save: () => save(false), saveas: () => save(true),
-  bold: () => cmd('bold'), italic: () => cmd('italic'), ul: () => cmd('insertUnorderedList'), ol: () => cmd('insertOrderedList'),
+  bold: () => cmd('bold'), italic: () => cmd('italic'), ul: () => { restore(); const l = listAt(); if (l && l.matches('ul.check')) { l.classList.remove('check'); if (!l.getAttribute('class')) l.removeAttribute('class'); touch(); } else { listCmd('insertUnorderedList'); touch(); } }, ol: () => { listCmd('insertOrderedList'); touch(); }, check: checkList,
   undo: () => histGo(-1), redo: () => histGo(1),
   code: addCode, clear: clearFormat, paint: () => { if (paint) paintStop(); else paintPick(false); }, note: addNote, margin: toggleNotes, who: () => initials(true), saveclean: saveClean, repeat: repeatLast, nosaved: () => { $('#savedbar').hidden = true; chromeHeight(); }, noclean: () => { $('#cleanbar').hidden = true; chromeHeight(); },
-  link: editLink,
+  link: editLink, index: () => { idxDepth = idxDepth % 3 + 1; rebuild(); touch(); }, // steps 1, 2, 3 and back to 1
   tag: () => { restore(); const t = getSelection().toString() || 'ID'; document.execCommand('insertHTML', false, '<span class="id">' + esc(t) + '</span>&nbsp;'); touch(); },
   table: addTable, stage: addStage, mr: () => tableOp('mr'), md: () => tableOp('md'), split: () => tableOp('split'), qa: addQa, 'r+': () => tableOp('r+'), ra: () => tableOp('ra'), cl: () => tableOp('cl'), 'r-': () => tableOp('r-'), 'c+': () => tableOp('c+'), 'c-': () => tableOp('c-'), dense: () => tableOp('dense'),
   diagram: () => openDiagram(null), dgedit: () => dgSel && openDiagram(dgSel), dgdel: dgDelete, help: () => { const h = $('#help'); if (h.open) h.close(); else { helpInfo(); h.showModal(); } },
@@ -1185,7 +1308,7 @@ $('#chrome').addEventListener('mousedown', e => { if (e.target.closest('button')
 $('#chrome').addEventListener('click', e => { const b = e.target.closest('button[data-a]'); if (!b) return; const a = b.dataset.a; if (!board && !['undo', 'redo', 'help', 'new', 'open', 'save', 'saveas', 'who', 'saveclean', 'noclean', 'nosaved', 'margin', 'paint', 'repeat'].includes(a)) { clearTimeout(timer); histSnap(); } if (ACT[a]) { ACT[a](); if (!board) repNote(a); } else if (ADD[a] && board) ADD[a](); });
 $('#help').addEventListener('click', e => { if (e.target === e.currentTarget || e.target.closest('[data-a="helpclose"]')) e.currentTarget.close(); });
 $('#s-block').addEventListener('change', e => { const v = e.target.value; if (v) { const label = e.target.selectedOptions[0].textContent; clearTimeout(timer); histSnap(); setBlock(v); repSet(label, () => setBlock(v)); } styleUI(); });
-$('#s-index').addEventListener('change', e => { idxDepth = +e.target.value || 1; rebuild(); touch(); });
+$('#s-boxtype').addEventListener('change', e => { const v = e.target.value; if (v) { clearTimeout(timer); histSnap(); setBox(v); repSet(v === 'none' ? 'Remove box' : BOXES[v] + ' box', () => setBox(v)); } styleUI(); });
 /* The cursor stays in the document: once a toolbar list has been opened and closes, with or without a choice, focus goes
    back to the text, so the arrow keys move the cursor and do not change the list. A list reached with Tab and never
    opened keeps the focus, so it can still be worked from the keyboard. */

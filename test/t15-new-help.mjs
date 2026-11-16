@@ -1,6 +1,6 @@
 // New asks before discarding unsaved changes, whether the document was opened or started new; Help is a dialog at the
 // far right of the toolbar and holds the editor version and the document name.
-import { open, check, same, caretIn, click, sleep, load } from './harness.mjs';
+import { open, check, same, caretIn, click, sleep, load, idxTo } from './harness.mjs';
 const { b, pg, errors } = await open();
 const K = pg.keyboard;
 // answer confirm() in the page, and record what it asked
@@ -25,7 +25,7 @@ same('the fresh document is clean again', await asked(), []);
 await answer(false); await caretIn(pg, '#doc h1'); await K.type('!'); await sleep(50); await click(pg, 'new'); await sleep(50);
 check('a later new document that has changed asks too', (await asked()).length === 1 && (await text()).startsWith('Untitled document!'));
 // changes that are not typing
-for (const [name, act] of [['a toolbar change (bold)', async () => { await pg.evaluate(() => { const r = document.createRange(); r.selectNodeContents(document.querySelector('#doc p:last-child')); const g = getSelection(); g.removeAllRanges(); g.addRange(r); }); await click(pg, 'bold'); }], ['an index level change', async () => { await pg.select('#s-index', '2'); }], ['the notes margin button', async () => { await click(pg, 'margin'); }], ['a paste', async () => { await caretIn(pg, '#doc p:last-child'); await pg.evaluate(() => { const dt = new DataTransfer(); dt.setData('text/plain', 'x'); document.getElementById('doc').dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); }); }]]) {
+for (const [name, act] of [['a toolbar change (bold)', async () => { await pg.evaluate(() => { const r = document.createRange(); r.selectNodeContents(document.querySelector('#doc p:last-child')); const g = getSelection(); g.removeAllRanges(); g.addRange(r); }); await click(pg, 'bold'); }], ['an index level change', async () => { await idxTo(pg, '2'); }], ['the notes margin button', async () => { await click(pg, 'margin'); }], ['a paste', async () => { await caretIn(pg, '#doc p:last-child'); await pg.evaluate(() => { const dt = new DataTransfer(); dt.setData('text/plain', 'x'); document.getElementById('doc').dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); }); }]]) {
   await answer(true); await click(pg, 'new'); await sleep(50); await asked(); await click(pg, 'new'); await sleep(50);
   const clean = (await asked()).length === 0;
   await answer(false); await act(); await sleep(50); await click(pg, 'new'); await sleep(50);
@@ -63,18 +63,21 @@ await b.close();
 const t3 = await open();
 await load(t3.pg, '<main><h1>T</h1><h2>A</h2><p id="a">one</p><p id="p">para</p><p id="z">last</p></main>');
 const at = () => t3.pg.evaluate(() => { let n = getSelection().anchorNode; if (n && n.nodeType !== 1) n = n.parentElement; return [document.activeElement.id, n && n.closest('#doc > *').textContent, document.getElementById('s-index').value, document.getElementById('s-block').value]; });
-await t3.pg.click('#p'); await t3.pg.click('#s-index'); await sleep(200); await t3.pg.keyboard.press('ArrowDown'); await t3.pg.keyboard.press('Enter'); await sleep(300);
-same('after choosing an index level the cursor is back in the text', await at(), ['doc', 'para', '2', 'p']);
+await t3.pg.click('#p'); await t3.pg.click('#s-index'); await sleep(200);
+same('after stepping the index level the cursor is still in the text', await at(), ['doc', 'para', '2', 'p']);
+same('the button shows the level and its tooltip says what it does', await t3.pg.$eval('#s-index', x => [x.querySelector('em').textContent, x.title]), ['2', 'Show Index Levels']);
 await t3.pg.keyboard.press('ArrowUp'); await sleep(100);
-same('Up then moves the cursor up a line and leaves the Index list alone', await at(), ['doc', 'one', '2', 'p']);
+same('Up then moves the cursor up a line and leaves the index level alone', await at(), ['doc', 'one', '2', 'p']);
 await t3.pg.click('#p'); await t3.pg.click('#s-block'); await sleep(200); await t3.pg.keyboard.press('Escape'); await sleep(300);
 same('closing the Style list without choosing also returns to the text', await at(), ['doc', 'para', '2', 'p']);
 await t3.pg.keyboard.press('ArrowUp'); await t3.pg.keyboard.press('ArrowUp'); await sleep(100);
 same('and Up moves the cursor, not the style', [(await at())[1], await t3.pg.evaluate(() => [...document.querySelectorAll('#doc > *')].map(n => n.tagName).join(','))], ['A', 'H1,H2,P,P,P']);
 await t3.pg.click('#p'); await t3.pg.click('#s-block'); await sleep(200); await t3.pg.keyboard.press('ArrowDown'); await t3.pg.keyboard.press('Enter'); await sleep(300);
 same('choosing a style still applies it, with the cursor in the text', [(await at())[0], await t3.pg.evaluate(() => [...document.querySelectorAll('#doc > *')].map(n => n.tagName).join(','))], ['doc', 'H1,H2,P,H1,P']);
-await t3.pg.focus('#s-index'); await sleep(300); await t3.pg.keyboard.press('ArrowUp'); await sleep(100);
-same('a list reached without opening it still works from the keyboard', [(await at())[0], (await at())[2]], ['s-index', '1']);
+await t3.pg.focus('#s-index'); await t3.pg.keyboard.press('Enter'); await sleep(100); await t3.pg.keyboard.press('Enter'); await sleep(100);
+same('Show Index Levels works from the keyboard and steps 2, 3, then back to 1', [(await at())[0], (await at())[2]], ['s-index', '1']);
+await t3.pg.focus('#s-boxtype'); await sleep(300); await t3.pg.keyboard.press('ArrowDown'); await sleep(150);
+same('a list reached without opening it still works from the keyboard, and the cursor goes into the new box', [(await at())[0], await t3.pg.evaluate(() => document.querySelectorAll('#doc .box.box-note').length)], ['doc', 1]);
 same('no page errors (lists)', t3.errors, []);
 await t3.b.close();
 

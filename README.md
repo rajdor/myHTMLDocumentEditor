@@ -8,7 +8,7 @@ Open `fine-line-editor.html` in Chrome or Edge. Nothing is loaded from the netwo
 
 ## What it does
 
-- Text: heading levels H1 (title) to H4, H1 and H2 subtitles, lead paragraph, caption, code blocks, bold, italic, lists, Q&A lists, links and ID tags. H2 headings are numbered.
+- Text: heading levels H1 (title) to H4, H1 and H2 subtitles, lead paragraph, caption, code blocks, bold, italic, lists, checklists (real checkboxes, so saved documents need no script), Q&A lists, boxes for the reader (Note, Information, Tip, Warning, Critical; inserted empty, they hold whole blocks and have an editable label), links and ID tags. H2 headings are numbered.
 - Clear format: removes bold and italics from the selected text; with the cursor only, or a whole block selected, the block also becomes a plain paragraph. Links and ID tags stay.
 - Copy format: a format painter for block style, bold, italics and ID tags; one press applies once, a double-click keeps it on.
 - Repeat last toolbar command: Option+Q on a Mac or Alt+Q on Windows applies the last toolbar command again at the cursor or on the selection; holding Option or Alt while you click or drag does the same in one move, and the Repeat button beside Redo names the command. It covers the Style list, bold, italic, lists, code block, ID tag, Note, Clear format and the table buttons, and it sets rather than toggles.
@@ -17,10 +17,11 @@ Open `fine-line-editor.html` in Chrome or Edge. Nothing is loaded from the netwo
 - Diagrams: Diagram opens the diagram editor in front of the document; Done places the diagram, Cancel discards changes. Double-click a diagram, or select it and press Enter, to edit it again.
 - Notes: a margin with a bar and icon beside each noted block; the icon opens a dated log of initialled comments. The margin is hidden by default; the Notes margin button shows or hides it, and the choice is saved with the document. A clean copy without notes is offered after Save.
 - Links: shown in the browser's own style (blue, underlined). Web images, video and audio become link cards, so nothing is downloaded on open. Ctrl or Cmd + click opens a link.
+- Fonts: Instrument Sans for body text, JetBrains Mono for code blocks and ID tags, Architects Daughter for the title and headings. All three are embedded in the editor and in each saved document, so nothing is downloaded and a document looks the same on any computer.
 - Index: built from the headings, showing 1, 2 or 3 levels (H2 to H4). The setting is saved with the document; the default is 1.
 - Files: Save writes one self-contained HTML document that opens in any browser and re-opens here. After a save, a line names the file saved; a dot on the Save button means there are unsaved changes. New and Open ask first when there are unsaved changes.
 - Older formats: documents made with grids open as tables, and a diagram drawn directly on the page converts to a diagram-editor diagram when you double-click it.
-- Toolbar: Phosphor icons grouped as File, History, Text, Lists, Insert, Table and Index, with the initials button and Help at the far right; hover for a description. Table buttons are dimmed outside a table.
+- Toolbar: Phosphor icons grouped as File, History, Text, Lists, Insert, Notes, Index and Table, with the initials button and Help at the far right; hover for a description. Insert table and Insert fancy table are always shown; the row, column, merge and compact buttons appear to their right only while the cursor is in a table.
 - Help: a dialog box with one card per topic. It also shows the editor version and the document name.
 - Safety: no script from a document runs. Documents are cleaned on open, and a Content Security Policy allows only the editor's own scripts.
 
@@ -40,6 +41,7 @@ The SVG is what readers see: it scales, prints and keeps its text searchable. Th
 |---|---|
 | `fine-line-editor.html` | The built editor; this one file is all a user needs |
 | `candy-shop-sop.html` | Example document: a standard operating procedure that uses every kind of content the editor makes |
+| `THIRD-PARTY-NOTICES.md` | Copyright notices and licence texts for the icons, fonts and libraries the editor includes |
 | `src/index.html` | Page template: toolbar, help, overlay |
 | `src/app.js` | Editor behaviour |
 | `src/convert.js` | Converts diagrams drawn directly on the page (the older format) to draw.io for the diagram editor |
@@ -80,9 +82,26 @@ Tests use puppeteer-core with a local Chrome or Edge (or `CHROME_PATH`). `npm te
 | t15-new-help | New asks before discarding unsaved changes (new and opened documents, every kind of change); Help dialog at the far right with the editor version and document name; the cursor stays in the document after a toolbar list is used; initials button |
 | t16-copy-format | Copy format: block style by a click, inline formatting onto a selection, list items and cells, code, links, several blocks, once or kept on, undo |
 | t17-clear-format | Clear format on selected text only, whole block with the cursor only, links and ID tags kept, across blocks; links in the browser's own style |
-| t18-example | The example document opens cleanly, uses every kind of content and saves back unchanged |
+| t18-example | The example document opens cleanly, uses every kind of content (including a checklist and a box of each type) and saves back unchanged |
 | t19-repeat | Repeat last toolbar command by key, by Option or Alt + click and by the button; set not toggle; kept through typing; table commands; nothing outside a table; undo; links under Alt + click |
+| t20-checklist | Checklists: made from paragraphs, bullets and numbers; Enter, Backspace; ticked by a click, undo; saved and re-opened; the saved file with scripts off; table cells; cleaning on open; copy and paste; repeat |
+| t21-boxes | Boxes for the reader: the Box list inserts an empty box, typing and pasting into it, styles kept, the look, changing type, editable label, Enter in and out, Remove box, undo, no box in a box, save and re-open, copy and paste, repeat |
 
 ## Updating the diagram editor
 
 Build myDiagramer, copy its `diagram-editor.html` into `vendor/`, then `npm run build` and `npm test`. The document editor relies only on the embed messages in myDiagramer's `docs/EMBED.md`: `de:ready`, `de:init`, `de:save`, `de:cancel`, `de:dirty`.
+
+## Credits
+
+The editor is built with these open-source components. Their copyright notices and licence texts are in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+
+| Component | Used for | Licence |
+|---|---|---|
+| [Phosphor Icons](https://phosphoricons.com) | Toolbar, Help, box and note icons | MIT |
+| [Instrument Sans](https://github.com/Instrument/instrument-sans) | Body text | SIL Open Font License 1.1 |
+| [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) | Code blocks and ID tags | SIL Open Font License 1.1 |
+| Architects Daughter, Kimberly Geswein | Title and headings | SIL Open Font License 1.1 |
+| [Rough.js](https://roughjs.com) | Hand-drawn rendering in the diagram editor | MIT |
+| [mxGraph](https://github.com/jgraph/mxgraph) line routing (ported) | Line routing in the diagram editor | Apache License 2.0 |
+
+The fonts are packaged by [Fontsource](https://fontsource.org).

@@ -42,6 +42,8 @@ same('and paste as a table', await pg.evaluate(() => document.querySelectorAll('
 // into a cell: stays in the cell, formatting kept
 await load(pg, DOC); await caretIn(pg, '#cell'); await paste('<div data-fle-clip="1"><p>Line <b>one</b></p><p>Line two</p></div>'); await sleep(50);
 same('blocks pasted into a cell stay in the cell as lines, formatting kept', await html('#cell'), 'c1Line <b>one</b><br>Line two');
+await load(pg, DOC); await caretIn(pg, '#cell'); await paste('<div data-fle-clip="1"><div class="tw"><table><tbody><tr><td><h4>Label</h4><b>loose bold</b><br>tail</td></tr></tbody></table></div><div>boxed</div></div>'); await sleep(50);
+same('text beside a block, or in a plain box, is not left out when pasted into a cell', await html('#cell'), 'c1Label<br><b>loose bold</b><br>tail<br>boxed');
 // list items into a list
 await load(pg, DOC); await caretIn(pg, '#l li'); await paste('<div data-fle-clip="1"><ul><li>new <i>a</i></li><li>new b</li></ul></div>'); await sleep(50);
 same('list items pasted into a list become items', await html('#l'), '<li>one</li><li>new <i>a</i></li><li>new b</li><li><b>two</b></li>');

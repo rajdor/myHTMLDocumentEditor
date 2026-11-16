@@ -1,6 +1,6 @@
 // Heading levels H1 to H4 with subtitles, the index depth setting (saved with the document, 1 by default),
 // code blocks (new lines, tab, leaving the block, paste) and Clear format.
-import { open, check, same, caretIn, click, sleep, load } from './harness.mjs';
+import { open, check, same, caretIn, click, sleep, load, idxTo } from './harness.mjs';
 const { b, pg } = await open();
 const K = pg.keyboard;
 const style = () => pg.evaluate(() => { const s = document.getElementById('s-block'); return s.value + '|' + s.options[s.selectedIndex].text; });
@@ -11,14 +11,14 @@ const DOC = '<main><h1>T</h1><p class="sub">S</p><h2>A</h2><p class="h2sub">A su
 await load(pg, DOC);
 const index = () => pg.evaluate(() => { const r = ol => [...ol.children].map(li => { const sub = li.querySelector(':scope > ol'); return li.firstChild.textContent + (sub ? '(' + r(sub).join(',') + ')' : ''); }); return r(document.getElementById('idx')); });
 same('index defaults to 1 level (H2 only)', await index(), ['A', 'B']);
-same('Index list shows 1 level', await pg.$eval('#s-index', s => s.value), '1');
-await pg.select('#s-index', '2'); await sleep(50);
+same('Show Index Levels starts at 1', await pg.$eval('#s-index', s => s.value), '1');
+await idxTo(pg, '2'); await sleep(50);
 same('2 levels adds H3', await index(), ['A(A1,A2)', 'B']);
 await caretIn(pg, '#doc p.h2sub'); same('Style shows H2-subtitle', await style(), 'p.h2sub|H2-subtitle');
 await caretIn(pg, '#doc h4'); same('Style shows H4', await style(), 'h4|H4');
-await pg.select('#s-index', '3'); await sleep(50);
+await idxTo(pg, '3'); await sleep(50);
 same('3 levels adds H4', await index(), ['A(A1(A1a),A2)', 'B(B deep)']);
-await pg.select('#s-index', '1'); await sleep(50);
+await idxTo(pg, '1'); await sleep(50);
 same('1 level shows H2 only', await index(), ['A', 'B']);
 const saved1 = await pg.evaluate(() => FLE.build());
 check('saved document records depth 1', saved1.includes('data-depth="1"') && !saved1.includes('<ol><li><a href="#a1"'));
@@ -27,7 +27,7 @@ await load(pg, DOC.replace('<main>', '<nav data-depth="3"></nav><main>')); same(
 await load(pg, DOC);
 const savedD = await pg.evaluate(() => FLE.build());
 check('saved document defaults to 1 level', savedD.includes('data-depth="1"') && !savedD.includes('<a href="#a1">A1</a>'));
-await pg.select('#s-index', '2'); await sleep(50);
+await idxTo(pg, '2'); await sleep(50);
 const saved2 = await pg.evaluate(() => FLE.build());
 check('saved document records depth 2', saved2.includes('data-depth="2"') && saved2.includes('<a href="#a1">A1</a>') && !saved2.includes('href="#a1a"'), saved2.slice(saved2.indexOf('<nav'), saved2.indexOf('</nav>')));
 check('H3 and H4 get link targets', saved2.includes('<h3 id="a1">') && saved2.includes('<h4 id="a1a">'));

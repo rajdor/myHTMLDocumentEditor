@@ -18,7 +18,7 @@ const icon = (n) => fs.readFileSync(path.join(ICON_DIR, n + '.svg'), 'utf8').rep
 
 let html = src('index.html')
   .replace(/\{\{ic:([a-z0-9-]+)\}\}/g, (m, n) => icon(n))
-  .replace('/*DOC_CSS*/', () => src('doc.css').replace('/*FONT_B64*/', fontB64).replace(/\/\*ICONURL:([a-z0-9-]+)\*\//g, (m, n) => 'url("data:image/svg+xml,' + encodeURIComponent(icon(n).replace(' aria-hidden="true"', ' xmlns="http://www.w3.org/2000/svg"')) + '")'))
+  .replace('/*DOC_CSS*/', () => src('doc.css').replace('/*FONT_B64*/', fontB64).replace(/\/\*FONTFILE:([@\w./-]+)\*\//g, (m, f) => fs.readFileSync(path.join(__dirname, 'node_modules', f)).toString('base64')).replace(/\/\*ICONURL:([a-z0-9-]+)\*\//g, (m, n) => 'url("data:image/svg+xml,' + encodeURIComponent(icon(n).replace(' aria-hidden="true"', ' xmlns="http://www.w3.org/2000/svg"')) + '")'))
   .replace('/*ED_CSS*/', () => src('editor.css'))
   .replace('/*DIAGRAM_EDITOR_B64*/', () => diagramEditor.toString('base64'))
   .replace('/*ICONS*/', () => JSON.stringify(icons))

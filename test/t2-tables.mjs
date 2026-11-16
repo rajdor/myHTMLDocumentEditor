@@ -1,6 +1,6 @@
 // Table structure: rows, columns, merge (right, down, selection), split (merged and single), deletes around merged cells,
 // and heading cells refusing to merge with body cells.
-import { open, check, same, caretCell, click, shape, load, sleep, where } from './harness.mjs';
+import { open, check, same, caretCell, caretIn, click, shape, load, sleep, where } from './harness.mjs';
 const { b, pg, dialogs } = await open({ prompt: '3,2' });
 await load(pg, '<main><h1>T</h1><div class="tw"><table><thead><tr><th>A</th><th>B</th><th>C</th><th>D</th></tr></thead><tbody>' +
   [1, 2, 3, 4].map(r => '<tr>' + [1, 2, 3, 4].map(c => '<td>r' + r + 'c' + c + '</td>').join('') + '</tr>').join('') + '</tbody></table></div></main>');
@@ -51,4 +51,12 @@ same('Fancy Table: heading row plus label column', await pg.evaluate(() => { con
   await pg.keyboard.down('Control'); await pg.keyboard.press('z'); await pg.keyboard.up('Control'); await sleep(100);
   same('undo takes the column out again', await shape(pg), '. . . . . | . . . . . | . . r3 . . | . . . . | . . . . | . c2 . .');
 }
+// the toolbar: the two insert buttons always show; the row, column, merge and compact buttons only in a table
+await load(pg, '<main><h1>T</h1><p id="a">Alpha</p><div class="tw"><table><thead><tr><th>H</th></tr></thead><tbody><tr><td>c1</td></tr></tbody></table></div></main>');
+const bar = () => pg.evaluate(() => { const vis = a => { const e = document.querySelector('#tbar [data-a="' + a + '"]'); return !!e && e.getBoundingClientRect().width > 0; }; return { table: vis('table'), fancy: vis('stage'), rows: vis('r+'), merge: vis('mr'), compact: vis('dense'), last: [...document.querySelectorAll('#tbar > .grp')].pop().getAttribute('aria-label'), notes: [...document.querySelectorAll('#tbar > .grp[aria-label="Notes"] button')].map(x => x.dataset.a) }; });
+await caretIn(pg, '#a'); await sleep(60);
+same('outside a table only the two insert buttons show, in the last group; notes have their own group', await bar(), { table: true, fancy: true, rows: false, merge: false, compact: false, last: 'Table', notes: ['note', 'margin'] });
+await caretCell(pg, 0, 1, 0); await sleep(60);
+const inT = await bar(); check('in a table the row, column, merge and compact buttons appear', inT.table && inT.fancy && inT.rows && inT.merge && inT.compact, inT);
+check('and the toolbar is still one row with Help at the far right', await pg.evaluate(() => { const h = document.querySelector('[data-a="help"]').getBoundingClientRect(), t = document.getElementById('tbar').getBoundingClientRect(); return t.right - h.right < 20 && h.top - t.top < 20; }));
 await b.close();

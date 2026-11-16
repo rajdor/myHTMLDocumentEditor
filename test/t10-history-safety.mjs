@@ -1,7 +1,7 @@
 // Undo and redo cover structural changes (Clear format, merges, Q&A, code blocks, tables) as well as typing;
 // Enter at the end of a subtitle, caption or lead paragraph gives a plain paragraph; Clear format keeps status icons;
 // opening a document never runs its scripts or event handlers; heading ids stay unique; a missing draft is ignored.
-import { open, check, same, caretIn, caretCell, click, sleep, load } from './harness.mjs';
+import { open, check, same, caretIn, caretCell, click, sleep, load, idxTo } from './harness.mjs';
 const { b, pg } = await open({ prompt: '2,2' });
 const K = pg.keyboard, mod = process.platform === 'darwin' ? 'Meta' : 'Control';
 const html = () => pg.evaluate(() => document.getElementById('doc').innerHTML);
@@ -47,7 +47,7 @@ same('heading ids are unique', new Set(ids).size, 3);
 await pg.evaluate(() => { localStorage.removeItem('fle-draft'); document.getElementById('draft').hidden = false; document.querySelector('[data-a="restore"]').click(); });
 check('Restore with no draft leaves the document alone', (await html()).includes('Same'));
 // a heading before the first H2 is listed, unnumbered
-await load(pg, '<main><h1>T</h1><h3>Before</h3><h2>A</h2><h3>A1</h3></main>'); await pg.select('#s-index', '2'); await sleep(50);
+await load(pg, '<main><h1>T</h1><h3>Before</h3><h2>A</h2><h3>A1</h3></main>'); await idxTo(pg, '2'); await sleep(50);
 same('heading before the first H2 is listed, unnumbered', await pg.evaluate(() => [...document.querySelectorAll('#idx > li')].map(li => li.className + ':' + li.firstChild.textContent)), ['u:Before', ':A']);
 
 // typing undoes a word at a time

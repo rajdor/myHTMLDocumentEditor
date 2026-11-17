@@ -43,7 +43,13 @@ same('and paste as a table', await pg.evaluate(() => document.querySelectorAll('
 await load(pg, DOC); await caretIn(pg, '#cell'); await paste('<div data-fle-clip="1"><p>Line <b>one</b></p><p>Line two</p></div>'); await sleep(50);
 same('blocks pasted into a cell stay in the cell as lines, formatting kept', await html('#cell'), 'c1Line <b>one</b><br>Line two');
 await load(pg, DOC); await caretIn(pg, '#cell'); await paste('<div data-fle-clip="1"><div class="tw"><table><tbody><tr><td><h4>Label</h4><b>loose bold</b><br>tail</td></tr></tbody></table></div><div>boxed</div></div>'); await sleep(50);
-same('text beside a block, or in a plain box, is not left out when pasted into a cell', await html('#cell'), 'c1Label<br><b>loose bold</b><br>tail<br>boxed');
+same('text beside a block, or in a plain box, is not left out when pasted into a cell', await html('#cell'), 'c1<b>Label</b><br><b>loose bold</b><br>tail<br>boxed');
+// from another program: a heading inside a cell or list item becomes a bold line, because the toolbar has no headings there
+await load(pg, DOC); await caretIn(pg, '#e'); await paste('<table><tbody><tr><td><h4>Asks</h4><p><strong>Has it been built?</strong></p><h3>Ready <b>now</b></h3><ul><li><h4>In a list</h4>item text</li></ul></td><th><h4>In a header cell</h4></th></tr></tbody></table><h3>Outside a table</h3>'); await sleep(80);
+same('a pasted heading inside a cell or list item becomes a bold line; in a header cell a plain one', await pg.evaluate(() => { const t = [...document.querySelectorAll('#doc table')].pop(); return [t.rows[0].cells[0].innerHTML, t.rows[0].cells[1].innerHTML]; }), ['<b>Asks</b><br><strong>Has it been built?</strong><br><b>Ready now</b><ul><li><b>In a list</b><br>item text</li></ul>', 'In a header cell']);
+check('a pasted heading outside a table is still a heading', await pg.evaluate(() => [...document.querySelectorAll('#doc h3')].some(h => h.textContent === 'Outside a table')));
+await load(pg, DOC); await caretIn(pg, '#e'); await paste('<p>x<sup>2</sup> H<sub>2</sub>O and <code>inline code</code></p>'); await sleep(80);
+same('superscript, subscript and inline code are kept on paste', await pg.evaluate(() => document.querySelector('#doc p:has(sup)').innerHTML), 'x<sup>2</sup> H<sub>2</sub>O and <code>inline code</code>');
 // list items into a list
 await load(pg, DOC); await caretIn(pg, '#l li'); await paste('<div data-fle-clip="1"><ul><li>new <i>a</i></li><li>new b</li></ul></div>'); await sleep(50);
 same('list items pasted into a list become items', await html('#l'), '<li>one</li><li>new <i>a</i></li><li>new b</li><li><b>two</b></li>');

@@ -61,13 +61,14 @@ function nodePath(n) { const p = []; while (n && n !== doc) { const par = n.pare
 function fromPath(p) { let n = doc; for (const i of p) { n = n.childNodes[i]; if (!n) return null; } return n; }
 function selState() { const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode)) return null; const r = s.getRangeAt(0), p = nodePath(r.startContainer); return p ? { p, o: r.startOffset } : null; }
 function histSnap() {
-  rebuild(); const h = doc.innerHTML.replace(/ ?\bed-dsel\b/g, ''); if (hpos >= 0 && hist[hpos].h === h) { hist[hpos].sel = selState() || hist[hpos].sel; return; }
+  rebuild(); const h = doc.innerHTML.replace(/ ?\bed-(dsel|cell)\b/g, '').replace(/ class=""/g, ''); if (hpos >= 0 && hist[hpos].h === h) { hist[hpos].sel = selState() || hist[hpos].sel; return; }
   hist = hist.slice(0, hpos + 1); hist.push({ h, sel: selState() }); if (hist.length > 80) hist.shift(); hpos = hist.length - 1;
 }
 function histReset() { hist = []; hpos = -1; histSnap(); }
 function histGo(d) {
   if (board) { if (d < 0) undoDiagram(); return; }
   clearTimeout(timer); histSnap(); const i = hpos + d; if (i < 0 || i >= hist.length) return;
+  cellSelClear();
   hpos = i; const e = hist[i]; deactivate(); doc.innerHTML = e.h; prepView();
   if (e.sel) { const n = fromPath(e.sel.p); if (n) { try { const r = document.createRange(); r.setStart(n, Math.min(e.sel.o, n.nodeType === 3 ? n.length : n.childNodes.length)); r.collapse(true); const s = getSelection(); s.removeAllRanges(); s.addRange(r); lastRange = r.cloneRange(); } catch (x) { } } }
   dirty = true; status(); rebuild(); styleUI();
@@ -101,9 +102,12 @@ function styleUI() {
   } else label = inCell() ? 'Grid cell' : 'Paragraph';
   first.textContent = label; box.value = v;
   const inTable = !!n.closest('td,th'); $$('#tbar button.t').forEach(x => x.classList.toggle('dim', !inTable));
+  { const tc = n.closest('td,th'), hs = tc && !tc.closest('.fig') ? tHeaderState(tc) : {}; ['hr', 'sr', 'hc', 'sc'].forEach(a => $('[data-a="' + a + '"]').classList.toggle('on', !!hs[a])); }
   const tops = $('#tbar .tops'); if (tops.hidden === inTable) { tops.hidden = !inTable; chromeHeight(); } // the row, column and merge buttons show only in a table
   [['bold', 'bold'], ['italic', 'italic'], ['ul', 'insertUnorderedList'], ['ol', 'insertOrderedList']].forEach(([a, c]) => { let on = false; try { on = document.queryCommandState(c); } catch (e) { } $('[data-a="' + a + '"]').classList.toggle('on', on); });
   const bx = boxAt(n); $('#s-boxtype').value = bx ? boxType(bx) : '';
+  $$('#s-fmt option[value]').forEach(o => { if (FMT[o.value]) o.textContent = (fmtOn(o.value) ? '\u2713 ' : '') + FMT[o.value][0]; }); { const la = listAt(); $('[data-a="indent"]').classList.toggle('dim', !la); $('[data-a="outdent"]').classList.toggle('dim', !la); }
+  { const lt = listTop(); $('[data-a="ldense"]').classList.toggle('on', !!(lt && lt.classList.contains('dense'))); $('[data-a="ldense"]').classList.toggle('dim', !lt); }
   const ck = inCheck(); $('[data-a="check"]').classList.toggle('on', ck); if (ck) $('[data-a="ul"]').classList.remove('on');
 }
 function live() { const s = getSelection(); if (s.rangeCount && doc.contains(s.anchorNode)) { let n = s.anchorNode; if (n.nodeType !== 1) n = n.parentElement; if (!n.closest('.fig')) lastRange = s.getRangeAt(0).cloneRange(); } }
@@ -149,17 +153,40 @@ function styledParaEnd() {
   const r = document.createRange(); r.setStart(s.anchorNode, s.anchorOffset); r.setEnd(p, p.childNodes.length); return r.toString().trim() ? null : p;
 }
 const SAFE_URL = /^(https?:\/\/|mailto:|tel:|#|\/|\.{0,2}\/|[^:]*$)/i;
+/* The Link button opens a small form: display text and address. On a link it edits that link. Otherwise the display
+   text starts as the selected text, and the address starts as the selected text when that is a web address, or else
+   as the clipboard when it holds one. The clipboard is read only when the browser has already allowed it, so pressing
+   the button never brings up a permission prompt. */
+const WEB_URL = /^https?:\/\/\S+$/i;
+let linkJob = null;
 function editLink() {
-  live(); let n = lastRange && lastRange.startContainer; if (n && n.nodeType !== 1) n = n.parentElement;
-  const a = n && n.closest('a:not(.link-card)'), old = a ? a.getAttribute('href') : 'https://';
-  const u = prompt(a ? 'Link address (clear it to remove the link)' : 'Link address', old); if (u === null) return;
-  const v = u.trim();
-  if (!v) { if (a) { a.replaceWith(...a.childNodes); touch(); } return; }
-  if (!SAFE_URL.test(v)) { alert('Links can be web addresses (https://), email (mailto:), phone (tel:) or a place in this document (#).'); return; }
-  if (a) { a.setAttribute('href', v); touch(); return; }
-  restore(); if (getSelection().isCollapsed) { document.execCommand('insertHTML', false, '<a href="' + esc(v) + '">' + esc(v) + '</a>'); } else document.execCommand('createLink', false, v);
+  live(); const r = lastRange; if (!r || !doc.contains(r.startContainer)) return; let n = r.startContainer; if (n.nodeType !== 1) n = n.parentElement; if (n.closest('.fig,.dg')) return;
+  const a = n.closest('a:not(.link-card)'), B = 'p,h1,h2,h3,h4,pre,dt,dd,li,td,th', blockAt = x => { if (x.nodeType !== 1) x = x.parentElement; return x.closest(B); };
+  const sel = a || r.collapsed ? '' : r.toString(), one = !!a || r.collapsed || (blockAt(r.startContainer) === blockAt(r.endContainer) && !/[\r\n]/.test(sel));
+  const d = $('#linkdlg'), T = $('#link-text'), U = $('#link-url'), picked = WEB_URL.test(sel.trim());
+  linkJob = { a, sel, one };
+  $('#link-h').textContent = a ? 'Edit link' : 'Add link'; $('#link-err').textContent = ''; $('[data-a="linkremove"]', d).hidden = !a;
+  T.disabled = !one; T.value = a ? a.textContent : one ? sel : ''; T.placeholder = one ? 'Shown in the document; left empty, the address is shown' : 'The selected text is kept as it is';
+  U.value = a ? a.getAttribute('href') || '' : picked ? sel.trim() : 'https://';
+  d.showModal(); U.focus(); U.select();
+  if (!a && !picked) { const job = linkJob; try { navigator.permissions.query({ name: 'clipboard-read' }).then(p => p.state === 'granted' ? navigator.clipboard.readText() : '').then(t => { t = (t || '').trim(); if (WEB_URL.test(t) && linkJob === job && d.open && U.value === 'https://') { U.value = t; U.select(); } }).catch(() => { }); } catch (e) { } }
+}
+function linkDone(how) {
+  const d = $('#linkdlg'), job = linkJob; if (!job) { d.close(); return; }
+  const finish = () => { linkJob = null; d.close(); restore(); };
+  if (how === 'cancel') { finish(); return; }
+  let v = $('#link-url').value.trim(); const text = $('#link-text').value.trim(); if (how === 'remove') v = '';
+  if (!v || v === 'https://' || v === 'http://') { if (!job.a) { $('#link-err').textContent = 'Enter an address.'; return; } const a = job.a; finish(); a.replaceWith(...a.childNodes); touch(); return; }
+  if (!SAFE_URL.test(v)) { $('#link-err').textContent = 'Links can be web addresses (https://), email (mailto:), phone (tel:) or a place in this document (#).'; return; }
+  finish();
+  if (job.a) { job.a.setAttribute('href', v); if (text && text !== job.a.textContent) job.a.textContent = text; }
+  else if (!getSelection().isCollapsed && (!job.one || !text || text === job.sel.trim() || text === job.sel)) document.execCommand('createLink', false, v); // the selected text is kept with its formatting
+  else document.execCommand('insertHTML', false, '<a href="' + esc(v) + '">' + esc(text || v) + '</a>');
   touch();
 }
+$('#linkdlg').addEventListener('click', e => { const b2 = e.target.closest('button[data-a]'); if (b2) linkDone({ linksave: 'save', linkremove: 'remove', linkcancel: 'cancel' }[b2.dataset.a]); });
+$('#linkdlg').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('input')) { e.preventDefault(); linkDone('save'); } });
+$('#linkdlg').addEventListener('cancel', e => { e.preventDefault(); linkDone('cancel'); });
 /* ---------- notes ----------
    A note covers whole blocks. Nothing is drawn in the document: the margin (shown when it is switched on and there are notes) has a bold
    bar beside the noted blocks and a note icon at its top. Clicking the icon opens the log over the margin without moving
@@ -246,11 +273,21 @@ function notesUI() {
 }
 function toggleNotes() { setNotes(!showNotes); fit(); dirty = true; status(); }
 function addCode() { const pre = mk('pre'); insertBlock(pre); caret(pre); styleUI(); }
-const INLINE = 'b,strong,i,em,u,s,strike,span,a,font,code,mark,small,big,sub,sup';
+const INLINE = 'b,strong,i,em,u,s,strike,del,ins,span,a,font,code,kbd,samp,tt,var,mark,small,big,sub,sup';
 /* Clear format. With the cursor only, or when a block is wholly selected, the block loses its inline formatting and
    becomes a plain paragraph (list items and cells stay what they are). With part of a block selected, only the selected
    text loses its inline formatting and the block style stays. Links and ID tags are never removed. */
 const clearable = e => !e.matches('a,span.id') && !e.closest('.fig,.dg,[class*="wb-"]') && !e.matches('[class*="wb-"]') && !e.querySelector('svg,img');
+/* A paragraph or heading that sits inside a table cell or list item becomes a plain line there: its content stays in
+   place, with a line break where it would otherwise run into the text beside it. Returns the cell or item. */
+function toLine(b) {
+  const par = b.parentNode, real = (n, step) => { while (n && n.nodeType === 3 && !n.data.trim()) n = n[step]; return n; };
+  const flows = n => !!n && n.nodeName !== 'BR' && !(n.nodeType === 1 && n.matches(BLOCKS + ',li,input'));
+  const kids = [...b.childNodes]; while (kids.length && kids[kids.length - 1].nodeName === 'BR') kids.pop();
+  if (flows(real(b.previousSibling, 'previousSibling'))) b.before(document.createElement('br'));
+  if (flows(real(b.nextSibling, 'nextSibling')) && kids.length) kids.push(document.createElement('br'));
+  b.replaceWith(...kids); return par;
+}
 function clearPart(b, ir) {
   const frag = ir.extractContents(); let at = ir.startContainer, off = ir.startOffset;
   const keep = []; let top = null;
@@ -276,7 +313,6 @@ function clearFormat() {
   const B = 'p,h1,h2,h3,h4,pre,dt,dd,li,td,th';
   let blocks = $$(B, doc).filter(b => !b.closest('.fig,.dg') && r.intersectsNode(b) && !$(B, b));
   if (!r.collapsed && r.endOffset === 0 && blocks.length > 1 && blocks[blocks.length - 1].contains(r.endContainer)) blocks.pop();
-  if (!blocks.length) return;
   const txt = t => t.replace(/[\s ​]+/g, '');
   const jobs = blocks.map(b => {
     const ir = document.createRange(); ir.selectNodeContents(b);
@@ -284,12 +320,34 @@ function clearFormat() {
     if (b.contains(r.endContainer)) ir.setEnd(r.endContainer, r.endOffset);
     return { b, ir, whole: r.collapsed || txt(ir.toString()) === txt(b.textContent) };
   });
+  // text that sits directly in a cell or list item, beside its lists and headings, is not in a block of its own: find those runs
+  const runs = [], isBlock = n => n.nodeType === 1 && n.matches(B + ',ul,ol,dl,table,div,input');
+  $$('td,th,li,dd', doc).filter(c => !c.closest('.fig,.dg') && $(B, c) && r.intersectsNode(c)).forEach(c => {
+    let run = []; const end = () => {
+      if (run.some(n => n.nodeType === 1 ? n.nodeName !== 'BR' : n.data.trim())) {
+        const rr = document.createRange(); rr.setStartBefore(run[0]); rr.setEndAfter(run[run.length - 1]);
+        if (rr.comparePoint(r.endContainer, r.endOffset) >= 0 && rr.comparePoint(r.startContainer, r.startOffset) <= 0) {
+          const ir = rr.cloneRange(); if (rr.comparePoint(r.startContainer, r.startOffset) === 0) ir.setStart(r.startContainer, r.startOffset); if (rr.comparePoint(r.endContainer, r.endOffset) === 0) ir.setEnd(r.endContainer, r.endOffset);
+          if (r.collapsed || txt(ir.toString())) runs.push({ c, nodes: run.slice(), ir, whole: r.collapsed || txt(ir.toString()) === txt(rr.toString()) });
+        }
+      }
+      run = [];
+    };
+    [...c.childNodes].forEach(n => { if (isBlock(n)) end(); else run.push(n); }); end();
+  });
+  if (!blocks.length && !runs.length) return;
   const dls = new Set(); let last = null, picked = null;
+  runs.forEach(({ c, nodes, ir, whole }) => {
+    if (!whole) { const o = clearPart(c, ir); if (!jobs.length && runs.length === 1) picked = o; last = c; return; }
+    nodes.filter(n => n.nodeType === 1).forEach(n => { $$(INLINE, n).filter(clearable).reverse().forEach(e => e.replaceWith(...e.childNodes)); if (n.matches(INLINE) && clearable(n)) n.replaceWith(...n.childNodes); });
+    last = c;
+  });
   jobs.forEach(({ b, ir, whole }) => {
     if (!whole) { if (b.matches('pre')) { last = b; return; } const o = clearPart(b, ir); if (jobs.length === 1) picked = o; last = b; return; }
     $$(INLINE, b).filter(clearable).reverse().forEach(e => e.replaceWith(...e.childNodes));
     b.removeAttribute('style');
     if (b.matches('li,td,th')) { last = b; return; }
+    if (b.matches('p,h1,h2,h3,h4') && b.parentNode.closest('td,th,li')) { last = toLine(b); return; } // in a cell or list item: a plain line, not a paragraph
     if (b.matches('pre')) [...b.childNodes].filter(n => n.nodeType === 3 && n.data.includes('\n')).forEach(n => { const f = document.createDocumentFragment(); n.data.replace(/\n$/, '').split('\n').forEach((t, i) => { if (i) f.appendChild(document.createElement('br')); f.appendChild(document.createTextNode(t)); }); n.replaceWith(f); });
     if (b.matches('dt,dd')) dls.add(b.parentNode);
     const p = document.createElement('p'); p.append(...b.childNodes); if (!p.childNodes.length) p.innerHTML = '<br>'; b.replaceWith(p); last = p;
@@ -404,9 +462,12 @@ const REP = {
   ul: () => { let w = false; try { w = document.queryCommandState('insertUnorderedList'); } catch (e) { } return [w ? 'Bulleted list' : 'Bulleted list off', () => { restore(); if (document.queryCommandState('insertUnorderedList') !== w) document.execCommand('insertUnorderedList'); }]; },
   ol: () => { let w = false; try { w = document.queryCommandState('insertOrderedList'); } catch (e) { } return [w ? 'Numbered list' : 'Numbered list off', () => { restore(); if (document.queryCommandState('insertOrderedList') !== w) document.execCommand('insertOrderedList'); }]; },
   check: () => { const w = inCheck(); return [w ? 'Checklist' : 'Checklist off', () => { restore(); if (inCheck() !== w) checkList(); }]; },
+  ldense: () => { const l = listTop(), w = !!(l && l.classList.contains('dense')); return [w ? 'Compact list' : 'Compact list off', () => { restore(); const t = listTop(); if (t && t.classList.contains('dense') !== w) listDense(); }]; },
+  indent: () => ['Indent', () => listShift(1)], outdent: () => ['Outdent', () => listShift(-1)],
   clear: () => ['Clear format', clearFormat],
   note: () => ['Note', addNote], code: () => ['Insert code block', addCode], qa: () => ['Insert Q&A list', addQa],
   tag: () => ['ID tag', () => { restore(); let n = getSelection().anchorNode; if (n && n.nodeType !== 1) n = n.parentElement; if (n && n.closest('span.id')) return; ACT.tag(); }],
+  ...Object.fromEntries([['hr', 'Header row'], ['sr', 'Sub header row'], ['hc', 'Header column'], ['sc', 'Sub header column']].map(([a, name]) => [a, () => { live(); const c = cell(), w = !!(c && tHeaderState(c)[a]); return [w ? name : name + ' off', () => { if (!inTable()) return; if (!!tHeaderState(cell())[a] !== w) tableOp(a); }]; }])),
   dense: () => { live(); const c = cell(), w = !!(c && c.closest('table').classList.contains('dense')); return [w ? 'Compact table' : 'Compact table off', () => { if (!inTable()) return; if (cell().closest('table').classList.contains('dense') !== w) tableOp('dense'); }]; }
 };
 [['r+', 'Add row below'], ['ra', 'Add row above'], ['r-', 'Delete row'], ['c+', 'Add column right'], ['cl', 'Add column left'], ['c-', 'Delete column'], ['mr', 'Merge right'], ['md', 'Merge down'], ['split', 'Split cell']].forEach(([op, label]) => { REP[op] = () => [label, () => { if (inTable()) tableOp(op); }]; });
@@ -462,6 +523,64 @@ function setBox(v) {
   if (b && b.tagName === 'P' && !b.className && !hasContent(b)) b.replaceWith(box); else if (b) b.after(box); else doc.appendChild(box);
   caret(box.lastChild); touch(); styleUI();
 }
+/* ---------- more formats ----------
+   Superscript, subscript, strike-through and inline code share one toolbar list. Choosing one switches it on or off
+   for the selected text; the list marks the ones that are on where the cursor is. */
+const FMT = { sup: ['Superscript', 'sup', 'superscript'], sub: ['Subscript', 'sub', 'subscript'], strike: ['Strike-through', 's,strike,del', 'strikeThrough'], code: ['Inline code', 'code'] };
+function fmtOn(k) { const s = getSelection(); let n = s.rangeCount ? s.anchorNode : null; if (n && n.nodeType !== 1) n = n.parentElement; const e = n && n.closest(FMT[k][1]); return !!(e && doc.contains(e) && !e.closest('pre,.fig,.dg')); }
+function setFmt(k, want) {
+  restore(); const s = getSelection(); if (!s.rangeCount) return; let n = s.anchorNode; if (n && n.nodeType !== 1) n = n.parentElement; if (!n || !doc.contains(n) || n.closest('pre,.fig,.dg')) return;
+  const on = fmtOn(k); if (want === undefined) want = !on;
+  if (k !== 'code') { if (on !== want || (!want && !s.isCollapsed && $$(FMT[k][1], doc).some(e => s.getRangeAt(0).intersectsNode(e)))) { document.execCommand(FMT[k][2]); if (!want && fmtOn(k)) document.execCommand(FMT[k][2]); } touch(); return; }
+  const r = s.getRangeAt(0), inside = n.closest('code');
+  if (!want) { const hit = inside ? [inside] : $$('code', doc).filter(c => !c.closest('pre,.fig,.dg') && r.intersectsNode(c)); if (!hit.length) return; const keep = [s.anchorNode, s.anchorOffset, s.focusNode, s.focusOffset]; hit.forEach(c => c.replaceWith(...c.childNodes)); try { s.setBaseAndExtent(...keep); } catch (e) { } touch(); return; }
+  if (inside || r.collapsed) return; const B = 'p,h1,h2,h3,h4,dt,dd,li,td,th', at = x => (x.nodeType === 1 ? x : x.parentElement).closest(B);
+  if (at(r.startContainer) !== at(r.endContainer)) { alert('Inline code is for text inside one paragraph. For several lines use a code block.'); return; }
+  const c = document.createElement('code'); c.appendChild(r.extractContents()); $$('code', c).forEach(x => x.replaceWith(...x.childNodes)); r.insertNode(c); c.parentNode.normalize();
+  const nr = document.createRange(); nr.selectNodeContents(c); s.removeAllRanges(); s.addRange(nr); lastRange = nr.cloneRange(); touch();
+}
+/* ---------- list indent and outdent ----------
+   Indent moves the items the cursor or selection is in one level in, under the item above them (the first item of a
+   list has nothing above it and stays). Outdent moves them one level out; the items below them at the old level go
+   with the last one, as its inner list. At the top level an outdented item leaves the list and becomes a paragraph,
+   or a plain line in a table cell. Tab and Shift+Tab do the same in a list outside a table. Q&A lists are not lists
+   here and are untouched. */
+function listItems() {
+  const s = getSelection(); if (!s.rangeCount) return []; const r = s.getRangeAt(0), li0 = n => { if (n && n.nodeType !== 1) n = n.parentElement; const li = n && n.closest('li'); return li && doc.contains(li) && !li.closest('.fig,.dg') ? li : null; };
+  const a = li0(r.startContainer); if (!a) return []; let b2 = li0(r.endContainer) || a; const L = a.parentNode;
+  while (b2 && b2.parentNode !== L) b2 = li0(b2.parentNode); // the selection ends deeper or elsewhere: stay at the level it starts at
+  const sibs = [...L.children].filter(x => x.tagName === 'LI'), i = sibs.indexOf(a), j = b2 ? sibs.indexOf(b2) : -1;
+  if (j < i) return sibs.slice(i).filter(x => r.intersectsNode(x)); return sibs.slice(i, j + 1);
+}
+function listLike(L) { const n = document.createElement(L.tagName.toLowerCase()); if (L.classList.contains('check')) n.className = 'check'; return n; }
+function listShift(dir) {
+  restore(); const lis = listItems(); if (!lis.length) return false; const s = getSelection(), keep = [s.anchorNode, s.anchorOffset, s.focusNode, s.focusOffset], L = lis[0].parentNode;
+  const back = fall => { try { if (!doc.contains(keep[0]) || !doc.contains(keep[2])) throw 0; s.setBaseAndExtent(...keep); lastRange = s.getRangeAt(0).cloneRange(); } catch (e) { if (fall && doc.contains(fall)) caret(fall, true); } };
+  const inner = li => [...li.children].filter(x => /^(UL|OL)$/.test(x.tagName));
+  if (dir > 0) {
+    let prev = lis[0].previousElementSibling; while (prev && prev.tagName !== 'LI') prev = prev.previousElementSibling; if (!prev) return false;
+    let into = inner(prev).pop(); if (!into) { into = listLike(L); prev.appendChild(into); }
+    lis.forEach(li => into.appendChild(li)); back(lis[0]); touch(); styleUI(); return true;
+  }
+  const last = lis[lis.length - 1], rest = []; for (let x = last.nextElementSibling; x; x = x.nextElementSibling) if (x.tagName === 'LI') rest.push(x);
+  const host = L.parentNode && L.parentNode.tagName === 'LI' ? L.parentNode : null;
+  if (host) {
+    if (rest.length) { let into = inner(last).pop(); if (!into) { into = listLike(L); last.appendChild(into); } rest.forEach(x => into.appendChild(x)); }
+    let at = host; lis.forEach(li => { at.after(li); at = li; }); if (!L.children.length) L.remove();
+    back(lis[0]); touch(); styleUI(); return true;
+  }
+  // top level: the items leave the list
+  const tail = rest.length ? listLike(L) : null; if (tail) { if (L.classList.contains('dense')) tail.classList.add('dense'); rest.forEach(x => tail.appendChild(x)); }
+  const cellish = !!L.parentNode.closest('td,th,li'), made = []; let at = L;
+  lis.forEach(li => {
+    $$(':scope > input', li).forEach(x => x.remove());
+    const p = document.createElement('p'), kids = inner(li); kids.forEach(k => k.remove()); p.append(...li.childNodes); if (!p.textContent.trim() && !p.querySelector('img,br')) p.appendChild(document.createElement('br'));
+    at.after(p); at = p; made.push(p); kids.forEach(k => { if (L.classList.contains('dense')) k.classList.add('dense'); at.after(k); at = k; }); li.remove();
+  });
+  if (tail) at.after(tail); if (!L.children.length) L.remove();
+  back(made[0]); if (cellish) made.forEach(p => { if (p.parentNode) toLine(p); });
+  touch(); styleUI(); return true;
+}
 /* ---------- checklists ----------
    A checklist is a bulleted list with the class "check". Each item starts with a real checkbox, so a saved document
    needs no script: the browser ticks the box and the style sheet places it. A tick made in the editor is written to
@@ -474,6 +593,7 @@ function checkFix(root) {
     const s = getSelection(), k = s.rangeCount && l.contains(s.anchorNode) && l.contains(s.focusNode) ? [s.anchorNode, s.anchorOffset, s.focusNode, s.focusOffset] : null;
     p.replaceWith(l); if (k) { s.setBaseAndExtent(...k); lastRange = s.getRangeAt(0).cloneRange(); }
   });
+  { const tags = $$('strike', root).filter(e => !e.closest('.fig,.dg')); if (tags.length) { const g = getSelection(), kp = g.rangeCount ? [g.anchorNode, g.anchorOffset, g.focusNode, g.focusOffset] : null; tags.forEach(e => rename(e, 's')); if (kp && doc.contains(kp[0]) && doc.contains(kp[2])) { try { g.setBaseAndExtent(...kp); lastRange = g.getRangeAt(0).cloneRange(); } catch (e) { } } } } // the browser writes strike-through as <strike>; the document keeps <s>
   boxFix(root);
   $$('ol.check', root).forEach(l => { l.classList.remove('check'); if (!l.getAttribute('class')) l.removeAttribute('class'); });
   const keep = new Set();
@@ -500,6 +620,9 @@ function listCmd(c) {
   while ((n = w.nextNode())) { if (k <= n.length) { s.collapse(n, k); lastRange = s.getRangeAt(0).cloneRange(); return; } k -= n.length; }
 }
 function listAt() { const s = getSelection(); let n = s.rangeCount ? s.anchorNode : null; if (n && n.nodeType !== 1) n = n.parentElement; const li = n && n.closest('li'); return li && doc.contains(li) && !li.closest('.fig,.dg') ? li.parentNode : null; }
+/* Compact list: tighter lines for the whole list the cursor is in, its inner lists included. */
+function listTop() { let l = listAt(); if (!l) return null; for (let p = l.parentNode.closest('ul,ol'); p && doc.contains(p); p = p.parentNode.closest('ul,ol')) l = p; return l; }
+function listDense() { restore(); const l = listTop(); if (!l) return; l.classList.toggle('dense'); if (!l.getAttribute('class')) l.removeAttribute('class'); touch(); styleUI(); }
 function inCheck() { const l = listAt(); return !!(l && l.matches('ul.check')); }
 /* The cursor at the very start of a checklist item, just after its box. */
 function checkStart() {
@@ -534,7 +657,7 @@ function clipClean(box) {
   $$('.note-log', box).forEach(n => n.remove());
   $$('.note-body', box).forEach(n => n.replaceWith(...n.childNodes));
   $$('.note', box).forEach(n => n.replaceWith(...n.childNodes));
-  $$('[class]', box).forEach(n => { n.classList.remove('ed-sel', 'ed-selc', 'ed-active', 'ed-from', 'ed-connect', 'ed-dsel', 'note-date', 'note-who'); if (!n.getAttribute('class')) n.removeAttribute('class'); });
+  $$('[class]', box).forEach(n => { n.classList.remove('ed-sel', 'ed-selc', 'ed-active', 'ed-from', 'ed-connect', 'ed-dsel', 'ed-cell', 'note-date', 'note-who'); if (!n.getAttribute('class')) n.removeAttribute('class'); });
   $$('[contenteditable]', box).forEach(n => n.removeAttribute('contenteditable'));
   $$('.dg, .fig', box).forEach(n => n.removeAttribute('title'));
   $$('a[data-ed-title]', box).forEach(a => { a.removeAttribute('title'); a.removeAttribute('data-ed-title'); });
@@ -552,6 +675,7 @@ function clipFrom(r) {
 }
 function onCopy(e, cut) {
   if (editing || board) return;
+  if (cellSel && cellSelCopy(e, cut)) return;
   const s = getSelection(); let box = null, text = '';
   if (s.rangeCount && !s.isCollapsed && doc.contains(s.anchorNode) && doc.contains(s.focusNode)) {
     if (blockOf(s.anchorNode) && blockOf(s.anchorNode) === blockOf(s.focusNode)) return; // inside one code block: plain text, as the browser does it
@@ -565,7 +689,7 @@ function onCopy(e, cut) {
 document.addEventListener('copy', e => onCopy(e, false));
 document.addEventListener('cut', e => onCopy(e, true));
 const SAFE_HREF = /^\s*(https?:|mailto:|tel:|#)/i;
-const KEEP = { P: [], BR: [], B: [], STRONG: [], I: [], EM: [], SUB: [], SUP: [], A: ['href'], CODE: [], PRE: [], H2: [], H3: [], H4: [], UL: [], OL: [], LI: [], TABLE: [], THEAD: [], TBODY: [], TFOOT: [], TR: [], TH: ['colspan', 'rowspan'], TD: ['colspan', 'rowspan'], IMG: ['src', 'alt', 'width', 'height'] };
+const KEEP = { P: [], BR: [], B: [], STRONG: [], I: [], EM: [], SUB: [], SUP: [], S: [], A: ['href'], CODE: [], PRE: [], H2: [], H3: [], H4: [], UL: [], OL: [], LI: [], TABLE: [], THEAD: [], TBODY: [], TFOOT: [], TR: [], TH: ['colspan', 'rowspan'], TD: ['colspan', 'rowspan'], IMG: ['src', 'alt', 'width', 'height'] };
 const BOXY = /^(DIV|SECTION|ARTICLE|HEADER|FOOTER|MAIN|ASIDE|FIGURE|FIGCAPTION|BLOCKQUOTE|ADDRESS|CENTER|NAV|DT|DD|DETAILS|SUMMARY)$/;
 function rename(e, tag) { const n = document.createElement(tag); n.append(...e.childNodes); e.replaceWith(n); return n; }
 /* HTML from another program: keep the structure, drop its styling. */
@@ -577,6 +701,8 @@ function foreign(box) {
     const bold = /font-weight:(bold|[6-9]00)/.test(st), plain = /font-weight:(normal|[1-4]00)/.test(st), ital = /font-style:italic/.test(st);
     let t = e.tagName;
     if (t === 'H1') { e = rename(e, 'h2'); t = 'H2'; } else if (t === 'H5' || t === 'H6') { e = rename(e, 'h4'); t = 'H4'; }
+    if (t === 'STRIKE' || t === 'DEL') { e = rename(e, 's'); t = 'S'; }
+    if (!KEEP[t] && !BOXY.test(t) && /text-decoration[^;]*:[^;]*line-through/.test(st) && hasContent(e)) { const w = document.createElement('s'); w.append(...e.childNodes); e.appendChild(w); }
     if ((t === 'B' || t === 'STRONG') && plain) { e.replaceWith(...e.childNodes); return; }
     if (t === 'A' && !SAFE_HREF.test(e.getAttribute('href') || '')) { e.replaceWith(...e.childNodes); return; }
     if (t === 'IMG' && !/^\s*data:image\//i.test(e.getAttribute('src') || '')) { e.remove(); return; }
@@ -586,6 +712,8 @@ function foreign(box) {
     e.replaceWith(...e.childNodes);
   });
   $$('li,td,th', box).forEach(c => $$(':scope > p', c).forEach(p => { if (p.nextSibling && hasContent(p)) p.after(document.createElement('br')); p.replaceWith(...p.childNodes); }));
+  // a heading inside a cell or list item becomes a bold line: the toolbar has no headings there, so it could not be made again
+  $$('h2,h3,h4', box).filter(h => h.parentNode.closest('td,th,li')).forEach(h => { $$('b,strong', h).forEach(x => x.replaceWith(...x.childNodes)); if (!hasContent(h)) { h.remove(); return; } if (h.parentNode.closest('td,th,li').tagName !== 'TH') { const w = document.createElement('b'); w.append(...h.childNodes); h.appendChild(w); } toLine(h); });
   $$('pre', box).forEach(pre => { const lines = pre.textContent.replace(/\n$/, '').split('\n'); pre.textContent = ''; lines.forEach((t, i) => { if (i) pre.appendChild(document.createElement('br')); if (t) pre.appendChild(document.createTextNode(t)); }); });
   $$('p,h2,h3,h4,li', box).forEach(n => { if (!hasContent(n) && !n.closest('table')) n.remove(); });
   $$('ul,ol', box).forEach(l => { if (!l.children.length) l.remove(); });
@@ -619,6 +747,7 @@ function clipLines(box) {
   const walk = n => n.childNodes.forEach(c => {
     if (c.nodeType === 3) run += esc(c.data);
     else if (c.nodeType !== 1 || c.matches('.dg,.fig')) return;
+    else if (/^H[1-4]$/.test(c.tagName)) { flush(); walk(c); if (run.trim()) run = '<b>' + run.replace(/<\/?(b|strong)>/g, '') + '</b>'; flush(); } // a heading becomes a bold line
     else if (c.matches(BREAK)) { flush(); walk(c); flush(); }
     else run += c.outerHTML;
   });
@@ -706,7 +835,221 @@ function tRebuild(T) {
   $$('colgroup', T.t).forEach(n => n.remove());
 }
 function newCellLike(x, inHead) { const n = document.createElement(inHead ? 'th' : (x ? x.tagName.toLowerCase() : 'td')); if (x && x.className) n.className = x.className; if (!inHead && x && x.getAttribute('scope')) n.setAttribute('scope', x.getAttribute('scope')); n.innerHTML = inHead ? 'Heading' : '<br>'; return n; }
+/* ---------- style inspector ----------
+   On demand only: the Inspect button reads the formatting at the cursor, or at the start of the selection, once, and
+   shows it in a small popup, outermost first. Nothing is watched or re-read while the popup is open. Anything the
+   toolbar cannot make where it is, is marked, and a text format can be taken off from the popup. */
+const INSPECT_INLINE = { B: 'Bold', STRONG: 'Bold', I: 'Italic', EM: 'Italic', CODE: 'Inline code', SUP: 'Superscript', SUB: 'Subscript', S: 'Strike-through', STRIKE: 'Strike-through', DEL: 'Strike-through', U: 'Underline', INS: 'Underline', MARK: 'Highlight', SMALL: 'Small text', BIG: 'Large text', KBD: 'Keyboard text', SAMP: 'Sample text', TT: 'Typewriter text', VAR: 'Variable text', FONT: 'Pasted font setting' };
+const INSPECT_PARA = { sub: 'H1 subtitle', h2sub: 'H2 subtitle', bluf: 'Lead paragraph', cap: 'Caption', 'box-h': 'Box label' };
+function inspectOne(e) {
+  const t = e.tagName, c = e.classList, host = e.parentNode.closest('td,th,li'), where = host ? (host.tagName === 'LI' ? 'a list item' : 'a table cell') : '';
+  if (c.contains('box')) return { name: BOXES[boxType(e)] + ' box' };
+  if (c.contains('note') && !c.contains('note-body')) return { name: 'Margin note' };
+  if (t === 'TABLE') return { name: (c.contains('lop') || c.contains('spine') ? 'Fancy table' : 'Table') + (c.contains('dense') ? ', compact' : '') + (c.contains('cw') ? ', set column widths' : '') };
+  if (t === 'TD') return { name: 'Table cell' };
+  if (t === 'TH') return { name: (c.contains('sub') ? 'Sub header cell' : 'Header cell') + (e.getAttribute('scope') === 'row' ? ' (header column)' : e.getAttribute('scope') === 'col' ? ' (header row)' : '') };
+  if (t === 'LI') { const l = e.parentNode, top = e.closest('ul.dense, ol.dense'); return { name: (l.classList.contains('check') ? 'Checklist item' : l.tagName === 'OL' ? 'Numbered list item' : 'Bulleted list item') + (l.parentNode.closest('li') ? ', in an inner list' : '') + (top ? ', compact' : '') }; }
+  if (t === 'DT') return { name: 'Q&A question' }; if (t === 'DD') return { name: 'Q&A answer' };
+  if (t === 'PRE') return { name: 'Code block', odd: where ? 'The toolbar cannot make this in ' + where : '' };
+  if (/^H[1-6]$/.test(t)) return { name: t === 'H1' ? 'Title (H1)' : 'Heading ' + t[1] + ' (H' + t[1] + ')', odd: where ? 'The toolbar cannot make a heading in ' + where : (+t[1] > 4 ? 'Not a toolbar style' : ''), line: !!where };
+  if (t === 'P') { const k = Object.keys(INSPECT_PARA).find(x => c.contains(x)); return { name: k ? INSPECT_PARA[k] : 'Paragraph', odd: where ? 'The toolbar cannot make a paragraph in ' + where : '', line: !!where }; }
+  if (t === 'A') return { name: 'Link: ' + (e.getAttribute('href') || ''), inline: true, off: 'Remove link' };
+  if (t === 'SPAN' && c.contains('id')) return { name: 'ID tag', inline: true, off: 'Remove tag' };
+  if (INSPECT_INLINE[t]) return { name: INSPECT_INLINE[t], inline: true, off: 'Remove', odd: /^(B|STRONG|I|EM|SUP|SUB|S|STRIKE|DEL|CODE)$/.test(t) ? '' : 'No toolbar button for this' };
+  if (t === 'SPAN') return e.getAttribute('style') ? null : { name: 'Plain wrapper (no effect)', inline: true, off: 'Remove' };
+  if (/^(DIV|THEAD|TBODY|TFOOT|TR|UL|OL|DL|DETAILS|SUMMARY)$/.test(t)) return null; // structure the rows above and below already describe
+  return { name: 'Other element <' + t.toLowerCase() + '>', odd: 'Not a toolbar style', inline: getComputedStyle(e).display.startsWith('inline'), off: 'Remove' };
+}
+function inspectTarget() {
+  const r = lastRange; if (!r || !doc.contains(r.startContainer)) return null; let n = r.startContainer, o = r.startOffset;
+  if (n.nodeType === 1) { n = n.childNodes[Math.min(o, n.childNodes.length - 1)] || n; while (n.nodeType === 1 && n.firstChild && n.nodeName !== 'BR') n = n.firstChild; }
+  else if (!r.collapsed && o === n.length) { const w = document.createTreeWalker(doc, NodeFilter.SHOW_TEXT); w.currentNode = n; let x; while ((x = w.nextNode())) { if (!r.intersectsNode(x)) break; if (x.data.trim()) { n = x; break; } } } // a selection that begins at the very end of one piece of text is about the next piece
+  const e = n.nodeType === 1 ? n : n.parentElement; return e && doc.contains(e) && !e.closest('.fig,.dg,.note-log') ? e : null;
+}
+function inspectClose() { const d = $('#insp'); if (d.open) d.close(); }
+function inspect() {
+  const d = $('#insp'); if (d.open) { d.close(); return; }
+  live(); const e = inspectTarget(); if (!e) { alert('Place the cursor in the text, or select a word, first.'); return; }
+  const chain = []; for (let x = e; x && x !== doc; x = x.parentElement) chain.unshift(x);
+  const rows = []; chain.forEach(x => { const st = x.getAttribute('style'); const one = inspectOne(x); if (one) rows.push(Object.assign(one, { e: x })); if (st && !x.closest('.fig,.dg') && !x.matches('col')) rows.push({ name: 'Pasted styling: ' + st.trim().slice(0, 90), odd: 'Not a toolbar style', inline: true, off: 'Remove', e: x, style: true }); });
+  const cs = getComputedStyle(e), hex = v => { const m = v.match(/[\d.]+/g); return m ? '#' + m.slice(0, 3).map(n => Math.round(+n).toString(16).padStart(2, '0')).join('').toUpperCase() : v; };
+  const sel = lastRange.collapsed ? '' : lastRange.toString().trim().slice(0, 60), list = $('#insp-list'); list.textContent = '';
+  $('#insp-what').textContent = sel ? 'At the start of “' + sel + '”' : 'At the cursor';
+  rows.forEach((x, i) => {
+    const li = document.createElement('li'); if (x.odd) li.className = 'odd'; const nm = document.createElement('span'); nm.textContent = x.name; li.appendChild(nm);
+    if (x.odd) { const o = document.createElement('small'); o.textContent = x.odd; li.appendChild(o); }
+    const act = x.line ? 'Make a plain line' : (x.inline && x.off ? x.off : ''); if (act) { const b2 = document.createElement('button'); b2.type = 'button'; b2.textContent = act; b2.dataset.i = i; li.appendChild(b2); }
+    list.appendChild(li);
+  });
+  { const look = $('#insp-look'), ul = document.createElement('ul'), head = document.createElement('b'); look.textContent = ''; head.textContent = 'Style attributes:'; look.append(head, ul); [['Font', cs.fontFamily.split(',')[0].replace(/["']/g, '')], ['Size', Math.round(parseFloat(cs.fontSize) * 10) / 10 + 'px'], ['Weight', cs.fontWeight], ['Style', cs.fontStyle === 'italic' ? 'italic' : ''], ['Colour', hex(cs.color)]].forEach(([k2, v]) => { if (!v) return; const li = document.createElement('li'); li.textContent = k2 + ': ' + v; ul.appendChild(li); }); }
+  list.onclick = ev => {
+    const b2 = ev.target.closest('button[data-i]'); if (!b2) return; const x = rows[+b2.dataset.i]; if (!x || !doc.contains(x.e)) return;
+    clearTimeout(timer); histSnap(); const keep = x.e.parentNode;
+    if (x.style) { x.e.removeAttribute('style'); if (x.e.matches('span,font') && !x.e.attributes.length) x.e.replaceWith(...x.e.childNodes); }
+    else if (x.line) toLine(x.e); else x.e.replaceWith(...x.e.childNodes);
+    keep.normalize(); touch(); d.close(); if (lastRange && doc.contains(lastRange.startContainer)) inspect(); // read it again, once, to show the result
+  };
+  d.show();
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#insp').open) inspectClose(); });
+doc.addEventListener('mousedown', inspectClose); doc.addEventListener('keydown', e => { if (!['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) inspectClose(); });
+$('#insp').addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
+$('#insp').addEventListener('click', e => { if (e.target.closest('[data-a="inspclose"]')) inspectClose(); });
+/* ---------- selecting cells ----------
+   A browser selects text in one run, row by row, so a column cannot be selected as text. Shift+click on another cell
+   of the same table, or dragging from one cell into another, selects the block of cells between them instead:
+   a column, a row or a rectangle. Bold, Italic, Clear format, the header and merge buttons, Delete, copy and cut then
+   act on those cells. Escape, a click or typing ends it. The cells are marked with the editing-only class ed-cell. */
+let cellSel = null, cellDrag = null; // cellSel: { t, a: [row, column], b: [row, column] }
+function cellAt(n) { if (n && n.nodeType !== 1) n = n.parentElement; const c = n && n.closest && n.closest('td,th'); return c && doc.contains(c) && !c.closest('.fig,.dg') ? c : null; }
+function cellSelInfo() {
+  if (!cellSel || !doc.contains(cellSel.t)) return null;
+  const T = tMatrix(cellSel.t), at = p => T.M[p[0]] && T.M[p[0]][p[1]], a = at(cellSel.a), b = at(cellSel.b); if (!a || !b) return null;
+  const p = tExtent(T, a), q = tExtent(T, b), R = tGrow(T, [Math.min(p[0], q[0]), Math.min(p[1], q[1]), Math.max(p[2], q[2]), Math.max(p[3], q[3])]), cells = [];
+  for (let r = R[0]; r <= R[2]; r++) for (let c = R[1]; c <= R[3]; c++) { const x = T.M[r][c]; if (x && !cells.includes(x)) cells.push(x); }
+  return { T, R, cells, a };
+}
+function cellSelPaint() {
+  $$('.ed-cell', doc).forEach(x => { x.classList.remove('ed-cell'); if (!x.getAttribute('class')) x.removeAttribute('class'); });
+  const info = cellSelInfo(); if (!info) { cellSel = null; doc.classList.remove('ed-cells'); return; }
+  info.cells.forEach(x => x.classList.add('ed-cell')); doc.classList.add('ed-cells');
+}
+function cellSelSet(a, b) { const t = a.closest('table'), T = tMatrix(t), p = tPos(T, a), q = tPos(T, b); if (!p || !q) return; cellSel = { t, a: p, b: q }; cellSelPaint(); }
+function cellSelClear() { if (!cellSel && !doc.classList.contains('ed-cells')) return; cellSel = null; cellSelPaint(); }
+/* Bold, Italic and Clear format on every selected cell. Bold and Italic turn on unless every cell with text already has them. */
+function cellFormat(a) {
+  const info = cellSelInfo(); if (!info) return; const s = getSelection(), filled = info.cells.filter(x => x.textContent.trim());
+  const pick = x => { const r = document.createRange(); r.selectNodeContents(x); s.removeAllRanges(); s.addRange(r); lastRange = r.cloneRange(); };
+  clearTimeout(timer); histSnap();
+  if (a === 'clear') filled.forEach(x => { pick(x); clearFormat(); });
+  else { const c = a, state = x => { pick(x); try { return document.queryCommandState(c); } catch (e) { return false; } }, want = !filled.every(state); filled.forEach(x => { if (state(x) !== want) document.execCommand(c); }); }
+  const home = cellSelInfo(); if (home) caret(home.a, false);
+  cellSelPaint(); touch();
+}
+function cellSelCopy(e, cut) {
+  const info = cellSelInfo(); if (!info) return false; const { T, R } = info, seen = new Set(), rows = [], lines = [];
+  for (let r = R[0]; r <= R[2]; r++) { const tr = document.createElement('tr'), txt = []; for (let c = R[1]; c <= R[3]; c++) { const x = T.M[r][c]; if (!x || seen.has(x)) continue; seen.add(x); tr.appendChild(x.cloneNode(true)); txt.push(x.innerText.replace(/\s*\n\s*/g, ' ').trim()); } if (tr.cells.length) { rows.push(tr); lines.push(txt.join('\t')); } }
+  const box = el('<div><div class="tw"><table><tbody></tbody></table></div></div>'); $('tbody', box).append(...rows); clipClean(box); box.setAttribute('data-fle-clip', '1');
+  e.preventDefault(); e.clipboardData.setData('text/html', box.outerHTML); e.clipboardData.setData('text/plain', lines.join('\n'));
+  if (cut) { clearTimeout(timer); histSnap(); info.cells.forEach(x => { x.innerHTML = '<br>'; }); touch(); }
+  return true;
+}
+doc.addEventListener('mousedown', e => {
+  cellDrag = null; if (e.button !== 0 || e.altKey || editing || board || paint) return;
+  const c = cellAt(e.target), info = cellSel && cellSelInfo();
+  if (e.shiftKey && c) { // from the cell the cursor is in, or the cell the block started from
+    const from = info && cellSel.t === c.closest('table') ? info.a : cellAt(getSelection().anchorNode);
+    if (from && from !== c && from.closest('table') === c.closest('table')) { e.preventDefault(); cellSelSet(from, c); return; }
+  }
+  cellSelClear(); if (c && !e.shiftKey) cellDrag = c;
+});
+document.addEventListener('mousemove', e => {
+  if (!cellDrag) return; if (!(e.buttons & 1) || !doc.contains(cellDrag)) { cellDrag = null; return; }
+  const c = cellAt(e.target); if (!c || c.closest('table') !== cellDrag.closest('table')) return;
+  if (c !== cellDrag || cellSel) cellSelSet(cellDrag, c);
+});
+document.addEventListener('mouseup', () => {
+  if (!cellDrag) return; const from = cellDrag; cellDrag = null; if (!cellSel) return;
+  const info = cellSelInfo(); if (!info || info.cells.length < 2) { cellSelClear(); return; } // back in one cell: an ordinary text selection
+  if (doc.contains(from)) caret(from, false); // the text selection made on the way is dropped; the cursor waits in the first cell
+}, true);
+doc.addEventListener('keydown', e => {
+  if (!cellSel || editing || board) return; const k = e.key, ctrl = e.ctrlKey || e.metaKey;
+  if (k === 'Escape') { e.preventDefault(); e.stopPropagation(); cellSelClear(); return; }
+  if (k === 'Delete' || k === 'Backspace') { e.preventDefault(); e.stopPropagation(); const info = cellSelInfo(); if (info) { clearTimeout(timer); histSnap(); info.cells.forEach(x => { x.innerHTML = '<br>'; }); caret(info.a, false); touch(); } return; }
+  if (ctrl && !e.altKey && !e.shiftKey && (k.toLowerCase() === 'b' || k.toLowerCase() === 'i')) { e.preventDefault(); e.stopPropagation(); cellFormat(k.toLowerCase() === 'b' ? 'bold' : 'italic'); return; }
+  if (ctrl || k === 'Shift' || k === 'Control' || k === 'Alt' || k === 'Meta') return; // copy, cut and other shortcuts act on the block
+  cellSelClear();
+}, true);
+/* ---------- column widths ----------
+   Dragging the border between two columns moves width from one to the other. The table keeps its own width, the
+   full text width, so it always fits the page. Widths are saved as percentages in a colgroup, and a table that has
+   them is laid out to them exactly (class cw). A double-click on a border goes back to automatic widths. */
+function tWidths(t) { const cs = $$(':scope > colgroup > col', t); return t.classList.contains('cw') && cs.length ? cs.map(c => parseFloat(c.style.width) || 0) : null; }
+function tSetWidths(t, w) {
+  $$(':scope > colgroup', t).forEach(n => n.remove());
+  if (!w || !w.length) { t.classList.remove('cw'); if (!t.getAttribute('class')) t.removeAttribute('class'); return; }
+  const sum = w.reduce((a, b) => a + b, 0) || 1, g = document.createElement('colgroup');
+  w.forEach(x => { const c = document.createElement('col'); c.style.width = (Math.round(x / sum * 10000) / 100) + '%'; g.appendChild(c); });
+  t.prepend(g); t.classList.add('cw');
+}
+/* The widths the columns have on screen now, as shares of the table. */
+function tMeasure(t) {
+  const T = tMatrix(t), W = T.M[0] ? T.M[0].length : 0, out = new Array(W).fill(0), tw = t.getBoundingClientRect().width || 1;
+  for (let k = 0; k < W; k++) { const m = T.M.find(row => row[k] && row[k].colSpan === 1); if (m) out[k] = m[k].getBoundingClientRect().width / tw * 100; }
+  const missing = out.filter(v => !v).length; if (missing) { const share = Math.max(2, (100 - out.reduce((a, b) => a + b, 0)) / missing); for (let k = 0; k < W; k++) if (!out[k]) out[k] = share; }
+  return out;
+}
+/* The column border under the pointer, if there is one: the table and the number of the column to its right. The
+   table's own left and right edges are not borders between columns, so they do not count. */
+function colBorderAt(e) {
+  const c = e.target && e.target.closest && e.target.closest('td,th'); if (!c || !doc.contains(c) || c.closest('.fig,.dg')) return null;
+  const t = c.closest('table'), r = c.getBoundingClientRect(), T = tMatrix(t), x = tExtent(T, c), W = T.M[0].length;
+  if (e.clientX >= r.right - 4 && x[3] + 1 < W) return [t, x[3] + 1];
+  if (e.clientX <= r.left + 4 && x[1] > 0) return [t, x[1]];
+  return null;
+}
+let colDrag = null, colTap = null;
+doc.addEventListener('pointermove', e => { if (colDrag) return; doc.classList.toggle('ed-colrz', !editing && !board && !paint && !e.buttons && !!colBorderAt(e)); });
+doc.addEventListener('pointerleave', () => { if (!colDrag) doc.classList.remove('ed-colrz'); });
+doc.addEventListener('pointerdown', e => {
+  if (e.button !== 0 || e.altKey || editing || board || paint) return; const hit = colBorderAt(e); if (!hit) return;
+  e.preventDefault(); e.stopImmediatePropagation(); clearTimeout(timer); histSnap();
+  const [t, b] = hit, had = tWidths(t), cols = tMatrix(t).M[0].length, w0 = had && had.length === cols ? had : tMeasure(t);
+  // a second press on the same border straight after the first is a double-click: back to automatic widths
+  if (colTap && colTap.t === t && colTap.b === b && e.timeStamp - colTap.at < 450) { colTap = null; if (had) { tSetWidths(t, null); touch(); } return; }
+  colTap = { t, b, at: e.timeStamp };
+  const tw = t.getBoundingClientRect().width || 1, x0 = e.clientX, min = Math.max(3, 28 / tw * 100), lo = min - w0[b - 1], hi = w0[b] - min;
+  colDrag = { moved: false }; doc.classList.add('ed-colrz');
+  const mv = ev => { const d = lo > hi ? 0 : Math.max(lo, Math.min(hi, (ev.clientX - x0) / tw * 100)); if (!colDrag.moved && Math.abs(ev.clientX - x0) < 2) return; colDrag.moved = true; const w = w0.slice(); w[b - 1] += d; w[b] -= d; tSetWidths(t, w); };
+  const up = () => { removeEventListener('pointermove', mv, true); removeEventListener('pointerup', up, true); removeEventListener('pointercancel', up, true); const moved = colDrag.moved; colDrag = null; doc.classList.remove('ed-colrz'); if (moved) { colTap = null; touch(); } };
+  addEventListener('pointermove', mv, true); addEventListener('pointerup', up, true); addEventListener('pointercancel', up, true);
+}, true);
+doc.addEventListener('mousedown', e => { if (e.button === 0 && !e.altKey && !editing && !board && !paint && colBorderAt(e)) e.preventDefault(); }, true);
+/* ---------- table headers ----------
+   A cell is ordinary (td), a header (th) or a sub header (th.sub). The four header buttons set that for the whole row or
+   column the cursor is in, or for every row or column the selection covers; the same button again makes them ordinary.
+   Any row can be changed, the top one included. A row counts as a header row when all its cells are headers; a column
+   counts as a header column when its cells are headers in every ordinary row. */
+function cellKind(x) { return x.tagName === 'TH' ? (x.classList.contains('sub') ? 'sub' : 'th') : null; }
+function kindOf(cells) { const cs = [...new Set(cells.filter(Boolean))]; return cs.length && cs.every(x => x.tagName === 'TH') ? (cs.every(x => cellKind(x) === 'sub') ? 'sub' : 'th') : null; }
+function tKinds(T) {
+  // a row of headers and sub headers mixed is not a header row: its cells come from header columns
+  const rowKind = T.M.map(m => { const cs = [...new Set(m.filter(Boolean))], k = kindOf(m); return k && cs.some(x => cellKind(x) !== k) ? null : k; }), W = T.M[0] ? T.M[0].length : 0, colKind = [], plain = T.M.filter((m, i) => !rowKind[i]);
+  for (let k = 0; k < W; k++) colKind[k] = kindOf(plain.map(m => m[k]));
+  return { rowKind, colKind };
+}
+/* Make a cell ordinary, a header or a sub header. A td cannot turn into a th in place, so it is replaced and the matrix follows. */
+function tSetKind(T, x, kind) {
+  let n = x; const tag = kind ? 'TH' : 'TD';
+  if (x.tagName !== tag) { n = document.createElement(tag); [...x.attributes].forEach(a => n.setAttribute(a.name, a.value)); n.append(...x.childNodes); x.replaceWith(n); T.M.forEach(m => m.forEach((y, k) => { if (y === x) m[k] = n; })); }
+  n.classList.toggle('sub', kind === 'sub'); if (!n.getAttribute('class')) n.removeAttribute('class'); if (!kind) n.removeAttribute('scope');
+  return n;
+}
+/* What each header cell is a heading for, so a screen reader reads the table properly. */
+function tScopes(T) { const { rowKind } = tKinds(T), seen = new Set(); T.M.forEach((m, i) => m.forEach(x => { if (!x || seen.has(x)) return; seen.add(x); if (x.tagName === 'TH') x.setAttribute('scope', rowKind[i] ? 'col' : 'row'); })); }
+function tHeaderOp(T, c, op) {
+  const want = op[0] === 'h' ? 'th' : 'sub', R = tGrow(T, tSelRect(T, c)), K = tKinds(T), s = getSelection(), keep = s.rangeCount ? [s.anchorNode, s.anchorOffset, s.focusNode, s.focusOffset] : null;
+  let at = c; const set = (x, kind) => { const n = tSetKind(T, x, kind); if (x === at) at = n; };
+  if (op[1] === 'r') {
+    const rows = []; for (let i = R[0]; i <= R[2]; i++) rows.push(i);
+    const off = rows.every(i => K.rowKind[i] === want); // turned off, a cell goes back to what its column makes it
+    rows.forEach(i => { for (let k = 0; k < T.M[i].length; k++) { const x = T.M[i][k]; if (x) set(x, off ? K.colKind[k] : want); } });
+  } else {
+    const cols = []; for (let k = R[1]; k <= R[3]; k++) cols.push(k);
+    let rows = T.M.map((m, i) => i).filter(i => !K.rowKind[i]); const none = !rows.length; if (none) rows = T.M.map((m, i) => i); // header rows keep their own look
+    const off = cols.every(k => (none ? kindOf(T.M.map(m => m[k])) : K.colKind[k]) === want);
+    rows.forEach(i => cols.forEach(k => { const x = T.M[i][k]; if (x) set(x, off ? null : want); }));
+  }
+  tScopes(T);
+  let back = false; if (keep && doc.contains(keep[0]) && doc.contains(keep[2])) { try { s.setBaseAndExtent(...keep); lastRange = s.getRangeAt(0).cloneRange(); back = true; } catch (e) { } }
+  if (!back) caret(at, true);
+  cellSelPaint(); touch(); styleUI();
+}
+/* Which header buttons are lit for the cell the cursor is in. */
+function tHeaderState(c) { const T = tMatrix(c.closest('table')), p = tPos(T, c); if (!p) return {}; const K = tKinds(T); return { hr: K.rowKind[p[0]] === 'th', sr: K.rowKind[p[0]] === 'sub', hc: !K.rowKind[p[0]] && K.colKind[p[1]] === 'th', sc: !K.rowKind[p[0]] && K.colKind[p[1]] === 'sub' }; }
 function tSelRect(T, c) {
+  if (cellSel && cellSel.t === T.t) { const info = cellSelInfo(); if (info) return info.R; }
   const s = getSelection(); let a = c, b = c;
   if (s.rangeCount && !s.isCollapsed) { const r = s.getRangeAt(0), f = n => { if (n.nodeType !== 1) n = n.parentElement; return n && n.closest('td,th'); }; const x = f(r.startContainer), y = f(r.endContainer); if (x && y && T.t.contains(x) && T.t.contains(y)) { a = x; b = y; } }
   const p = tExtent(T, a), q = tExtent(T, b); return [Math.min(p[0], q[0]), Math.min(p[1], q[1]), Math.max(p[2], q[2]), Math.max(p[3], q[3])];
@@ -731,13 +1074,18 @@ function tableOp(op) {
   if (op === 'dense') { t.classList.toggle('dense'); touch(); return; }
   const T = tMatrix(t), [r, col, r2, col2] = tExtent(T, c), W = T.M[0].length;
   const headRow = i => i >= 0 && i < T.rows.length && T.rows[i].sec.tagName === 'THEAD';
+  if (op === 'hr' || op === 'sr' || op === 'hc' || op === 'sc') { tHeaderOp(T, c, op); return; }
+  // set column widths follow the columns: a new column takes half of the one it was added beside, a deleted one gives its width back
+  const CW0 = tWidths(t), CW = CW0 && CW0.length === W ? CW0 : null, halve = (from, at) => { if (CW) { const h = CW[from] / 2; CW[from] = h; CW.splice(at, 0, h); } };
+  // a new row is ordinary apart from its header columns; a new column is ordinary apart from its header rows
+  const K = tKinds(T), fresh = (n, kind, head) => { if (!kind && head) n.innerHTML = '<br>'; return tSetKind({ M: [] }, n, kind); };
   let focus = c;
   if (op === 'r+') {
     let at = r2, sec = T.rows[at].sec;
     if (headRow(at)) { sec = t.tBodies[0] || t.createTBody(); const first = T.rows.findIndex(x => x.sec === sec); at = (first < 0 ? T.rows.length : first) - 1; }
     const src = Math.max(0, at), tmpl = T.M[src] || [], next = T.M[at + 1], fromHead = headRow(src), tr = document.createElement('tr');
     if (!fromHead && T.rows[src].tr.className) tr.className = T.rows[src].tr.className;
-    const row = []; for (let k = 0; k < W; k++) { const x = tmpl[k]; if (!fromHead && x && next && next[k] === x) { row[k] = x; continue; } row[k] = newCellLike(fromHead ? null : x, false); }
+    const row = []; for (let k = 0; k < W; k++) { const x = tmpl[k]; if (!fromHead && x && next && next[k] === x) { row[k] = x; continue; } row[k] = fresh(newCellLike(fromHead ? null : x, false), K.colKind[k]); }
     T.M.splice(at + 1, 0, row); T.rows.splice(at + 1, 0, { tr, sec });
     const after = T.rows[at + 2]; if (after && after.sec === sec) after.tr.before(tr); else sec.appendChild(tr);
     focus = row.find(x => x && !tmpl.includes(x)) || focus;
@@ -746,13 +1094,13 @@ function tableOp(op) {
     if (headRow(r)) { alert('A row cannot go above the heading row.'); return; }
     const sec = T.rows[r].sec, tmpl = T.M[r], prev = T.rows[r - 1] && T.rows[r - 1].sec === sec ? T.M[r - 1] : null, tr = document.createElement('tr');
     if (T.rows[r].tr.className) tr.className = T.rows[r].tr.className;
-    const row = []; for (let k = 0; k < W; k++) { const x = tmpl[k]; if (x && prev && prev[k] === x) { row[k] = x; continue; } row[k] = newCellLike(x, false); }
+    const row = []; for (let k = 0; k < W; k++) { const x = tmpl[k]; if (x && prev && prev[k] === x) { row[k] = x; continue; } row[k] = fresh(newCellLike(x, false), K.colKind[k]); }
     T.rows[r].tr.before(tr); T.M.splice(r, 0, row); T.rows.splice(r, 0, { tr, sec });
     focus = row.find(x => x && !tmpl.includes(x)) || focus;
   }
   if (op === 'cl') {
-    T.M.forEach((m, i) => { const x = m[col]; if (x && col > 0 && m[col - 1] === x) { m.splice(col, 0, x); return; } m.splice(col, 0, newCellLike(x, headRow(i))); });
-    focus = T.M[r][col];
+    T.M.forEach((m, i) => { const x = m[col]; if (x && col > 0 && m[col - 1] === x) { m.splice(col, 0, x); return; } m.splice(col, 0, fresh(newCellLike(x, headRow(i)), K.rowKind[i], headRow(i))); });
+    focus = T.M[r][col]; halve(col, col);
   }
   if (op === 'r-') {
     if (headRow(r)) { alert('The heading row stays; clear its text instead.'); return; }
@@ -760,12 +1108,12 @@ function tableOp(op) {
     T.M.splice(r, r2 - r + 1); T.rows.splice(r, r2 - r + 1).forEach(x => x.tr.remove()); focus = (T.M[r] || T.M[r - 1] || [])[col] || null;
   }
   if (op === 'c+') {
-    T.M.forEach((m, i) => { const x = m[col2]; if (x && m[col2 + 1] === x) { m.splice(col2 + 1, 0, x); return; } m.splice(col2 + 1, 0, newCellLike(x, headRow(i))); });
-    focus = T.M[r][col2 + 1];
+    T.M.forEach((m, i) => { const x = m[col2]; if (x && m[col2 + 1] === x) { m.splice(col2 + 1, 0, x); return; } m.splice(col2 + 1, 0, fresh(newCellLike(x, headRow(i)), K.rowKind[i], headRow(i))); });
+    focus = T.M[r][col2 + 1]; halve(col2, col2 + 1);
   }
   if (op === 'c-') {
     if (W - (col2 - col + 1) < 1) { alert('A table needs at least one column.'); return; }
-    T.M.forEach(m => m.splice(col, col2 - col + 1)); focus = null;
+    T.M.forEach(m => m.splice(col, col2 - col + 1)); focus = null; if (CW) CW.splice(col, col2 - col + 1);
   }
   if (op === 'mr' || op === 'md') {
     let R = tSelRect(T, c);
@@ -777,9 +1125,9 @@ function tableOp(op) {
   }
   if (op === 'split') {
     if (r2 > r || col2 > col) { for (let i = r; i <= r2; i++) for (let k = col; k <= col2; k++) if (i !== r || k !== col) T.M[i][k] = newCellLike(c, false); }
-    else { T.M.forEach((m, i) => { const x = m[col]; m.splice(col + 1, 0, i === r ? newCellLike(c, headRow(i)) : x); }); focus = T.M[r][col + 1]; }
+    else { T.M.forEach((m, i) => { const x = m[col]; m.splice(col + 1, 0, i === r ? newCellLike(c, headRow(i)) : x); }); focus = T.M[r][col + 1]; halve(col, col + 1); }
   }
-  tRebuild(T); touch(); if (focus && focus.isConnected) caret(focus, true);
+  tRebuild(T); if (CW) tSetWidths(t, CW); cellSelClear(); touch(); if (focus && focus.isConnected) caret(focus, true);
 }
 
 function addStage() {
@@ -1059,6 +1407,7 @@ document.addEventListener('keydown', e => {
   if (ctrl && k.toLowerCase() === 'o') { e.preventDefault(); open(); return; }
   if (k === 'Backspace' && !ctrl && !e.altKey && !editing && !board && checkStart()) { e.preventDefault(); clearTimeout(timer); histSnap(); document.execCommand('insertUnorderedList'); touch(); styleUI(); return; }
   if (k === 'Tab' && !ctrl && !e.altKey && !editing) { const c = cellEl(); if (c) { e.preventDefault(); cellTab(c, e.shiftKey); return; } }
+  if (k === 'Tab' && !ctrl && !e.altKey && !editing && !board && doc.contains(e.target) && listAt() && !blockOf(getSelection().anchorNode)) { e.preventDefault(); clearTimeout(timer); histSnap(); const out = e.shiftKey; if (listShift(out ? -1 : 1)) repSet(out ? 'Outdent' : 'Indent', () => listShift(out ? -1 : 1)); return; }
   if ((k === 'ArrowDown' || k === 'ArrowUp') && !e.shiftKey && !ctrl && !e.altKey && !editing) { const c = cellEl(); if (c && cellArrow(c, k === 'ArrowDown')) { e.preventDefault(); return; } }
   if (k === 'Enter' && !ctrl && !e.altKey && !editing) { const q = qaItem(); if (q) { e.preventDefault(); qaEnter(q, e.shiftKey); return; } }
   if (!editing && !ctrl && !e.altKey && (k === 'Enter' || k === 'Tab')) { const pre = blockOf(getSelection().anchorNode); if (pre) { e.preventDefault(); if (k === 'Tab') { if (!e.shiftKey) codeInsert('\t'); } else if (e.shiftKey) { document.execCommand('insertLineBreak'); touch(); } else codeEnter(pre); return; } }
@@ -1191,7 +1540,7 @@ function dgDelete() { if (!dgSel || !confirm('Delete this diagram?')) return; co
 function clean() {
   const c = doc.cloneNode(true);
   $$('.ed-handle', c).forEach(n => n.remove());
-  $$('.ed-sel,.ed-selc,.ed-active,.ed-from,.ed-connect', c).forEach(n => n.classList.remove('ed-sel', 'ed-selc', 'ed-active', 'ed-from', 'ed-connect'));
+  $$('.ed-sel,.ed-selc,.ed-active,.ed-from,.ed-connect,.ed-cell', c).forEach(n => n.classList.remove('ed-sel', 'ed-selc', 'ed-active', 'ed-from', 'ed-connect', 'ed-cell'));
   $$('[contenteditable]', c).forEach(n => n.removeAttribute('contenteditable'));
   $$('.fig', c).forEach(f => { f.style.height = ''; f.style.maxWidth = ''; if (f.firstElementChild) f.firstElementChild.style.transform = ''; if (!f.getAttribute('style')) f.removeAttribute('style'); });
   $$('.dg, .fig', c).forEach(n => { n.classList.remove('ed-dsel'); n.removeAttribute('title'); });
@@ -1209,6 +1558,7 @@ function build(opts) {
 }
 function prepView() { dgSel = null; $('#gbar').hidden = true; $$('.dg, .fig', doc).forEach(f => f.classList.remove('ed-dsel')); fit(); chromeHeight(); }
 function prep() {
+  inspectClose(); cellSel = null; doc.classList.remove('ed-cells'); $$('.ed-cell', doc).forEach(x => x.classList.remove('ed-cell'));
   checkFix(doc); migrateGrids(doc);
   dgSelect(null); $$('.dg, .fig', doc).forEach(f => { f.setAttribute('contenteditable', 'false'); f.setAttribute('title', 'Double-click to edit'); });
   $$('.wb-board', doc).forEach(b => { if (!b.parentNode.classList.contains('fig')) { const f = el('<div class="fig"></div>'); b.replaceWith(f); f.appendChild(b); } });
@@ -1293,21 +1643,22 @@ function fresh() { if (!keepGoing('start a new document')) return; handle = null
 /* ---------- toolbar wiring ---------- */
 const ACT = {
   new: fresh, open: open, save: () => save(false), saveas: () => save(true),
-  bold: () => cmd('bold'), italic: () => cmd('italic'), ul: () => { restore(); const l = listAt(); if (l && l.matches('ul.check')) { l.classList.remove('check'); if (!l.getAttribute('class')) l.removeAttribute('class'); touch(); } else { listCmd('insertUnorderedList'); touch(); } }, ol: () => { listCmd('insertOrderedList'); touch(); }, check: checkList,
+  bold: () => cmd('bold'), italic: () => cmd('italic'), ul: () => { restore(); const l = listAt(); if (l && l.matches('ul.check')) { l.classList.remove('check'); if (!l.getAttribute('class')) l.removeAttribute('class'); touch(); } else { listCmd('insertUnorderedList'); touch(); } }, ol: () => { listCmd('insertOrderedList'); touch(); }, check: checkList, ldense: listDense, indent: () => { listShift(1); }, outdent: () => { listShift(-1); },
   undo: () => histGo(-1), redo: () => histGo(1),
   code: addCode, clear: clearFormat, paint: () => { if (paint) paintStop(); else paintPick(false); }, note: addNote, margin: toggleNotes, who: () => initials(true), saveclean: saveClean, repeat: repeatLast, nosaved: () => { $('#savedbar').hidden = true; chromeHeight(); }, noclean: () => { $('#cleanbar').hidden = true; chromeHeight(); },
-  link: editLink, index: () => { idxDepth = idxDepth % 3 + 1; rebuild(); touch(); }, // steps 1, 2, 3 and back to 1
+  inspect: inspect, link: editLink, index: () => { idxDepth = idxDepth % 3 + 1; rebuild(); touch(); }, // steps 1, 2, 3 and back to 1
   tag: () => { restore(); const t = getSelection().toString() || 'ID'; document.execCommand('insertHTML', false, '<span class="id">' + esc(t) + '</span>&nbsp;'); touch(); },
-  table: addTable, stage: addStage, mr: () => tableOp('mr'), md: () => tableOp('md'), split: () => tableOp('split'), qa: addQa, 'r+': () => tableOp('r+'), ra: () => tableOp('ra'), cl: () => tableOp('cl'), 'r-': () => tableOp('r-'), 'c+': () => tableOp('c+'), 'c-': () => tableOp('c-'), dense: () => tableOp('dense'),
+  table: addTable, stage: addStage, mr: () => tableOp('mr'), md: () => tableOp('md'), split: () => tableOp('split'), qa: addQa, 'r+': () => tableOp('r+'), ra: () => tableOp('ra'), cl: () => tableOp('cl'), 'r-': () => tableOp('r-'), 'c+': () => tableOp('c+'), 'c-': () => tableOp('c-'), dense: () => tableOp('dense'), hr: () => tableOp('hr'), sr: () => tableOp('sr'), hc: () => tableOp('hc'), sc: () => tableOp('sc'),
   diagram: () => openDiagram(null), dgedit: () => dgSel && openDiagram(dgSel), dgdel: dgDelete, help: () => { const h = $('#help'); if (h.open) h.close(); else { helpInfo(); h.showModal(); } },
   connect: () => setMode(mode === 'connect' ? null : 'connect'), del: remove, dup: duplicate, deldiagram: deleteDiagram,
   restore: () => { try { const d = localStorage.getItem('fle-draft'); if (d) { const t = new DOMParser().parseFromString('<main>' + d + '</main>', 'text/html'); sanitize(t.querySelector('main')); cardify(t.querySelector('main')); doc.innerHTML = t.querySelector('main').innerHTML; prep(); histReset(); dirty = true; status(); } } catch (e) { } $('#draft').hidden = true; chromeHeight(); },
   dismiss: () => { try { localStorage.removeItem('fle-draft'); } catch (e) { } $('#draft').hidden = true; chromeHeight(); },
 };
 $('#chrome').addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
-$('#chrome').addEventListener('click', e => { const b = e.target.closest('button[data-a]'); if (!b) return; const a = b.dataset.a; if (!board && !['undo', 'redo', 'help', 'new', 'open', 'save', 'saveas', 'who', 'saveclean', 'noclean', 'nosaved', 'margin', 'paint', 'repeat'].includes(a)) { clearTimeout(timer); histSnap(); } if (ACT[a]) { ACT[a](); if (!board) repNote(a); } else if (ADD[a] && board) ADD[a](); });
+$('#chrome').addEventListener('click', e => { const b = e.target.closest('button[data-a]'); if (!b) return; const a = b.dataset.a; if (!board && !['undo', 'redo', 'help', 'inspect', 'new', 'open', 'save', 'saveas', 'who', 'saveclean', 'noclean', 'nosaved', 'margin', 'paint', 'repeat'].includes(a)) { clearTimeout(timer); histSnap(); } if (cellSel && (a === 'bold' || a === 'italic' || a === 'clear')) cellFormat(a); else if (ACT[a]) { ACT[a](); if (!board) repNote(a); } else if (ADD[a] && board) ADD[a](); });
 $('#help').addEventListener('click', e => { if (e.target === e.currentTarget || e.target.closest('[data-a="helpclose"]')) e.currentTarget.close(); });
 $('#s-block').addEventListener('change', e => { const v = e.target.value; if (v) { const label = e.target.selectedOptions[0].textContent; clearTimeout(timer); histSnap(); setBlock(v); repSet(label, () => setBlock(v)); } styleUI(); });
+$('#s-fmt').addEventListener('change', e => { const v = e.target.value; e.target.value = ''; if (v && FMT[v]) { clearTimeout(timer); histSnap(); restore(); const want = !fmtOn(v); setFmt(v, want); repSet(FMT[v][0] + (want ? '' : ' off'), () => setFmt(v, want)); } styleUI(); });
 $('#s-boxtype').addEventListener('change', e => { const v = e.target.value; if (v) { clearTimeout(timer); histSnap(); setBox(v); repSet(v === 'none' ? 'Remove box' : BOXES[v] + ' box', () => setBox(v)); } styleUI(); });
 /* The cursor stays in the document: once a toolbar list has been opened and closes, with or without a choice, focus goes
    back to the text, so the arrow keys move the cursor and do not change the list. A list reached with Tab and never

@@ -241,6 +241,9 @@ table { border-collapse: collapse; width: 100%; font-size: 14px; }
 table.dense { font-size: 12.5px; line-height: 1.4; }
 th { text-align: left; font-weight: 600; color: var(--ink); background: var(--fill); border: 1px solid var(--dots); padding: 6px 8px; vertical-align: bottom; }
 td { border: 1px solid var(--dots); padding: 6px 8px; vertical-align: top; }
+/* Sub headers, and header cells down the side: set from the table buttons for a whole row or column. */
+th.sub { background: #f6f9fc; color: var(--ink-soft); }
+th[scope="row"] { vertical-align: top; }
 tr.grp td { background: #f6f9fc; font-weight: 600; color: var(--ink-soft); font-size: 13px; padding: 4px 8px; }
 .id { display: inline-block; font: 600 11px/1.5 var(--mono); font-variant-ligatures: none; color: var(--ink); background: var(--fill); border-radius: 3px; padding: 0 4px; margin-right: 2px; white-space: nowrap; }
 .src { color: #6b7d92; font-size: .92em; }
@@ -266,6 +269,9 @@ table.lop thead th { border-top: 0; background: var(--fill); font: 400 22px/1.3 
 table.lop tr > :first-child { border-left: 0; }
 table.lop thead th:first-child { width: 120px; }
 table.lop tbody th { font-weight: 600; color: var(--ink-soft); font-size: 13px; background: #f6f9fc; text-align: left; }
+table.lop tbody th:not(.sub)[scope="col"] { background: var(--fill); color: var(--ink); }
+table.lop thead th.sub { background: #f6f9fc; font: 600 13px/1.45 var(--body); color: var(--ink-soft); text-align: left; vertical-align: top; }
+table.spine th.sub { background: #f6f9fc; color: var(--ink-soft); }
 table.lop .g { font-weight: 600; color: var(--ink-soft); font-size: 12px; margin: 6px 0 2px; }
 table.lop .g:first-child { margin-top: 0; }
 table.spine { border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: 13px; line-height: 1.5; margin: 12px 0 18px; min-width: 760px; }
@@ -414,11 +420,11 @@ main:not(.notes-on) .note::after, main:not(.notes-on) .note-log { display: none;
 <pre>BIN:        A2<br>PRODUCT:    Milk chocolate buttons<br>CONTAINS:   Milk, Soy<br>BEST BEFORE: 2027-03-31<br>REFILLED:   2026-11-16 09:40 AB</pre>
 <h2 id="bin-map-and-allergen-matrix">Bin map and allergen matrix</h2>
 <p class="h2sub">One row per bin. The matrix is the record the allergen check compares against.</p>
-<div class="note"><div class="note-body"><div class="tw"><table><thead><tr><th>Row</th><th>Bin</th><th>Product</th><th>Allergens on the supplier label</th><th>Zone</th></tr></thead><tbody>
-<tr><td rowspan="2">Top</td><td>A1</td><td>Fruit jellies</td><td>None declared</td><td rowspan="2">Nut free</td></tr>
-<tr><td>A2</td><td>Milk chocolate buttons</td><td>Milk, Soy</td></tr>
-<tr><td rowspan="2">Middle</td><td>B1</td><td>Peanut brittle pieces</td><td>Peanuts</td><td rowspan="2">Contains nuts</td></tr>
-<tr><td>B2</td><td>Hazelnut pralines</td><td>Tree nuts, Milk</td></tr>
+<div class="note"><div class="note-body"><div class="tw"><table><thead><tr><th scope="col">Row</th><th scope="col">Bin</th><th scope="col">Product</th><th scope="col">Allergens on the supplier label</th><th scope="col">Zone</th></tr></thead><tbody>
+<tr><th rowspan="2" scope="row">Top</th><th class="sub" scope="row">A1</th><td>Fruit jellies</td><td>None declared</td><td rowspan="2">Nut free</td></tr>
+<tr><th class="sub" scope="row">A2</th><td>Milk chocolate buttons</td><td>Milk, Soy</td></tr>
+<tr><th rowspan="2" scope="row">Middle</th><th class="sub" scope="row">B1</th><td>Peanut brittle pieces</td><td>Peanuts</td><td rowspan="2">Contains nuts</td></tr>
+<tr><th class="sub" scope="row">B2</th><td>Hazelnut pralines</td><td>Tree nuts, Milk</td></tr>
 </tbody></table></div></div><details class="note-log"><summary></summary><div class="note-entries"><p class="note-date"><b>2026.11.16</b></p><p><b class="note-who">CD</b> Bin B1 and B2 share a scoop rack. Move the rack or add a second one.</p></div></details></div>
 <p class="cap">Table 1. An extract of the matrix. The full matrix is kept behind the counter.</p>
 <h2 id="common-questions">Common questions</h2>

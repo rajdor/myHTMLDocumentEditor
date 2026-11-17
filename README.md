@@ -8,12 +8,16 @@ Open `fine-line-editor.html` in Chrome or Edge. Nothing is loaded from the netwo
 
 ## What it does
 
-- Text: heading levels H1 (title) to H4, H1 and H2 subtitles, lead paragraph, caption, code blocks, bold, italic, lists, checklists (real checkboxes, so saved documents need no script), Q&A lists, boxes for the reader (Note, Information, Tip, Warning, Critical; inserted empty, they hold whole blocks and have an editable label), links and ID tags. H2 headings are numbered.
-- Clear format: removes bold and italics from the selected text; with the cursor only, or a whole block selected, the block also becomes a plain paragraph. Links and ID tags stay.
+- Text: heading levels H1 (title) to H4, H1 and H2 subtitles, lead paragraph, caption, code blocks, bold, italic, lists, checklists (real checkboxes, so saved documents need no script), compact lists, Q&A lists, boxes for the reader (Note, Information, Tip, Warning, Critical; inserted empty, they hold whole blocks and have an editable label), links and ID tags. H2 headings are numbered.
+- Clear format: removes all text formatting from the selected text, including inline code, superscript, subscript and anything pasted in; with the cursor only, or a whole block selected, the block also becomes a plain paragraph (a plain line inside a table cell or list item). Links and ID tags stay.
+- More formats: superscript, subscript, strike-through and inline code from one toolbar list.
+- List indent and outdent: buttons, or Tab and Shift+Tab; outdent at the top level turns the item into a paragraph.
+- Links: a form for the display text and the address, with defaults from the selected text and, when the browser already allows it, the clipboard.
+- Inspect formatting: a button opens a popup that lists the formatting on the text at the cursor or the selected word, marks anything the toolbar cannot make there, shows the font, size, weight and colour, and can remove one format at a time. It reads the document only when pressed.
 - Copy format: a format painter for block style, bold, italics and ID tags; one press applies once, a double-click keeps it on.
 - Repeat last toolbar command: Option+Q on a Mac or Alt+Q on Windows applies the last toolbar command again at the cursor or on the selection; holding Option or Alt while you click or drag does the same in one move, and the Repeat button beside Redo names the command. It covers the Style list, bold, italic, lists, code block, ID tag, Note, Clear format and the table buttons, and it sets rather than toggles.
 - Clipboard: copy, cut and paste keep formatting. Content copied in the editor pastes as it was; content from other programs keeps its structure and takes the document's style, through the same cleaning as Open.
-- Tables: Table and Fancy Table (headings across the top, labels down the side, outlined). Add rows above or below and columns left or right, delete rows and columns, merge right, merge down, merge a selected block, split, compact. Enter, Tab and the arrow keys work cell by cell.
+- Tables: Table and Fancy Table (headings across the top, labels down the side, outlined). Add rows above or below and columns left or right, delete rows and columns, merge right, merge down, merge a selected block, split, compact. Set any row or column as a header or a sub header. Drag the border between two columns to resize them (the table keeps its width; double-click a border for automatic widths). Shift+click or drag across cells to select a column, a row or a block of cells for formatting, copying or deleting. Enter, Tab and the arrow keys work cell by cell.
 - Diagrams: Diagram opens the diagram editor in front of the document; Done places the diagram, Cancel discards changes. Double-click a diagram, or select it and press Enter, to edit it again.
 - Notes: a margin with a bar and icon beside each noted block; the icon opens a dated log of initialled comments. The margin is hidden by default; the Notes margin button shows or hides it, and the choice is saved with the document. A clean copy without notes is offered after Save.
 - Links: shown in the browser's own style (blue, underlined). Web images, video and audio become link cards, so nothing is downloaded on open. Ctrl or Cmd + click opens a link.
@@ -21,7 +25,7 @@ Open `fine-line-editor.html` in Chrome or Edge. Nothing is loaded from the netwo
 - Index: built from the headings, showing 1, 2 or 3 levels (H2 to H4). The setting is saved with the document; the default is 1.
 - Files: Save writes one self-contained HTML document that opens in any browser and re-opens here. After a save, a line names the file saved; a dot on the Save button means there are unsaved changes. New and Open ask first when there are unsaved changes.
 - Older formats: documents made with grids open as tables, and a diagram drawn directly on the page converts to a diagram-editor diagram when you double-click it.
-- Toolbar: Phosphor icons grouped as File, History, Text, Lists, Insert, Notes, Index and Table, with the initials button and Help at the far right; hover for a description. Insert table and Insert fancy table are always shown; the row, column, merge and compact buttons appear to their right only while the cursor is in a table.
+- Toolbar: Phosphor icons grouped as File, History, Text, Lists, Insert, Notes, Index and Table, with the initials button and Help at the far right; hover for a description. Insert table and Insert fancy table are always shown; the row, column, header, merge and compact buttons appear to their right only while the cursor is in a table.
 - Help: a dialog box with one card per topic. It also shows the editor version and the document name.
 - Safety: no script from a document runs. Documents are cleaned on open, and a Content Security Policy allows only the editor's own scripts.
 
@@ -76,7 +80,7 @@ Tests use puppeteer-core with a local Chrome or Edge (or `CHROME_PATH`). `npm te
 | t9-headings-code | Heading levels and subtitles, index levels (saved, default 1), code blocks, Clear format |
 | t10-history-safety | Undo and redo of structural changes and by word, plain paragraph after subtitles, Clear format keeps icons, opening a document runs no scripts, unique heading ids, Restore with no draft, headings before the first H2 in the index, web images not fetched |
 | t11-no-scripts | Content Security Policy blocks document scripts even past the cleaning, opened documents are cleaned, dropped HTML becomes text, diagram editor still runs |
-| t12-links | Nothing downloaded on open, web media become link cards, saved links, click and hover, Link button add, edit, refuse, remove |
+| t12-links | Nothing downloaded on open, web media become link cards, saved links, click and hover, Link form: display text and address, defaults from the selected text and the clipboard, edit, refuse, remove |
 | t13-notes | Notes on blocks, tables and diagrams; margin hidden by default, shown by the button or by adding a note, saved with the document; icon opens the log without moving the page; date and initialled lines; growing; Enter in and out; removal when empty; closed on open, not saved open; clean copy offer and the saved line; undo; earlier note form upgraded; print |
 | t14-clipboard | Copy, cut and paste keep formatting: inline, blocks, lists, tables, cells; notes left behind; undo; cleaning of HTML from other programs |
 | t15-new-help | New asks before discarding unsaved changes (new and opened documents, every kind of change); Help dialog at the far right with the editor version and document name; the cursor stays in the document after a toolbar list is used; initials button |
@@ -86,6 +90,13 @@ Tests use puppeteer-core with a local Chrome or Edge (or `CHROME_PATH`). `npm te
 | t19-repeat | Repeat last toolbar command by key, by Option or Alt + click and by the button; set not toggle; kept through typing; table commands; nothing outside a table; undo; links under Alt + click |
 | t20-checklist | Checklists: made from paragraphs, bullets and numbers; Enter, Backspace; ticked by a click, undo; saved and re-opened; the saved file with scripts off; table cells; cleaning on open; copy and paste; repeat |
 | t21-boxes | Boxes for the reader: the Box list inserts an empty box, typing and pasting into it, styles kept, the look, changing type, editable label, Enter in and out, Remove box, undo, no box in a box, save and re-open, copy and paste, repeat |
+| t22-table-headers | Header and sub header rows and columns: the four buttons, on and off, switching, the top row, selections, scope for screen readers, the look, undo, new rows and columns, merged cells, save and re-open, repeat, fancy tables |
+| t23-column-widths | Dragging a column border: width moves between the two columns, the table keeps its width, a minimum width, outer edges, undo, save and re-open, added and deleted columns, double-click for automatic widths, fancy tables |
+| t24-cell-select | Selecting cells by Shift+click and by dragging: column, row and rectangle; Bold, Italic and Clear format on the block; header and merge buttons; copy as a table and as text; cut, Delete, undo; ending the selection; text selection inside one cell; nothing saved |
+| t25-compact-list | Compact list on and off for bulleted and numbered lists, checklists and lists in tables; inner lists; other lists untouched; undo; save and re-open; repeat |
+| t26-inspector | Inspect formatting: opens only on demand, lists formats from the outside in, the look line, marks what the toolbar cannot make, blocks, boxes, lists and table cells, removing one format, a selected word, closing, nothing saved |
+| t27-more-formats | Superscript, subscript, strike-through and inline code from the More list: on, off, ticks, undo, repeat, limits, Clear format, pasted strike-through kept, toolbar on one row |
+| t28-list-indent | List indent and outdent by button and by Tab: levels, several items, cursor kept, top level becomes a paragraph, numbered lists and checklists, Q&A untouched, lists in table cells |
 
 ## Updating the diagram editor
 

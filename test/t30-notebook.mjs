@@ -201,6 +201,31 @@ check('the import clashes with its own original name here, so it asks', await dl
 await pg.$eval('#nb-clash-n', e => { e.value = 'Foreign imported'; }); await pg.click('#nb-clash button[value="rename"]'); await sleep(400);
 check('the original file is unchanged after the import is saved', await text('foreign.html') === '<html><body><h1>Foreign</h1><p>from elsewhere</p></body></html>' && (await paths()).includes('Foreign imported.html'));
 
+/* ----- import of Markdown and plain text ----- */
+const MD = '---\npageid: x1\ntitle: From front matter\n---\n## Tasks\n\n- [ ] buy **milk**\n- [x] call [Sam](https://example.com)\n\n1. one\n2. two\n\n| A | B |\n|---|---|\n| 1 | 2 |\n\n```js\nlet x = 1;\n```\n\n##### Small heading\n\n<script>window.HACKED = 1</script>\n<img src="x" onerror="window.HACKED = 2">\n';
+await pg.evaluate((md) => { MFS.put(R, 'Notes in markdown.md', md); MFS.put(R, 'todo list.txt', 'line one\n\nline <two> & more\n'); MFS.put(R, 'Titled.md', '# Own title\n\ntext\n'); }, MD);
+await pg.click('#nb button[data-nb="refresh"]'); await sleep(300);
+check('Markdown and text files are no longer greyed', await pg.$eval(row('Notes in markdown.md'), e => e.classList.contains('k-page') && e.textContent === 'Notes in markdown.md') && await pg.$eval(row('todo list.txt'), e => e.classList.contains('k-page')) && await pg.$eval(row('picture.png'), e => e.classList.contains('k-other')));
+await clickRow('Notes in markdown.md');
+const md = await pg.evaluate(() => { const d = document.querySelector('#doc'), q = s => [...d.querySelectorAll(s)]; return {
+  h1: q('h1').map(x => x.textContent), h2: q('h2').map(x => x.textContent), h4: q('h4').map(x => x.textContent),
+  checks: q('ul.check > li').map(li => [li.firstChild.nodeName, li.firstChild.checked, li.firstChild.disabled, li.textContent.trim()]), bold: q('ul.check strong, ul.check b').map(x => x.textContent), link: q('ul.check a').map(a => a.getAttribute('href')),
+  ol: q('ol > li').map(x => x.textContent.trim()), th: q('table th').map(x => x.textContent), td: q('table td').map(x => x.textContent), pre: q('pre').map(x => x.textContent.trim()),
+  script: q('script').length, onerror: q('[onerror]').length, hacked: window.HACKED, text: d.textContent }; });
+same('Markdown: front matter is dropped and its title becomes the H1', [md.h1, /pageid|x1/.test(md.text)], [['From front matter'], false]);
+same('Markdown: headings convert; levels below H4 become H4', [md.h2, md.h4], [['Tasks'], ['Small heading']]);
+same('Markdown: task lists become checklists with working boxes', md.checks, [['INPUT', false, false, 'buy milk'], ['INPUT', true, false, 'call Sam']]);
+same('Markdown: bold, links, numbered lists, tables and code convert', [md.bold, md.link, md.ol, md.th, md.td, md.pre], [['milk'], ['https://example.com'], ['one', 'two'], ['A', 'B'], ['1', '2'], ['let x = 1;']]);
+same('Markdown: script in the file is removed and never runs', [md.script, md.onerror, md.hacked === undefined], [0, 0, true]);
+s = await state();
+check('an imported Markdown file is a new unsaved page beside the original', s.cur.node === null && s.cur.dir === '' && /Imported Notes in markdown.md/.test(await msg()));
+await setH1('From front matter'); await save();
+check('saving it writes an HTML page named from the title and leaves the .md untouched', (await paths()).includes('From front matter.html') && await text('Notes in markdown.md') === MD && /class="check"/.test(await text('From front matter.html')), await paths());
+await clickRow('Titled.md');
+same('Markdown with its own H1 keeps it', await pg.$$eval('#doc h1', hs => hs.map(h => h.textContent)), ['Own title']);
+await clickRow('todo list.txt');
+same('plain text: the file name is the title, one paragraph a line, characters kept as typed', await pg.evaluate(() => [document.querySelector('#doc h1').textContent, [...document.querySelectorAll('#doc p')].map(p => p.textContent)]), ['todo list', ['line one', 'line <two> & more']]);
+
 /* ----- New and Open in a notebook; a page outside the notebook ----- */
 await setH1('Foreign changed'); await pg.click('#chrome button[data-a="new"]'); await sleep(250);
 check('New with unsaved changes uses the same prompt', await dlgOpen('#nb-ask'));

@@ -14,6 +14,8 @@ const NB = (() => {
   const ic = n => $('#nb-ic').content.querySelector('[data-ic="' + n + '"]').innerHTML;
   const lower = s => s.toLowerCase();
   const isPage = n => n.kind === 'file' && /\.html?$/i.test(n.name);
+  const isText = n => n.kind === 'file' && /\.(md|markdown|txt)$/i.test(n.name);
+  const opens = n => isPage(n) || isText(n);
   const label = n => isPage(n) ? n.name.replace(/\.html?$/i, '') : n.name;
   const find = (dir, name) => (dir.kids || []).find(k => lower(k.name) === lower(name));
   const pathArr = n => { const p = []; for (; n && n.parent; n = n.parent) p.unshift(n.name); return p; };
@@ -100,7 +102,7 @@ const NB = (() => {
     return [...all.filter(k => pin(k) < 0).sort(by), ...all.filter(k => pin(k) >= 0).sort((a, b) => pin(a) - pin(b))];
   }
   function row(n, depth, fresh) {
-    const r = document.createElement('div'), dir = !fresh && n.kind === 'directory', page = fresh || isPage(n);
+    const r = document.createElement('div'), dir = !fresh && n.kind === 'directory', page = fresh || opens(n);
     r.className = 'nb-row ' + (fresh ? 'k-page is-new is-cur' : (dir ? 'k-dir' : page ? 'k-page' : 'k-other') + (n === sel ? ' is-sel' : '') + (cur && cur.node === n ? ' is-cur' : '') + (isProtected(n) ? ' is-pin' : ''));
     r.setAttribute('role', 'treeitem'); r.style.paddingLeft = (6 + depth * 14) + 'px';
     if (dir) r.setAttribute('aria-expanded', n.open ? 'true' : 'false');
@@ -180,13 +182,32 @@ const NB = (() => {
   }
 
   /* ----- pages ----- */
+  /* Markdown and plain text become page content, which then goes through the same cleaning as any opened document.
+     Markdown is converted by marked; text becomes one paragraph a line. A page with no H1 takes the file's name as its title. */
+  function importText(name, text) {
+    const t = document.createElement('template'), c = t.content; let title = name.replace(/\.[^.]+$/, '');
+    text = text.replace(/^\uFEFF/, '');
+    if (/\.txt$/i.test(name)) t.innerHTML = text.split(/\r?\n/).filter(l => l.trim()).map(l => '<p>' + esc(l) + '</p>').join('');
+    else {
+      const fm = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);   // front matter is not content; its title is used when there is no H1
+      if (fm) { text = text.slice(fm[0].length); const m = fm[1].match(/^title:[ \t]*(.+)$/m); if (m) title = m[1].trim().replace(/^(['"])(.*)\1$/, '$2') || title; }
+      t.innerHTML = marked.parse(text, { gfm: true });
+      $$('pre > code', c).forEach(k => { k.parentNode.textContent = k.textContent.replace(/\n$/, ''); });   // the editor's code block is a plain pre
+      $$('h5, h6', c).forEach(h => { const n = document.createElement('h4'); n.append(...h.childNodes); h.replaceWith(n); });
+      $$('li input[type=checkbox]', c).forEach(i => { const li = i.closest('li'), ul = li.parentNode; if (ul.nodeName !== 'UL') { i.remove(); return; } ul.classList.add('check'); i.removeAttribute('disabled'); const p = i.parentNode; li.prepend(i); if (p !== li && p.nodeName === 'P') { p.replaceWith(...p.childNodes); } });
+      $$('ul.check > li', c).forEach(li => { if (!$(':scope > input[type=checkbox]', li)) { const i = document.createElement('input'); i.type = 'checkbox'; li.prepend(i); } const x = li.childNodes[1]; if (x && x.nodeType === 3) x.data = x.data.replace(/^\s+/, ''); });
+    }
+    if (!$('h1', c)) { const h = document.createElement('h1'); h.textContent = title; c.prepend(h); }
+    return t.innerHTML;
+  }
   async function openPage(n) {
     if (cur && cur.node === n) { sel = n; render(); return; }
     if (!(await leave())) return;
     let text, mtime;
     try { const f = await n.handle.getFile(); text = await f.text(); mtime = f.lastModified; } catch (e) { say('Could not open ' + n.name + ': ' + e.message, true); return; }
     sel = n;
-    if (isOwn(text)) { handle = ro ? null : n.handle; load(text, n.name); cur = { dir: n.parent, node: n, mtime, disk: text }; say(''); }
+    if (isText(n)) text = '<main>' + importText(n.name, text) + '</main>';
+    if (!isText(n) && isOwn(text)) { handle = ro ? null : n.handle; load(text, n.name); cur = { dir: n.parent, node: n, mtime, disk: text }; say(''); }
     else { handle = null; load(text, n.name); cur = { dir: inTrash(n) ? root : n.parent, node: null }; say('Imported ' + n.name + ' as a new page. The original file stays as it is; Save writes a new page named after the title.'); }
     render();
   }
@@ -288,11 +309,11 @@ const NB = (() => {
   function menuFor(n) {
     const m = [], t = trashNode();
     if (!n) return ro ? [] : [['New page', () => ACT.new()], ['New folder', newFolder], null, ['Refresh', refresh]];
-    if (ro) { if (isPage(n)) m.push(['Open', () => openPage(n)]); if (tabOk(n)) m.push(['Open in new browser tab', () => openTab(n)]); return m; }
-    if (inTrash(n)) { m.push(['Restore', () => restore(n)]); if (isPage(n)) m.push(['Open', () => openPage(n)]); if (tabOk(n)) m.push(['Open in new browser tab', () => openTab(n)]); m.push(null, ['Delete permanently', () => removeForever(n)]); return m; }
+    if (ro) { if (opens(n)) m.push(['Open', () => openPage(n)]); if (tabOk(n)) m.push(['Open in new browser tab', () => openTab(n)]); return m; }
+    if (inTrash(n)) { m.push(['Restore', () => restore(n)]); if (opens(n)) m.push(['Open', () => openPage(n)]); if (tabOk(n)) m.push(['Open in new browser tab', () => openTab(n)]); m.push(null, ['Delete permanently', () => removeForever(n)]); return m; }
     if (n === t) return [['Empty trash', emptyTrash]];
     if (n.kind === 'directory') { if (!(n.parent === root && (n.name === '.history' || n.name === '.notebook'))) m.push(['New page here', () => { sel = n; ACT.new(); }], ['New folder here', () => { sel = n; newFolder(); }]); }
-    else { if (isPage(n)) m.push(['Open', () => openPage(n)]); if (tabOk(n)) m.push(['Open in new browser tab', () => openTab(n)]); }
+    else { if (opens(n)) m.push(['Open', () => openPage(n)]); if (tabOk(n)) m.push(['Open in new browser tab', () => openTab(n)]); }
     if (!isProtected(n)) { if (m.length) m.push(null); m.push(['Rename', () => { renaming = n; render(); }], ['Move to trash', () => toTrash(n)]); }
     return m;
   }
@@ -341,7 +362,7 @@ const NB = (() => {
   const nodeOf = e => { const r = e.target.closest('.nb-row'); return r && r.dataset.i !== undefined ? flat[+r.dataset.i] : null; };
   async function clickRow(n) {
     if (n.kind === 'directory') { sel = n; n.open = !n.open; if (n.open) { try { await readDir(n); } catch (e) { n.open = false; say('Could not read ' + n.name + ': ' + e.message, true); } } render(); }
-    else if (isPage(n)) await openPage(n);
+    else if (opens(n)) await openPage(n);
     else { sel = n; render(); }
   }
   function wire() {

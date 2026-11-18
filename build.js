@@ -11,7 +11,7 @@ const fontB64 = fs.readFileSync(path.join(__dirname, 'node_modules/@fontsource/a
 const diagramEditor = fs.readFileSync(path.join(__dirname, 'vendor', 'diagram-editor.html'));
 const icons = JSON.parse(src('icons.json'));
 
-const app = "'use strict';\nconst VERSION = " + JSON.stringify(pkg.version) + ";\n" + src('app.js').replace('/*CONVERT*/', () => src('convert.js'));
+const app = "'use strict';\nconst VERSION = " + JSON.stringify(pkg.version) + ";\n" + src('app.js').replace('/*CONVERT*/', () => src('convert.js')).replace('/*NOTEBOOK*/', () => src('notebook.js'));
 
 const ICON_DIR = path.join(__dirname, 'node_modules/@phosphor-icons/core/assets/regular');
 const icon = (n) => fs.readFileSync(path.join(ICON_DIR, n + '.svg'), 'utf8').replace(/\s*xmlns="[^"]*"/, '').replace('<svg', '<svg aria-hidden="true"').trim();

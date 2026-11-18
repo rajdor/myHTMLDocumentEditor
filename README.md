@@ -23,6 +23,7 @@ Open `fine-line-editor.html` in Chrome or Edge. Nothing is loaded from the netwo
 - Links: shown in the browser's own style (blue, underlined). Web images, video and audio become link cards, so nothing is downloaded on open. Ctrl or Cmd + click opens a link.
 - Fonts: Instrument Sans for body text, JetBrains Mono for code blocks and ID tags, Architects Daughter for the title and headings. All three are embedded in the editor and in each saved document, so nothing is downloaded and a document looks the same on any computer.
 - Index: built from the headings, showing 1, 2 or 3 levels (H2 to H4). The setting is saved with the document; the default is 1.
+- Notebook: an explorer panel turns a folder on disk into a notebook, with folders as sections and files as pages. Open, create, rename, move and delete pages from the tree; deleted items go to a `.trash` folder in the notebook and can be restored. Chrome and Edge save straight into the folder; other browsers get a read-only tree and Save downloads. See `docs/notebook-explorer-spec.md` for the full design and what is still to be built.
 - Files: Save writes one self-contained HTML document that opens in any browser and re-opens here. After a save, a line names the file saved; a dot on the Save button means there are unsaved changes. New and Open ask first when there are unsaved changes.
 - Older formats: documents made with grids open as tables, and a diagram drawn directly on the page converts to a diagram-editor diagram when you double-click it.
 - Toolbar: Phosphor icons grouped as File, History, Text, Lists, Insert, Notes, Index and Table, with the initials button and Help at the far right; hover for a description. Insert table and Insert fancy table are always shown; the row, column, header, merge and compact buttons appear to their right only while the cursor is in a table.
@@ -49,12 +50,15 @@ The SVG is what readers see: it scales, prints and keeps its text searchable. Th
 | `src/index.html` | Page template: toolbar, help, overlay |
 | `src/app.js` | Editor behaviour |
 | `src/convert.js` | Converts diagrams drawn directly on the page (the older format) to draw.io for the diagram editor |
+| `src/notebook.js` | Notebook explorer: the folder tree, page files, trash; included in the editor's script at build time |
 | `src/doc.css` | Document styles; these are written into every saved document |
 | `src/editor.css` | Editing-only styles; never saved |
 | `src/icons.json` | Phosphor state icons used in diagrams |
 | `vendor/diagram-editor.html` | The built diagram editor from myDiagramer, embedded at build time |
+| `docs/notebook-explorer-spec.md` | Specification for the notebook explorer |
+| `spike/folder-spike.html` | Throwaway page used to confirm folder access from a `file://` page |
 | `build.js` | Builds `fine-line-editor.html` |
-| `test/` | Regression tests; `test/files/legacy-document.html` is a small document in the older format used by t4 and t7 |
+| `test/` | Regression tests; `test/files/legacy-document.html` is a small document in the older format used by t4 and t7; `test/mockfs.mjs` is an in-memory folder for the notebook tests |
 | `CHANGELOG.md` | What changed in each version |
 
 ## Build and test
@@ -98,6 +102,7 @@ Tests use puppeteer-core with a local Chrome or Edge (or `CHROME_PATH`). `npm te
 | t27-more-formats | Superscript, subscript, strike-through and inline code from the More list: on, off, ticks, undo, repeat, limits, Clear format, pasted strike-through kept, toolbar on one row |
 | t28-list-indent | List indent and outdent by button and by Tab: levels, several items, cursor kept, top level becomes a paragraph, numbered lists and checklists, Q&A untouched, lists in table cells |
 | t29-qa-lists | Lists inside a Q&A answer: made from the current line or the selected lines, kinds and changing kind, Enter and Backspace, leaving the list, indent, the Q&A stays whole, questions refuse lists, saved markup |
+| t30-notebook | Notebook explorer on an in-memory folder (`test/mockfs.mjs`): panel and landing, tree order, hidden files and settings, opening pages, the Save, Discard, Cancel prompt, first save named from the H1, name clashes, rename, new folder, move by drag, trash and restore, changes made outside the editor, import of other HTML, copy where the browser cannot move, read-only mode, the notice for browsers without folder access |
 
 ## Updating the diagram editor
 

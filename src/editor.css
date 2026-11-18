@@ -115,3 +115,56 @@ html.de-open, html.de-open body { overflow: hidden; }
 #linkdlg button { font: inherit; color: var(--ink); background: #fff; border: 1px solid #B8C2CE; border-radius: 3px; padding: 4px 12px; cursor: pointer; }
 #linkdlg button:hover { background: #EAF1F8; }
 #linkdlg button.go { background: var(--ink); color: #fff; border-color: var(--ink); }
+/* notebook explorer: a panel down the left side, under the toolbar; never saved with a document */
+html.nb-open body { padding-left: var(--nbw, 260px); }
+html.nb-open #chrome { margin-left: calc(-1 * var(--nbw, 260px)); }
+#nb { position: fixed; z-index: 40; left: 0; top: var(--ch, 0px); bottom: 0; width: var(--nbw, 260px); box-sizing: border-box; display: flex; flex-direction: column; background: #F7FAFD; border-right: 1.5px solid #CFDBE8; font: 13px/1.3 system-ui, -apple-system, 'Segoe UI', sans-serif; color: #12355B; }
+#nb[hidden], #nb [hidden] { display: none !important; }
+#nb .nb-top { display: flex; align-items: center; gap: 2px; padding: 6px 6px 6px 10px; border-bottom: 1px solid #CFDBE8; }
+#nb-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+#nb .nb-top button { width: 24px; height: 24px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 3px; background: none; color: inherit; cursor: pointer; flex: none; }
+#nb .nb-top button:hover { background: #EAF1F8; border-color: #CFDBE8; }
+#nb .nb-top button.on { background: #12355B; color: #fff; }
+#nb .nb-top svg { width: 17px; height: 17px; }
+#nb-land { padding: 14px 12px; color: #3D5A7A; line-height: 1.45; }
+#nb-land p { margin: 0 0 12px; max-width: none; }
+#nb-land button { display: block; width: 100%; margin: 0 0 8px; font: inherit; color: #12355B; background: #fff; border: 1px solid #B8C2CE; border-radius: 3px; padding: 6px 8px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#nb-land button:hover { background: #EAF1F8; }
+#nb-msg { padding: 5px 10px; font-size: 12px; color: #3D5A7A; border-bottom: 1px solid #CFDBE8; overflow-wrap: anywhere; }
+#nb-msg:empty { display: none; }
+#nb-msg.bad { color: #B23C0B; background: #FFF4EC; }
+#nb-tree { flex: 1; overflow: auto; padding: 4px 0 24px; outline: none; }
+#nb-tree.is-drop { box-shadow: inset 0 0 0 2px #12355B; }
+.nb-row { display: flex; align-items: center; gap: 4px; height: 26px; padding-right: 8px; cursor: default; white-space: nowrap; user-select: none; -webkit-user-select: none; }
+.nb-row:hover { background: #EAF1F8; }
+.nb-row.is-sel { background: #DCE8F5; }
+#nb-tree:focus-visible .nb-row.is-sel { box-shadow: inset 2px 0 0 #12355B; }
+.nb-row.is-cur .nb-lbl { font-weight: 600; }
+.nb-row.k-other { color: #8A9BB0; }
+.nb-row.is-pin { color: #3D5A7A; }
+.nb-row.is-new .nb-lbl { font-style: italic; }
+.nb-row.is-drop { box-shadow: inset 0 0 0 2px #12355B; }
+.nb-row svg { width: 16px; height: 16px; flex: none; }
+.nb-caret { width: 12px; flex: none; display: inline-flex; }
+.nb-caret svg { width: 12px; height: 12px; }
+.nb-lbl { overflow: hidden; text-overflow: ellipsis; }
+.nb-row input { font: inherit; color: #12355B; flex: 1; min-width: 0; height: 20px; border: 1px solid #12355B; border-radius: 2px; padding: 0 4px; background: #fff; }
+#nb-rz { position: absolute; top: 0; right: -4px; width: 8px; bottom: 0; cursor: col-resize; }
+#nb-menu { position: fixed; z-index: 60; min-width: 190px; background: #fff; border: 1px solid #B8C2CE; border-radius: 4px; box-shadow: 0 4px 14px rgba(18, 53, 91, .18); padding: 4px 0; font: 13px/1.3 system-ui, -apple-system, 'Segoe UI', sans-serif; color: #12355B; }
+#nb-menu[hidden] { display: none; }
+#nb-menu button { display: block; width: 100%; text-align: left; border: 0; background: none; font: inherit; color: inherit; padding: 6px 14px; cursor: pointer; }
+#nb-menu button:hover, #nb-menu button:focus-visible { background: #EAF1F8; outline: none; }
+#nb-menu hr { border: 0; border-top: 1px solid #CFDBE8; margin: 4px 0; }
+dialog.nb-dlg { width: min(460px, calc(100vw - 48px)); padding: 16px 18px; border: 1.5px solid var(--ink); border-radius: 3px; box-shadow: 4px 6px 0 var(--shadow); background: #fff; color: #1c2b3a; font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+dialog.nb-dlg::backdrop { background: rgba(18, 53, 91, .35); }
+dialog.nb-dlg > b { display: block; font-size: 16px; color: var(--ink); margin-bottom: 6px; }
+dialog.nb-dlg p { margin: 0 0 12px; max-width: none; }
+dialog.nb-dlg label { display: block; font-size: 12px; color: var(--ink-soft); margin-bottom: 2px; }
+dialog.nb-dlg input { display: block; width: 100%; box-sizing: border-box; font: inherit; border: 1px solid #B8C2CE; border-radius: 3px; padding: 5px 8px; margin-bottom: 6px; }
+dialog.nb-dlg p[role=alert] { color: #B23C0B; font-size: 13px; min-height: 1.2em; margin-bottom: 8px; }
+dialog.nb-dlg .nb-btns { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+dialog.nb-dlg button { font: inherit; color: var(--ink); background: #fff; border: 1px solid #B8C2CE; border-radius: 3px; padding: 5px 12px; cursor: pointer; }
+dialog.nb-dlg button:hover { background: #EAF1F8; }
+dialog.nb-dlg button[value=save], dialog.nb-dlg button[value=rename] { background: #12355B; border-color: #12355B; color: #fff; }
+#nbwarn { background: #FFF1D1; border-top: 1px solid #8A5300; }
+@media print { #nb, #nb-menu { display: none !important; } html.nb-open body { padding-left: 0; } }

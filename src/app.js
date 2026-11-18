@@ -371,7 +371,7 @@ doc.addEventListener('drop', async e => {
   if (dragInside) { dragInside = false; return; }
   e.preventDefault(); const dt = e.dataTransfer; if (!dt) return;
   const f = dt.files && dt.files[0];
-  if (f) { if (/\.html?$/i.test(f.name)) { if (!keepGoing('open the dropped document')) return; handle = null; load(await f.text(), f.name); } return; }
+  if (f) { if (/\.html?$/i.test(f.name)) { if (!(await gate('open the dropped document'))) return; handle = null; NB.detach(); load(await f.text(), f.name); } return; }
   const t = dt.getData('text/plain'); if (!t) return;
   const r = document.caretRangeFromPoint && document.caretRangeFromPoint(e.clientX, e.clientY);
   if (r && doc.contains(r.startContainer)) { const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
@@ -1653,7 +1653,15 @@ const TYPES_HTML = [{ description: 'HTML document', accept: { 'text/html': ['.ht
 function pickerOpts(o) { o.id = 'fine-line-documents'; o.types = TYPES_HTML; if (handle) o.startIn = handle; delete o.noStart; return o; }
 /* After a save, a line names the file. A page is told the file's name only, never its folder, so the name is all it can show. */
 function savedLine(name, dl) { $('#savedmsg').textContent = (dl ? 'File saved to the browser\'s downloads folder: ' : 'File saved: ') + name; $('#savedbar').hidden = false; chromeHeight(); }
+function afterSave(dl) {
+  dirty = false; status(); try { localStorage.removeItem('fle-draft'); } catch (e) { }
+  savedLine(fname, dl);
+  if (notesIn(doc)) { $('#cleanbar').hidden = false; chromeHeight(); }
+}
+/* In a notebook, New, Open and switching pages offer Save, Discard or Cancel; outside one they ask as before. */
+async function gate(what) { return NB.on() ? NB.leave() : keepGoing(what); }
 async function save(as) {
+  if (!as && NB.page()) return NB.savePage();
   let dl = false; deactivate(); const html = build();
   try {
     if (window.showSaveFilePicker) {
@@ -1661,9 +1669,8 @@ async function save(as) {
       const w = await handle.createWritable(); await w.write(html); await w.close(); fname = handle.name;
     } else { download(html); dl = true; }
   } catch (e) { if (e.name === 'AbortError') return; handle = null; download(html); dl = true; }
-  dirty = false; status(); try { localStorage.removeItem('fle-draft'); } catch (e) { }
-  savedLine(fname, dl);
-  if (notesIn(doc)) { $('#cleanbar').hidden = false; chromeHeight(); }
+  if (as) NB.detach();
+  afterSave(dl);
 }
 async function saveClean() {
   $('#cleanbar').hidden = true; chromeHeight();
@@ -1674,18 +1681,19 @@ async function saveClean() {
   const keep = fname; fname = name; download(html); fname = keep; savedLine(name, true);
 }
 async function open() {
-  if (!keepGoing('open another document')) return;
+  if (!(await gate('open another document'))) return;
   try {
-    if (window.showOpenFilePicker) { const [h] = await showOpenFilePicker(pickerOpts({})); const f = await h.getFile(); handle = h; load(await f.text(), f.name); return; }
+    if (window.showOpenFilePicker) { const [h] = await showOpenFilePicker(pickerOpts({})); const f = await h.getFile(); handle = h; NB.detach(); load(await f.text(), f.name); return; }
   } catch (e) { if (e.name === 'AbortError') return; }
   $('#file').click();
 }
-$('#file').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; handle = null; load(await f.text(), f.name); e.target.value = ''; });
-function fresh() { if (!keepGoing('start a new document')) return; handle = null; fname = 'document.html'; idxDepth = 1; repSet(null); $('#cleanbar').hidden = true; $('#savedbar').hidden = true; setNotes(false); remoteImgs = 0; deactivate(); doc.innerHTML = STARTER; prep(); histReset(); dirty = false; status(); }
+$('#file').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; handle = null; NB.detach(); load(await f.text(), f.name); e.target.value = ''; });
+async function fresh() { if (!(await gate('start a new document'))) return; blank(); NB.newPage(); }
+function blank() { handle = null; fname = 'document.html'; idxDepth = 1; repSet(null); $('#cleanbar').hidden = true; $('#savedbar').hidden = true; setNotes(false); remoteImgs = 0; deactivate(); doc.innerHTML = STARTER; prep(); histReset(); dirty = false; status(); }
 
 /* ---------- toolbar wiring ---------- */
 const ACT = {
-  new: fresh, open: open, save: () => save(false), saveas: () => save(true),
+  new: fresh, open: open, nb: () => NB.toggle(), nbwarnx: () => NB.warnOff(), save: () => save(false), saveas: () => save(true),
   bold: () => cmd('bold'), italic: () => cmd('italic'), ul: () => { if (qaList('ul')) return; const l = listAt(); if (l && l.matches('ul.check')) { l.classList.remove('check'); if (!l.getAttribute('class')) l.removeAttribute('class'); touch(); } else { listCmd('insertUnorderedList'); touch(); } }, ol: () => { if (qaList('ol')) return; listCmd('insertOrderedList'); touch(); }, check: checkList, ldense: listDense, indent: () => { listShift(1); }, outdent: () => { listShift(-1); },
   undo: () => histGo(-1), redo: () => histGo(1),
   code: addCode, clear: clearFormat, paint: () => { if (paint) paintStop(); else paintPick(false); }, note: addNote, margin: toggleNotes, who: () => initials(true), saveclean: saveClean, repeat: repeatLast, nosaved: () => { $('#savedbar').hidden = true; chromeHeight(); }, noclean: () => { $('#cleanbar').hidden = true; chromeHeight(); },
@@ -1698,7 +1706,7 @@ const ACT = {
   dismiss: () => { try { localStorage.removeItem('fle-draft'); } catch (e) { } $('#draft').hidden = true; chromeHeight(); },
 };
 $('#chrome').addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
-$('#chrome').addEventListener('click', e => { const b = e.target.closest('button[data-a]'); if (!b) return; const a = b.dataset.a; if (!board && !['undo', 'redo', 'help', 'inspect', 'new', 'open', 'save', 'saveas', 'who', 'saveclean', 'noclean', 'nosaved', 'margin', 'paint', 'repeat'].includes(a)) { clearTimeout(timer); histSnap(); } if (cellSel && (a === 'bold' || a === 'italic' || a === 'clear')) cellFormat(a); else if (ACT[a]) { ACT[a](); if (!board) repNote(a); } else if (ADD[a] && board) ADD[a](); });
+$('#chrome').addEventListener('click', e => { const b = e.target.closest('button[data-a]'); if (!b) return; const a = b.dataset.a; if (!board && !['undo', 'redo', 'help', 'inspect', 'new', 'open', 'save', 'saveas', 'who', 'saveclean', 'noclean', 'nosaved', 'margin', 'paint', 'repeat', 'nb', 'nbwarnx'].includes(a)) { clearTimeout(timer); histSnap(); } if (cellSel && (a === 'bold' || a === 'italic' || a === 'clear')) cellFormat(a); else if (ACT[a]) { ACT[a](); if (!board) repNote(a); } else if (ADD[a] && board) ADD[a](); });
 $('#help').addEventListener('click', e => { if (e.target === e.currentTarget || e.target.closest('[data-a="helpclose"]')) e.currentTarget.close(); });
 $('#s-block').addEventListener('change', e => { const v = e.target.value; if (v) { const label = e.target.selectedOptions[0].textContent; clearTimeout(timer); histSnap(); setBlock(v); repSet(label, () => setBlock(v)); } styleUI(); });
 $('#s-fmt').addEventListener('change', e => { const v = e.target.value; e.target.value = ''; if (v && FMT[v]) { clearTimeout(timer); histSnap(); restore(); const want = !fmtOn(v); setFmt(v, want); repSet(FMT[v][0] + (want ? '' : ' off'), () => setFmt(v, want)); } styleUI(); });
@@ -1722,9 +1730,12 @@ $('#s-state').addEventListener('change', e => setState(e.target.value));
 ['#s-w', '#s-h', '#s-aria'].forEach(s => $(s).addEventListener('change', setBoard));
 $('#s-state').innerHTML = STATES.map(s => '<option value="' + s + '">' + s + '</option>').join('');
 
+/*NOTEBOOK*/
+
 /* ---------- start ---------- */
 doc.innerHTML = STARTER; prep(); histReset(); status(); whoUI(); chromeHeight(); $$('#tbar button.t').forEach(x => x.classList.add('dim'));
 try { const d = localStorage.getItem('fle-draft'); if (d && d !== clean().innerHTML) $('#draft').hidden = false; } catch (e) { }
 chromeHeight();
-window.FLE = { load, build, ADD, activate, connect, select, newDiagram, DE, boardToDrawio, get board() { return board; } };
+NB.init();
+window.FLE = { load, build, NB, ADD, activate, connect, select, newDiagram, DE, boardToDrawio, get board() { return board; } };
 })();

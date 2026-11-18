@@ -48,7 +48,7 @@ await click(pg, 'help'); await sleep(100);
 const dlg = await pg.evaluate(() => { const d = document.getElementById('help'); return { open: d.open, modal: d.matches(':modal'), info: document.getElementById('help-info').textContent, topics: [...d.querySelectorAll('.help-body .hc .hc-h span')].map(x => x.textContent), cols: new Set([...d.querySelectorAll('.hc')].map(c => Math.round(c.getBoundingClientRect().left))).size, fits: [...d.querySelectorAll('.hc')].every(c => c.querySelectorAll('li').length >= 2) }; });
 check('Help opens as a dialog box', dlg.open && dlg.modal, dlg);
 check('the dialog shows the editor version and the document name', /^Editor v\d+\.\d+\.\d+ \| Document: opened\.html \(unsaved changes\)$/.test(dlg.info), dlg.info);
-same('the dialog holds the help topics as cards', dlg.topics, ['Writing and styles', 'Index', 'Copy, cut and paste', 'Tables', 'Links', 'Notes', 'Code', 'Q&A', 'Diagrams', 'Connectors', 'Files']);
+same('the dialog holds the help topics as cards', dlg.topics, ['Writing and styles', 'Index', 'Copy, cut and paste', 'Tables', 'Links', 'Notes', 'Code', 'Q&A', 'Diagrams', 'Connectors', 'Notebook', 'Files']);
 check('cards are laid out in columns of short points', dlg.cols >= 2 && dlg.fits, dlg);
 same('opening Help does not move the page', await pg.evaluate(() => document.querySelector('.page').getBoundingClientRect().top), before);
 await pg.screenshot({ path: 'test/out/t15-help.png' });

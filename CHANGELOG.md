@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Fixed: the list buttons broke a Q&A list (the answer or question lost its place in the list). An answer can now hold bullet, numbered and check lists, made from the line the cursor is on; the list buttons do nothing in a question.
 - More formats: a toolbar list with superscript, subscript, strike-through and inline code, each switched on or off for the selected text; the list ticks the ones on at the cursor. Inline code now uses the code font. Pasted strike-through is kept.
 - List indent and outdent: two buttons, and Tab and Shift+Tab in a list. Outdent at the top level turns the item into a paragraph (a plain line in a table cell). Q&A lists are unchanged.
 - Link button opens a form with display text and address in place of the single address prompt. The display text defaults to the selected text; the address defaults to the selected text when it is a web address, or to a web address on the clipboard when the browser already allows reading it (it never asks).

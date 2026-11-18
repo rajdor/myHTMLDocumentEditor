@@ -97,6 +97,7 @@ Tests use puppeteer-core with a local Chrome or Edge (or `CHROME_PATH`). `npm te
 | t26-inspector | Inspect formatting: opens only on demand, lists formats from the outside in, the look line, marks what the toolbar cannot make, blocks, boxes, lists and table cells, removing one format, a selected word, closing, nothing saved |
 | t27-more-formats | Superscript, subscript, strike-through and inline code from the More list: on, off, ticks, undo, repeat, limits, Clear format, pasted strike-through kept, toolbar on one row |
 | t28-list-indent | List indent and outdent by button and by Tab: levels, several items, cursor kept, top level becomes a paragraph, numbered lists and checklists, Q&A untouched, lists in table cells |
+| t29-qa-lists | Lists inside a Q&A answer: made from the current line or the selected lines, kinds and changing kind, Enter and Backspace, leaving the list, indent, the Q&A stays whole, questions refuse lists, saved markup |
 
 ## Updating the diagram editor
 

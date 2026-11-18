@@ -295,6 +295,7 @@ dl.qa { margin: 8px 0 16px; max-width: 900px; }
 dl.qa dt { position: relative; padding-left: 32px; margin-top: 14px; font-weight: 600; color: var(--ink); }
 dl.qa dt:first-child { margin-top: 0; }
 dl.qa dd { position: relative; margin: 4px 0 0; padding-left: 32px; }
+dl.qa dd > ul, dl.qa dd > ol { margin: 4px 0; }
 dl.qa dt::before, dl.qa dd::before { position: absolute; left: 0; top: 1px; font: 600 11px/1.6 var(--mono); border-radius: 3px; padding: 0 5px; }
 dl.qa dt::before { content: "Q"; color: var(--ink); background: var(--fill); }
 dl.qa dd::before { content: "A"; color: var(--ink-soft); background: #f6f9fc; }

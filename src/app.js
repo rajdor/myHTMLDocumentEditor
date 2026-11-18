@@ -107,6 +107,7 @@ function styleUI() {
   [['bold', 'bold'], ['italic', 'italic'], ['ul', 'insertUnorderedList'], ['ol', 'insertOrderedList']].forEach(([a, c]) => { let on = false; try { on = document.queryCommandState(c); } catch (e) { } $('[data-a="' + a + '"]').classList.toggle('on', on); });
   const bx = boxAt(n); $('#s-boxtype').value = bx ? boxType(bx) : '';
   $$('#s-fmt option[value]').forEach(o => { if (FMT[o.value]) o.textContent = (fmtOn(o.value) ? '\u2713 ' : '') + FMT[o.value][0]; }); { const la = listAt(); $('[data-a="indent"]').classList.toggle('dim', !la); $('[data-a="outdent"]').classList.toggle('dim', !la); }
+  { const q = qaItem(), noList = !!(q && q.tagName === 'DT'); ['ul', 'ol', 'check'].forEach(a => $('[data-a="' + a + '"]').classList.toggle('dim', noList)); }
   { const lt = listTop(); $('[data-a="ldense"]').classList.toggle('on', !!(lt && lt.classList.contains('dense'))); $('[data-a="ldense"]').classList.toggle('dim', !lt); }
   const ck = inCheck(); $('[data-a="check"]').classList.toggle('on', ck); if (ck) $('[data-a="ul"]').classList.remove('on');
 }
@@ -459,8 +460,8 @@ const inTable = () => { live(); return !!cell(); };
 const REP = {
   bold: () => { let w = false; try { w = document.queryCommandState('bold'); } catch (e) { } return [w ? 'Bold' : 'Bold off', () => { restore(); setInline('bold', 'b,strong', w); }]; },
   italic: () => { let w = false; try { w = document.queryCommandState('italic'); } catch (e) { } return [w ? 'Italic' : 'Italic off', () => { restore(); setInline('italic', 'i,em', w); }]; },
-  ul: () => { let w = false; try { w = document.queryCommandState('insertUnorderedList'); } catch (e) { } return [w ? 'Bulleted list' : 'Bulleted list off', () => { restore(); if (document.queryCommandState('insertUnorderedList') !== w) document.execCommand('insertUnorderedList'); }]; },
-  ol: () => { let w = false; try { w = document.queryCommandState('insertOrderedList'); } catch (e) { } return [w ? 'Numbered list' : 'Numbered list off', () => { restore(); if (document.queryCommandState('insertOrderedList') !== w) document.execCommand('insertOrderedList'); }]; },
+  ul: () => { let w = false; try { w = document.queryCommandState('insertUnorderedList'); } catch (e) { } return [w ? 'Bulleted list' : 'Bulleted list off', () => { if (qaList('ul')) return; if (document.queryCommandState('insertUnorderedList') !== w) document.execCommand('insertUnorderedList'); }]; },
+  ol: () => { let w = false; try { w = document.queryCommandState('insertOrderedList'); } catch (e) { } return [w ? 'Numbered list' : 'Numbered list off', () => { if (qaList('ol')) return; if (document.queryCommandState('insertOrderedList') !== w) document.execCommand('insertOrderedList'); }]; },
   check: () => { const w = inCheck(); return [w ? 'Checklist' : 'Checklist off', () => { restore(); if (inCheck() !== w) checkList(); }]; },
   ldense: () => { const l = listTop(), w = !!(l && l.classList.contains('dense')); return [w ? 'Compact list' : 'Compact list off', () => { restore(); const t = listTop(); if (t && t.classList.contains('dense') !== w) listDense(); }]; },
   indent: () => ['Indent', () => listShift(1)], outdent: () => ['Outdent', () => listShift(-1)],
@@ -571,16 +572,52 @@ function listShift(dir) {
   }
   // top level: the items leave the list
   const tail = rest.length ? listLike(L) : null; if (tail) { if (L.classList.contains('dense')) tail.classList.add('dense'); rest.forEach(x => tail.appendChild(x)); }
-  const cellish = !!L.parentNode.closest('td,th,li'), made = []; let at = L;
+  const cellish = !!L.parentNode.closest('td,th,li,dd'), made = []; let at = L;
   lis.forEach(li => {
     $$(':scope > input', li).forEach(x => x.remove());
     const p = document.createElement('p'), kids = inner(li); kids.forEach(k => k.remove()); p.append(...li.childNodes); if (!p.textContent.trim() && !p.querySelector('img,br')) p.appendChild(document.createElement('br'));
     at.after(p); at = p; made.push(p); kids.forEach(k => { if (L.classList.contains('dense')) k.classList.add('dense'); at.after(k); at = k; }); li.remove();
   });
   if (tail) at.after(tail); if (!L.children.length) L.remove();
-  back(made[0]); if (cellish) made.forEach(p => { if (p.parentNode) toLine(p); });
+  back(made[0]); if (cellish) made.forEach(p => { if (!p.parentNode) return; if (!p.textContent.trim() && !p.querySelector('img')) { const br = document.createElement('br'); p.replaceWith(br); if (!doc.contains(s.anchorNode) || s.anchorNode === br.parentNode) { s.collapse(br.parentNode, [...br.parentNode.childNodes].indexOf(br)); lastRange = s.getRangeAt(0).cloneRange(); } return; } toLine(p); });
   touch(); styleUI(); return true;
 }
+/* ---------- lists in a Q&A answer ----------
+   The browser's own list command takes a Q&A list for a list to convert and breaks it, so inside a Q&A the list
+   buttons are handled here. In an answer, the line or lines the cursor or selection is on become a list inside the
+   answer; on an item of that list the same button takes the item back out and another list button changes the kind
+   of list. In a question the list buttons do nothing. Returns true when the cursor is in a Q&A. */
+function qaList(kind) {
+  restore(); const item = qaItem(lastRange); if (!item) return false; if (item.tagName === 'DT') return true;
+  const s = getSelection(), want = kind === 'ol' ? 'OL' : 'UL', chk = kind === 'check', keep = [s.anchorNode, s.anchorOffset, s.focusNode, s.focusOffset];
+  const back = fall => { try { if (!doc.contains(keep[0]) || !doc.contains(keep[2])) throw 0; s.setBaseAndExtent(...keep); lastRange = s.getRangeAt(0).cloneRange(); } catch (e) { if (fall && doc.contains(fall)) caret(fall, true); } };
+  const isList = n => !!n && n.nodeType === 1 && /^(UL|OL)$/.test(n.tagName), sameKind = n => isList(n) && n.tagName === want && n.classList.contains('check') === chk;
+  const L = listAt();
+  if (L && item.contains(L)) {
+    if (sameKind(L)) { listShift(-1); return true; }
+    let N = L; if (L.tagName !== want) { N = document.createElement(want.toLowerCase()); if (L.classList.contains('dense')) N.className = 'dense'; N.append(...L.childNodes); L.replaceWith(N); }
+    N.classList.toggle('check', chk); if (!N.getAttribute('class')) N.removeAttribute('class');
+    back(N.firstElementChild); touch(); styleUI(); return true;
+  }
+  const r = s.getRangeAt(0), top = n => { while (n && n.parentNode !== item) n = n.parentNode; return n; }, kids = [...item.childNodes];
+  const a = r.startContainer === item ? kids[Math.min(r.startOffset, kids.length - 1)] : top(r.startContainer), z = r.collapsed ? a : (r.endContainer === item ? kids[Math.max(0, Math.min(r.endOffset, kids.length) - 1)] : top(r.endContainer));
+  const lines = []; let cur = [];
+  kids.forEach(n => { if (n.nodeName === 'BR') { lines.push({ nodes: cur, br: n }); cur = []; } else if (isList(n)) { if (cur.length) lines.push({ nodes: cur }); lines.push({ block: n }); cur = []; } else cur.push(n); });
+  if (cur.length || !lines.length) lines.push({ nodes: cur });
+  const at = n => lines.findIndex(l => l.block === n || l.br === n || (l.nodes && l.nodes.includes(n)));
+  let i = a ? at(a) : lines.length - 1, j = z ? at(z) : i; if (i < 0) i = lines.length - 1; if (j < i) j = i; if (lines[i].block) return true;
+  for (let k2 = i; k2 <= j; k2++) if (lines[k2].block) { j = k2 - 1; break; }
+  const list = document.createElement(want.toLowerCase()); if (chk) list.className = 'check';
+  const first = lines[i].nodes[0] || lines[i].br; if (first) first.before(list); else item.appendChild(list);
+  for (let k2 = i; k2 <= j; k2++) { const li = document.createElement('li'), ln = lines[k2]; if (ln.nodes.some(n => n.nodeType !== 3 || n.data.trim())) li.append(...ln.nodes); else { ln.nodes.forEach(n => n.remove()); li.appendChild(document.createElement('br')); } if (ln.br) ln.br.remove(); list.appendChild(li); }
+  let made = list; const pv = list.previousSibling, nx = list.nextSibling;
+  if (sameKind(pv)) { pv.append(...list.childNodes); list.remove(); made = pv; }
+  if (sameKind(nx)) { made.append(...nx.childNodes); nx.remove(); }
+  back(made.lastElementChild); if (!s.rangeCount || !made.contains(s.anchorNode)) caret(made.lastElementChild, true);
+  touch(); styleUI(); return true;
+}
+/* The list item the cursor is in, when that list is inside a Q&A answer. */
+function qaListItem() { const q = qaItem(); if (!q) return null; const s = getSelection(); let n = s.anchorNode; if (n && n.nodeType !== 1) n = n.parentElement; const li = n && n.closest('li'); return li && q.contains(li) ? li : null; }
 /* ---------- checklists ----------
    A checklist is a bulleted list with the class "check". Each item starts with a real checkbox, so a saved document
    needs no script: the browser ticks the box and the style sheet places it. A tick made in the editor is written to
@@ -632,7 +669,7 @@ function checkStart() {
   return r.toString() === '' && !r.cloneContents().querySelector('br,img,input') ? li : null;
 }
 function checkList() {
-  restore(); if (qaItem(lastRange)) return;
+  if (qaList('check')) return;
   let l = listAt();
   if (l && l.matches('ul.check')) listCmd('insertUnorderedList');
   else { if (!l || l.tagName !== 'UL') { listCmd('insertUnorderedList'); l = listAt(); } if (l && l.tagName === 'UL') l.classList.add('check'); }
@@ -1189,7 +1226,8 @@ function qaEnter(item, shift) {
   }
   const after = document.createRange(); after.setStart(r.endContainer, r.endOffset); after.setEnd(item, item.childNodes.length);
   const before = document.createRange(); before.setStart(item, 0); before.setEnd(r.startContainer, r.startOffset);
-  const atEnd = !after.toString().trim(), empty = atEnd && !lineText(frag(before), true);
+  let lead = frag(before).filter(n => !(n.parentElement && n.parentElement.closest('ul,ol'))); { let cut = -1; lead.forEach((n, i) => { if (n.nodeType === 1 && /^(UL|OL)$/.test(n.tagName)) cut = i; }); lead = lead.slice(cut + 1); } // a list in the answer ends the line before it
+  const atEnd = !after.toString().trim(), empty = atEnd && !lineText(lead, true);
   if (!empty) { document.execCommand('insertLineBreak'); touch(); return; }
   while (item.lastChild && (item.lastChild.nodeName === 'BR' || (item.lastChild.nodeType === 3 && !item.lastChild.data.trim()))) item.lastChild.remove();
   const dt = mk('dt'); item.after(dt); if (!item.textContent.trim()) item.remove(); caret(dt); touch();
@@ -1409,7 +1447,12 @@ document.addEventListener('keydown', e => {
   if (k === 'Tab' && !ctrl && !e.altKey && !editing) { const c = cellEl(); if (c) { e.preventDefault(); cellTab(c, e.shiftKey); return; } }
   if (k === 'Tab' && !ctrl && !e.altKey && !editing && !board && doc.contains(e.target) && listAt() && !blockOf(getSelection().anchorNode)) { e.preventDefault(); clearTimeout(timer); histSnap(); const out = e.shiftKey; if (listShift(out ? -1 : 1)) repSet(out ? 'Outdent' : 'Indent', () => listShift(out ? -1 : 1)); return; }
   if ((k === 'ArrowDown' || k === 'ArrowUp') && !e.shiftKey && !ctrl && !e.altKey && !editing) { const c = cellEl(); if (c && cellArrow(c, k === 'ArrowDown')) { e.preventDefault(); return; } }
-  if (k === 'Enter' && !ctrl && !e.altKey && !editing) { const q = qaItem(); if (q) { e.preventDefault(); qaEnter(q, e.shiftKey); return; } }
+  if ((k === 'Enter' || k === 'Backspace') && !ctrl && !e.altKey && !e.shiftKey && !editing && !board) { const li = qaListItem(), g = getSelection(); if (li && g.isCollapsed) {
+    const own = [...li.childNodes].filter(n => !(n.nodeType === 1 && n.matches('ul,ol,input'))), empty = !own.some(n => n.nodeType === 3 ? n.data.trim() : n.nodeName !== 'BR');
+    const pre = document.createRange(); pre.setStart(li, 0); pre.setEnd(g.anchorNode, g.anchorOffset);
+    if (k === 'Enter' ? empty && !li.querySelector('ul,ol') : !pre.toString()) { e.preventDefault(); clearTimeout(timer); histSnap(); listShift(-1); return; } // an empty item, or Backspace at the start of one, leaves the list and stays in the answer
+  } }
+  if (k === 'Enter' && !ctrl && !e.altKey && !editing) { const q = qaItem(); if (q && !qaListItem()) { e.preventDefault(); qaEnter(q, e.shiftKey); return; } }
   if (!editing && !ctrl && !e.altKey && (k === 'Enter' || k === 'Tab')) { const pre = blockOf(getSelection().anchorNode); if (pre) { e.preventDefault(); if (k === 'Tab') { if (!e.shiftKey) codeInsert('\t'); } else if (e.shiftKey) { document.execCommand('insertLineBreak'); touch(); } else codeEnter(pre); return; } }
   if (k === 'Enter' && !e.shiftKey && !ctrl && !e.altKey && !editing) { const s1 = getSelection(); let n1 = s1.anchorNode; if (n1 && n1.nodeType !== 1) n1 = n1.parentElement; const lp = n1 && n1.closest('.note-entries > p'); if (lp && doc.contains(lp)) { e.preventDefault(); const who = initials(); if (!who) return; const line = mk('p', '', '<b class="note-who"></b>&nbsp;'); line.firstChild.textContent = who; lp.after(line); caret(line, true); touch(); return; } }
   if (k === 'Enter' && !e.shiftKey && !ctrl && !e.altKey && !editing && !inCell()) {
@@ -1643,7 +1686,7 @@ function fresh() { if (!keepGoing('start a new document')) return; handle = null
 /* ---------- toolbar wiring ---------- */
 const ACT = {
   new: fresh, open: open, save: () => save(false), saveas: () => save(true),
-  bold: () => cmd('bold'), italic: () => cmd('italic'), ul: () => { restore(); const l = listAt(); if (l && l.matches('ul.check')) { l.classList.remove('check'); if (!l.getAttribute('class')) l.removeAttribute('class'); touch(); } else { listCmd('insertUnorderedList'); touch(); } }, ol: () => { listCmd('insertOrderedList'); touch(); }, check: checkList, ldense: listDense, indent: () => { listShift(1); }, outdent: () => { listShift(-1); },
+  bold: () => cmd('bold'), italic: () => cmd('italic'), ul: () => { if (qaList('ul')) return; const l = listAt(); if (l && l.matches('ul.check')) { l.classList.remove('check'); if (!l.getAttribute('class')) l.removeAttribute('class'); touch(); } else { listCmd('insertUnorderedList'); touch(); } }, ol: () => { if (qaList('ol')) return; listCmd('insertOrderedList'); touch(); }, check: checkList, ldense: listDense, indent: () => { listShift(1); }, outdent: () => { listShift(-1); },
   undo: () => histGo(-1), redo: () => histGo(1),
   code: addCode, clear: clearFormat, paint: () => { if (paint) paintStop(); else paintPick(false); }, note: addNote, margin: toggleNotes, who: () => initials(true), saveclean: saveClean, repeat: repeatLast, nosaved: () => { $('#savedbar').hidden = true; chromeHeight(); }, noclean: () => { $('#cleanbar').hidden = true; chromeHeight(); },
   inspect: inspect, link: editLink, index: () => { idxDepth = idxDepth % 3 + 1; rebuild(); touch(); }, // steps 1, 2, 3 and back to 1

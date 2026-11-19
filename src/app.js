@@ -982,12 +982,36 @@ function insertInline(html) {
   r.insertNode(f);
   const c = document.createRange(); c.setStartAfter(last); c.collapse(true); s.removeAllRanges(); s.addRange(c); lastRange = c.cloneRange();
 }
+/* A block of cells pasted with the cursor in a table goes in cell for cell, from the cursor's cell across and down, as in a
+   spreadsheet. Cells that hold something are replaced, and rows or columns the table has no room for are left out;
+   in either case it says so and asks first. One copied cell is not a block: it goes in at the cursor like any text. */
+let clipNoop = false;
+function cellPaste(box) {
+  const kids = [...box.children], w = kids.length === 1 && kids[0].matches('.tw,table') ? kids[0] : null, src = w && (w.matches('table') ? w : $(':scope > table', w)), home = cellEl();
+  if (!src || !home || $('table', src)) return null;
+  const S = tMatrix(src), rows = S.M.length, cols = Math.max(0, ...S.M.map(r => r.length)); if (new Set(S.M.flat().filter(Boolean)).size < 2) return null;
+  const T = tMatrix(home.closest('table')), [r0, c0] = tPos(T, home), fitR = Math.min(rows, T.M.length - r0), fitC = Math.min(cols, T.M[r0].length - c0), jobs = [], from = new Set(), to = new Set();
+  for (let i = 0; i < fitR; i++) for (let j = 0; j < fitC; j++) { const a = S.M[i][j], d = T.M[r0 + i][c0 + j]; if (!a || from.has(a)) continue; from.add(a); if (!d || to.has(d)) continue; to.add(d); jobs.push([d, a]); }
+  const over = jobs.filter(([d]) => hasContent(d)).length, cutR = rows - fitR, cutC = cols - fitC, n = (k, w1) => k + ' ' + w1 + (k === 1 ? '' : 's');
+  if (over || cutR || cutC) {
+    const m = 'Pasting ' + n(rows, 'row') + ' by ' + n(cols, 'column') + ' of cells here:\n\n'
+      + (over ? '- replaces what is in ' + n(over, 'cell') + '\n' : '')
+      + (cutR ? '- leaves out the last ' + n(cutR, 'row') + ': the table has only ' + n(fitR, 'row') + ' from this cell down\n' : '')
+      + (cutC ? '- leaves out the last ' + n(cutC, 'column') + ': the table has only ' + n(fitC, 'column') + ' from this cell across\n' : '')
+      + '\nOK: paste.\nCancel: paste nothing.';
+    if (!confirm(m)) { clipNoop = true; return false; }
+  }
+  if (!jobs.length) { clipNoop = true; return false; }
+  jobs.forEach(([d, a]) => { d.innerHTML = hasContent(a) ? a.innerHTML : '<br>'; });
+  clipAdopt(jobs.map(j => j[0])); cellSelClear(); caret(jobs[jobs.length - 1][0], true); return true;
+}
 function clipInsert(box) {
   const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode)) return;
   let at = s.anchorNode; if (at.nodeType !== 1) at = at.parentElement;
   // from another program, into a place with its own weight (or into bold): its bold is not kept
   const heavy = !box.hasAttribute('data-fle-clip') && !!at.closest(WEIGHTED + ',b,strong');
   const put = h => { if (heavy) { const t = document.createElement('div'); t.innerHTML = h; unbold(t, true); h = t.innerHTML; } insertInline(h); };
+  if (cellPaste(box) !== null) return;
   if (!box.querySelector(BLOCKS + ',.dg,.fig')) { put(box.innerHTML); return; }
   const li = at.closest('li'), lists = [...box.children].every(c => c.matches('ul,ol'));
   if (li && doc.contains(li) && !cellEl() && lists && !s.isCollapsed) document.execCommand('delete');
@@ -1014,12 +1038,12 @@ function clipInsert(box) {
 }
 doc.addEventListener('paste', e => {
   if (editing) return; e.preventDefault(); const t = e.clipboardData.getData('text/plain'), h = e.clipboardData.getData('text/html');
-  clearTimeout(timer); histSnap();
+  clearTimeout(timer); histSnap(); clipNoop = false;
   if (blockOf(getSelection().anchorNode)) codeInsert(t);
   else if (h && h.trim()) { const box = clipRead(h); if (hasContent(box)) clipInsert(box); else if (t) document.execCommand('insertText', false, t); fit(); styleUI(); }
   else if (inCell()) document.execCommand('insertHTML', false, t.split(/\r?\n/).map(esc).join('<br>'));
   else document.execCommand('insertText', false, t);
-  touch();
+  if (!clipNoop) touch();
 });
 
 function addTable() {

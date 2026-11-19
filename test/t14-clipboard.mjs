@@ -78,7 +78,7 @@ check('a web image becomes a link card, not a download', /class="link-card"/.tes
 check('no styles, classes from the source, scripts or handlers get in', !/style=|MsoNormal|<script|onclick|javascript:|<font/.test(got.join('')), got.join(''));
 // inline HTML from another program into a heading keeps it a heading
 await load(pg, DOC); await caretIn(pg, '#doc h2'); await paste('<span style="font-weight:bold">B</span> <em>e</em>', 'B e'); await sleep(50);
-same('inline formatting pastes into the current block', await html('#doc h2'), 'Heading two<b>B</b> <em>e</em>');
+same('inline formatting pastes into the current block (bold is not kept in a heading)', await html('#doc h2'), 'Heading twoB <em>e</em>');
 // plain text only: unchanged behaviour
 await load(pg, DOC); await caretIn(pg, '#z'); await paste('', ' plain'); await sleep(50);
 same('plain text pastes as text', await html('#z'), 'Zed plain');

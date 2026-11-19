@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-8CndHyQe95Bc7MOtNMkO0WxVEiTNPPMB3Y7rA9D5CpM=' 'sha256-3Zh695gSlLtuWIVf2eNqD6CjDiGQ+8M93ETEaeeiB54=' 'sha256-M6SWFqrQoifkqEPzYVvh9EYzKZBy3GChxVramkRkJyw=' 'sha256-koJn5cVKlUwZqNFWbSKAMvXgT5MBiwuchuxsWQ7/598='; style-src 'unsafe-inline' data:; img-src data: blob:; font-src data:; connect-src data: blob:; frame-src 'self' blob: data:; child-src 'self' blob: data:; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-8CndHyQe95Bc7MOtNMkO0WxVEiTNPPMB3Y7rA9D5CpM=' 'sha256-tuPy2yqsgYD0myVmY1ftYwPRbH13Vp+cx1+gcIYOokI=' 'sha256-M6SWFqrQoifkqEPzYVvh9EYzKZBy3GChxVramkRkJyw=' 'sha256-koJn5cVKlUwZqNFWbSKAMvXgT5MBiwuchuxsWQ7/598='; style-src 'unsafe-inline' data:; img-src data: blob:; font-src data:; connect-src data: blob:; frame-src 'self' blob: data:; child-src 'self' blob: data:; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fine Line notebook</title>
 <style id="doc-css">body { margin: 0; }
@@ -215,6 +215,8 @@ h4 { font-size: 14px; font-weight: 600; color: var(--ink-soft); margin: 20px 0 6
 .h2sub { color: var(--ink-soft); margin: -4px 0 18px; }
 pre { font: 13px/1.5 var(--mono); font-variant-ligatures: none; color: var(--ink); background: #f6f9fc; border: 1px solid var(--dots); border-radius: 3px; padding: 10px 12px; margin: 10px 0 16px; max-width: 900px; overflow-x: auto; white-space: pre; tab-size: 4; }
 p { margin: 8px 0; max-width: 900px; }
+/* bold is one set weight: the browser's own rule is relative (bolder than the text around it), which gives 900 in a header cell or heading */
+main b, main strong { font-weight: 700; }
 .bluf { font-size: 17px; border-left: 4px solid var(--ink); padding: 4px 0 4px 16px; }
 .cap { font-size: 13px; color: var(--ink-soft); margin: 6px 0 16px; max-width: none; }
 ul, ol { margin: 8px 0; padding-left: 22px; max-width: 900px; }
@@ -449,18 +451,19 @@ html.de-open, html.de-open body { overflow: hidden; }
 #tbar select { padding-left: 4px; padding-right: 2px; }
 #tbar .tops button.ic { width: 22px; }
 /* link form */
-#linkdlg { width: min(460px, calc(100vw - 32px)); padding: 16px 18px 14px; border: 1.5px solid var(--ink); border-radius: 3px; box-shadow: 4px 6px 0 var(--shadow); background: var(--paper); color: #1c2b3a; font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
-#linkdlg::backdrop { background: rgba(18, 53, 91, .35); }
-#linkdlg > b { display: block; font-size: 15px; color: var(--ink); margin-bottom: 6px; }
-#linkdlg label { display: block; margin: 8px 0 2px; font-size: 12px; color: var(--ink-soft); }
-#linkdlg input { width: 100%; box-sizing: border-box; font: inherit; color: inherit; background: #fff; border: 1px solid #B8C2CE; border-radius: 3px; padding: 5px 8px; }
-#linkdlg input:disabled { background: #F1F4F8; }
-#link-err { margin: 6px 0 0; min-height: 1.4em; font-size: 12px; color: var(--redline); }
-#linkdlg .link-btns { display: flex; gap: 8px; margin-top: 6px; }
-#linkdlg .link-btns span { flex: 1; }
-#linkdlg button { font: inherit; color: var(--ink); background: #fff; border: 1px solid #B8C2CE; border-radius: 3px; padding: 4px 12px; cursor: pointer; }
-#linkdlg button:hover { background: #EAF1F8; }
-#linkdlg button.go { background: var(--ink); color: #fff; border-color: var(--ink); }
+:is(#linkdlg,#numdlg) { width: min(460px, calc(100vw - 32px)); padding: 16px 18px 14px; border: 1.5px solid var(--ink); border-radius: 3px; box-shadow: 4px 6px 0 var(--shadow); background: var(--paper); color: #1c2b3a; font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+:is(#linkdlg,#numdlg)::backdrop { background: rgba(18, 53, 91, .35); }
+:is(#linkdlg,#numdlg) > b { display: block; font-size: 15px; color: var(--ink); margin-bottom: 6px; }
+:is(#linkdlg,#numdlg) label { display: block; margin: 8px 0 2px; font-size: 12px; color: var(--ink-soft); }
+:is(#linkdlg,#numdlg) input { width: 100%; box-sizing: border-box; font: inherit; color: inherit; background: #fff; border: 1px solid #B8C2CE; border-radius: 3px; padding: 5px 8px; }
+:is(#linkdlg,#numdlg) input:disabled { background: #F1F4F8; }
+#num-hint { margin: 6px 0 0; font-size: 12px; color: var(--ink-soft); }
+#link-err, #num-err { margin: 6px 0 0; min-height: 1.4em; font-size: 12px; color: var(--redline); }
+:is(#linkdlg,#numdlg) .link-btns { display: flex; gap: 8px; margin-top: 6px; }
+:is(#linkdlg,#numdlg) .link-btns span { flex: 1; }
+:is(#linkdlg,#numdlg) button { font: inherit; color: var(--ink); background: #fff; border: 1px solid #B8C2CE; border-radius: 3px; padding: 4px 12px; cursor: pointer; }
+:is(#linkdlg,#numdlg) button:hover { background: #EAF1F8; }
+:is(#linkdlg,#numdlg) button.go { background: var(--ink); color: #fff; border-color: var(--ink); }
 /* notebook explorer: a panel down the left side, under the toolbar; never saved with a document */
 html.nb-open body { padding-left: var(--nbw, 260px); }
 html.nb-open #chrome { margin-left: calc(-1 * var(--nbw, 260px)); }
@@ -521,8 +524,8 @@ dialog.nb-dlg button[value=save], dialog.nb-dlg button[value=rename] { backgroun
  <div class="row" id="tbar">
   <span class="grp" role="group" aria-label="File"><button data-a="nb" class="ic" title="Notebook: show or hide the explorer" aria-label="Notebook explorer" aria-pressed="false"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M184,112a8,8,0,0,1-8,8H112a8,8,0,0,1,0-16h64A8,8,0,0,1,184,112Zm-8,24H112a8,8,0,0,0,0,16h64a8,8,0,0,0,0-16Zm48-88V208a16,16,0,0,1-16,16H48a16,16,0,0,1-16-16V48A16,16,0,0,1,48,32H208A16,16,0,0,1,224,48ZM48,208H72V48H48Zm160,0V48H88V208H208Z"/></svg></button><button data-a="new" class="ic" title="New document" aria-label="New document"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-40-64a8,8,0,0,1-8,8H136v16a8,8,0,0,1-16,0V160H104a8,8,0,0,1,0-16h16V128a8,8,0,0,1,16,0v16h16A8,8,0,0,1,160,152Z"/></svg></button><button data-a="open" class="ic" title="Open (Ctrl+O)" aria-label="Open (Ctrl+O)"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M245,110.64A16,16,0,0,0,232,104H216V88a16,16,0,0,0-16-16H130.67L102.94,51.2a16.14,16.14,0,0,0-9.6-3.2H40A16,16,0,0,0,24,64V208h0a8,8,0,0,0,8,8H211.1a8,8,0,0,0,7.59-5.47l28.49-85.47A16.05,16.05,0,0,0,245,110.64ZM93.34,64,123.2,86.4A8,8,0,0,0,128,88h72v16H69.77a16,16,0,0,0-15.18,10.94L40,158.7V64Zm112,136H43.1l26.67-80H232Z"/></svg></button><button data-a="save" class="ic" title="Save (Ctrl+S)" aria-label="Save (Ctrl+S)"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M219.31,72,184,36.69A15.86,15.86,0,0,0,172.69,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V83.31A15.86,15.86,0,0,0,219.31,72ZM168,208H88V152h80Zm40,0H184V152a16,16,0,0,0-16-16H88a16,16,0,0,0-16,16v56H48V48H172.69L208,83.31ZM160,72a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h56A8,8,0,0,1,160,72Z"/></svg></button><button data-a="saveas" class="ic" title="Save as (Ctrl+Shift+S)" aria-label="Save as (Ctrl+Shift+S)"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M208,32H83.31A15.86,15.86,0,0,0,72,36.69L36.69,72A15.86,15.86,0,0,0,32,83.31V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM88,48h80V80H88ZM208,208H48V83.31l24-24V80A16,16,0,0,0,88,96h80a16,16,0,0,0,16-16V48h24Zm-80-96a40,40,0,1,0,40,40A40,40,0,0,0,128,112Zm0,64a24,24,0,1,1,24-24A24,24,0,0,1,128,176Z"/></svg></button></span>
   <span class="grp" role="group" aria-label="History"><button data-a="undo" class="ic" title="Undo (Ctrl+Z)" aria-label="Undo (Ctrl+Z)"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a96,96,0,0,1-94.71,96H128A95.38,95.38,0,0,1,62.1,197.8a8,8,0,0,1,11-11.63A80,80,0,1,0,71.43,71.39a3.07,3.07,0,0,1-.26.25L44.59,96H72a8,8,0,0,1,0,16H24a8,8,0,0,1-8-8V56a8,8,0,0,1,16,0V85.8L60.25,60A96,96,0,0,1,224,128Z"/></svg></button><button data-a="redo" class="ic" title="Redo (Ctrl+Shift+Z)" aria-label="Redo (Ctrl+Shift+Z)"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M240,56v48a8,8,0,0,1-8,8H184a8,8,0,0,1,0-16H211.4L184.81,71.64l-.25-.24a80,80,0,1,0-1.67,114.78,8,8,0,0,1,11,11.63A95.44,95.44,0,0,1,128,224h-1.32A96,96,0,1,1,195.75,60L224,85.8V56a8,8,0,1,1,16,0Z"/></svg></button><button data-a="repeat" class="ic dim" title="Repeat last toolbar command" aria-label="Repeat last toolbar command"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M24,128A72.08,72.08,0,0,1,96,56H204.69L194.34,45.66a8,8,0,0,1,11.32-11.32l24,24a8,8,0,0,1,0,11.32l-24,24a8,8,0,0,1-11.32-11.32L204.69,72H96a56.06,56.06,0,0,0-56,56,8,8,0,0,1-16,0Zm200-8a8,8,0,0,0-8,8,56.06,56.06,0,0,1-56,56H51.31l10.35-10.34a8,8,0,0,0-11.32-11.32l-24,24a8,8,0,0,0,0,11.32l24,24a8,8,0,0,0,11.32-11.32L51.31,200H160a72.08,72.08,0,0,0,72-72A8,8,0,0,0,224,120Z"/></svg></button></span>
-  <span class="grp" role="group" aria-label="Text"><select id="s-block" title="Paragraph style"><option value="">Style</option><option value="p">Paragraph</option><option value="h1">H1</option><option value="p.sub">H1-subtitle</option><option value="h2">H2</option><option value="p.h2sub">H2-subtitle</option><option value="h3">H3</option><option value="h4">H4</option><option value="p.bluf">Lead paragraph</option><option value="p.cap">Caption</option><option value="pre">Code block</option><option value="dt">Q&amp;A question</option><option value="dd">Q&amp;A answer</option></select><select id="s-boxtype" title="Box: insert a box for the reader after the current block; inside a box, change its type" aria-label="Box"><option value="">Box</option><option value="note">Note</option><option value="info">Information</option><option value="tip">Tip</option><option value="warning">Warning</option><option value="critical">Critical</option><option value="none">Remove box</option></select><button data-a="bold" class="ic" title="Bold (Ctrl+B)" aria-label="Bold (Ctrl+B)"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M178.48,115.7A44,44,0,0,0,148,40H80a8,8,0,0,0-8,8V200a8,8,0,0,0,8,8h80a48,48,0,0,0,18.48-92.3ZM88,56h60a28,28,0,0,1,0,56H88Zm72,136H88V128h72a32,32,0,0,1,0,64Z"/></svg></button><button data-a="italic" class="ic" title="Italic (Ctrl+I)" aria-label="Italic (Ctrl+I)"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M200,56a8,8,0,0,1-8,8H157.77L115.1,192H144a8,8,0,0,1,0,16H64a8,8,0,0,1,0-16H98.23L140.9,64H112a8,8,0,0,1,0-16h80A8,8,0,0,1,200,56Z"/></svg></button><select id="s-fmt" title="More formats: superscript, subscript, strike-through and inline code, on or off for the selected text" aria-label="More formats"><option value="">More</option><option value="sup">Superscript</option><option value="sub">Subscript</option><option value="strike">Strike-through</option><option value="code">Inline code</option></select><button data-a="clear" class="ic" title="Clear format: removes all text formatting from the selected text (bold, italics, inline code, superscript, subscript, strike-through and anything pasted in). With the cursor only, or a whole block selected, the block also becomes a plain paragraph, or a plain line in a table cell or list item. Links and ID tags stay" aria-label="Clear format: remove all formatting from the selection or the current block"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M213.38,221.92a8,8,0,0,1-11.3-.54L136,148.69V192h24a8,8,0,0,1,0,16H96a8,8,0,0,1,0-16h24V131.09L64,69.49V88a8,8,0,0,1-16,0V56a8,8,0,0,1,.72-3.31l-6.64-7.31A8,8,0,1,1,53.92,34.62l160,176A8,8,0,0,1,213.38,221.92ZM105.79,64H120V80.43a8,8,0,0,0,16,0V64h56V88a8,8,0,0,0,16,0V56a8,8,0,0,0-8-8H105.79a8,8,0,0,0,0,16Z"/></svg></button><button data-a="paint" class="ic" title="Copy format: put the cursor in the source text and press this, then click a block or select text to apply. Double-click to keep it on; Esc ends" aria-label="Copy format" aria-pressed="false"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M232,32a8,8,0,0,0-8-8c-44.08,0-89.31,49.71-114.43,82.63A60,60,0,0,0,32,164c0,30.88-19.54,44.73-20.47,45.37A8,8,0,0,0,16,224H92a60,60,0,0,0,57.37-77.57C182.3,121.31,232,76.08,232,32ZM92,208H34.63C41.38,198.41,48,183.92,48,164a44,44,0,1,1,44,44Zm32.42-94.45q5.14-6.66,10.09-12.55A76.23,76.23,0,0,1,155,121.49q-5.9,4.94-12.55,10.09A60.54,60.54,0,0,0,124.42,113.55Zm42.7-2.68a92.57,92.57,0,0,0-22-22c31.78-34.53,55.75-45,69.9-47.91C212.17,55.12,201.65,79.09,167.12,110.87Z"/></svg></button><button data-a="inspect" class="ic" title="Inspect formatting: shows what formatting is on the text at the cursor, or on the selected word" aria-label="Inspect formatting"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"/></svg></button></span>
-  <span class="grp" role="group" aria-label="Lists"><button data-a="ul" class="ic" title="Bullet list" aria-label="Bullet list"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M80,64a8,8,0,0,1,8-8H216a8,8,0,0,1,0,16H88A8,8,0,0,1,80,64Zm136,56H88a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16Zm0,64H88a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16ZM44,52A12,12,0,1,0,56,64,12,12,0,0,0,44,52Zm0,64a12,12,0,1,0,12,12A12,12,0,0,0,44,116Zm0,64a12,12,0,1,0,12,12A12,12,0,0,0,44,180Z"/></svg></button><button data-a="ol" class="ic" title="Numbered list" aria-label="Numbered list"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H104a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128ZM104,72H216a8,8,0,0,0,0-16H104a8,8,0,0,0,0,16ZM216,184H104a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16ZM43.58,55.16,48,52.94V104a8,8,0,0,0,16,0V40a8,8,0,0,0-11.58-7.16l-16,8a8,8,0,0,0,7.16,14.32ZM79.77,156.72a23.73,23.73,0,0,0-9.6-15.95,24.86,24.86,0,0,0-34.11,4.7,23.63,23.63,0,0,0-3.57,6.46,8,8,0,1,0,15,5.47,7.84,7.84,0,0,1,1.18-2.13,8.76,8.76,0,0,1,12-1.59A7.91,7.91,0,0,1,63.93,159a7.64,7.64,0,0,1-1.57,5.78,1,1,0,0,0-.08.11L33.59,203.21A8,8,0,0,0,40,216H72a8,8,0,0,0,0-16H56l19.08-25.53A23.47,23.47,0,0,0,79.77,156.72Z"/></svg></button><button data-a="check" class="ic" title="Checklist" aria-label="Checklist"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H128a8,8,0,0,1,0-16h88A8,8,0,0,1,224,128ZM128,72h88a8,8,0,0,0,0-16H128a8,8,0,0,0,0,16Zm88,112H128a8,8,0,0,0,0,16h88a8,8,0,0,0,0-16ZM82.34,42.34,56,68.69,45.66,58.34A8,8,0,0,0,34.34,69.66l16,16a8,8,0,0,0,11.32,0l32-32A8,8,0,0,0,82.34,42.34Zm0,64L56,132.69,45.66,122.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32,0l32-32a8,8,0,0,0-11.32-11.32Zm0,64L56,196.69,45.66,186.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32,0l32-32a8,8,0,0,0-11.32-11.32Z"/></svg></button><button data-a="outdent" class="ic dim" title="Outdent (Shift+Tab): move the list item out one level; at the top level it leaves the list and becomes a paragraph" aria-label="Outdent list item"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H112a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128ZM112,72H216a8,8,0,0,0,0-16H112a8,8,0,0,0,0,16ZM216,184H40a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16ZM72,144a8,8,0,0,0,5.66-13.66L43.31,96,77.66,61.66A8,8,0,0,0,66.34,50.34l-40,40a8,8,0,0,0,0,11.32l40,40A8,8,0,0,0,72,144Z"/></svg></button><button data-a="indent" class="ic dim" title="Indent (Tab): move the list item in one level, under the item above" aria-label="Indent list item"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H112a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128ZM112,72H216a8,8,0,0,0,0-16H112a8,8,0,0,0,0,16ZM216,184H40a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16ZM34.34,141.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0,0-11.32l-40-40A8,8,0,0,0,34.34,61.66L68.69,96,34.34,130.34A8,8,0,0,0,34.34,141.66Z"/></svg></button><button data-a="ldense" class="ic dim" title="Compact list on or off: less space between the lines of the list the cursor is in" aria-label="Compact list on or off"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128ZM122.34,101.66a8,8,0,0,0,11.32,0l32-32a8,8,0,0,0-11.32-11.32L136,76.69V16a8,8,0,0,0-16,0V76.69L101.66,58.34A8,8,0,0,0,90.34,69.66Zm11.32,52.68a8,8,0,0,0-11.32,0l-32,32a8,8,0,0,0,11.32,11.32L120,179.31V240a8,8,0,0,0,16,0V179.31l18.34,18.35a8,8,0,0,0,11.32-11.32Z"/></svg></button><button data-a="qa" class="ic" title="Question and answer list" aria-label="Question and answer list"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M232.07,186.76a80,80,0,0,0-62.5-114.17A80,80,0,1,0,23.93,138.76l-7.27,24.71a16,16,0,0,0,19.87,19.87l24.71-7.27a80.39,80.39,0,0,0,25.18,7.35,80,80,0,0,0,108.34,40.65l24.71,7.27a16,16,0,0,0,19.87-19.86ZM62,159.5a8.28,8.28,0,0,0-2.26.32L32,168l8.17-27.76a8,8,0,0,0-.63-6,64,64,0,1,1,26.26,26.26A8,8,0,0,0,62,159.5Zm153.79,28.73L224,216l-27.76-8.17a8,8,0,0,0-6,.63,64.05,64.05,0,0,1-85.87-24.88A79.93,79.93,0,0,0,174.7,89.71a64,64,0,0,1,41.75,92.48A8,8,0,0,0,215.82,188.23Z"/></svg></button></span>
+  <span class="grp" role="group" aria-label="Text"><select id="s-block" title="Paragraph style"><option value="">Style</option><option value="p">Paragraph</option><option value="h1">H1</option><option value="p.sub">H1-subtitle</option><option value="h2">H2</option><option value="p.h2sub">H2-subtitle</option><option value="h3">H3</option><option value="h4">H4</option><option value="p.bluf">Lead paragraph</option><option value="p.cap">Caption</option><option value="pre">Code block</option><option value="dt">Q&amp;A question</option><option value="dd">Q&amp;A answer</option></select><select id="s-boxtype" title="Box: insert a box for the reader where the cursor is; inside a box, change its type" aria-label="Box"><option value="">Box</option><option value="note">Note</option><option value="info">Information</option><option value="tip">Tip</option><option value="warning">Warning</option><option value="critical">Critical</option><option value="none">Remove box</option></select><button data-a="bold" class="ic" title="Bold (Ctrl+B)" aria-label="Bold (Ctrl+B)"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M178.48,115.7A44,44,0,0,0,148,40H80a8,8,0,0,0-8,8V200a8,8,0,0,0,8,8h80a48,48,0,0,0,18.48-92.3ZM88,56h60a28,28,0,0,1,0,56H88Zm72,136H88V128h72a32,32,0,0,1,0,64Z"/></svg></button><button data-a="italic" class="ic" title="Italic (Ctrl+I)" aria-label="Italic (Ctrl+I)"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M200,56a8,8,0,0,1-8,8H157.77L115.1,192H144a8,8,0,0,1,0,16H64a8,8,0,0,1,0-16H98.23L140.9,64H112a8,8,0,0,1,0-16h80A8,8,0,0,1,200,56Z"/></svg></button><select id="s-fmt" title="More formats: superscript, subscript, strike-through and inline code, on or off for the selected text" aria-label="More formats"><option value="">More</option><option value="sup">Superscript</option><option value="sub">Subscript</option><option value="strike">Strike-through</option><option value="code">Inline code</option></select><button data-a="clear" class="ic" title="Clear format: removes all text formatting from the selected text (bold, italics, inline code, superscript, subscript, strike-through and anything pasted in). With the cursor only, or a whole block selected, the block also becomes a plain paragraph, or a plain line in a table cell or list item. Links and ID tags stay" aria-label="Clear format: remove all formatting from the selection or the current block"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M213.38,221.92a8,8,0,0,1-11.3-.54L136,148.69V192h24a8,8,0,0,1,0,16H96a8,8,0,0,1,0-16h24V131.09L64,69.49V88a8,8,0,0,1-16,0V56a8,8,0,0,1,.72-3.31l-6.64-7.31A8,8,0,1,1,53.92,34.62l160,176A8,8,0,0,1,213.38,221.92ZM105.79,64H120V80.43a8,8,0,0,0,16,0V64h56V88a8,8,0,0,0,16,0V56a8,8,0,0,0-8-8H105.79a8,8,0,0,0,0,16Z"/></svg></button><button data-a="paint" class="ic" title="Copy format: put the cursor in the source text and press this, then click a block or select text to apply. Double-click to keep it on; Esc ends" aria-label="Copy format" aria-pressed="false"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M232,32a8,8,0,0,0-8-8c-44.08,0-89.31,49.71-114.43,82.63A60,60,0,0,0,32,164c0,30.88-19.54,44.73-20.47,45.37A8,8,0,0,0,16,224H92a60,60,0,0,0,57.37-77.57C182.3,121.31,232,76.08,232,32ZM92,208H34.63C41.38,198.41,48,183.92,48,164a44,44,0,1,1,44,44Zm32.42-94.45q5.14-6.66,10.09-12.55A76.23,76.23,0,0,1,155,121.49q-5.9,4.94-12.55,10.09A60.54,60.54,0,0,0,124.42,113.55Zm42.7-2.68a92.57,92.57,0,0,0-22-22c31.78-34.53,55.75-45,69.9-47.91C212.17,55.12,201.65,79.09,167.12,110.87Z"/></svg></button><button data-a="inspect" class="ic" title="Inspect formatting: shows what formatting is on the text at the cursor, or on the selected word" aria-label="Inspect formatting"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"/></svg></button></span>
+  <span class="grp" role="group" aria-label="Lists"><button data-a="ul" class="ic" title="Bullet list" aria-label="Bullet list"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M80,64a8,8,0,0,1,8-8H216a8,8,0,0,1,0,16H88A8,8,0,0,1,80,64Zm136,56H88a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16Zm0,64H88a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16ZM44,52A12,12,0,1,0,56,64,12,12,0,0,0,44,52Zm0,64a12,12,0,1,0,12,12A12,12,0,0,0,44,116Zm0,64a12,12,0,1,0,12,12A12,12,0,0,0,44,180Z"/></svg></button><button data-a="ol" class="ic" title="Numbered list" aria-label="Numbered list"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H104a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128ZM104,72H216a8,8,0,0,0,0-16H104a8,8,0,0,0,0,16ZM216,184H104a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16ZM43.58,55.16,48,52.94V104a8,8,0,0,0,16,0V40a8,8,0,0,0-11.58-7.16l-16,8a8,8,0,0,0,7.16,14.32ZM79.77,156.72a23.73,23.73,0,0,0-9.6-15.95,24.86,24.86,0,0,0-34.11,4.7,23.63,23.63,0,0,0-3.57,6.46,8,8,0,1,0,15,5.47,7.84,7.84,0,0,1,1.18-2.13,8.76,8.76,0,0,1,12-1.59A7.91,7.91,0,0,1,63.93,159a7.64,7.64,0,0,1-1.57,5.78,1,1,0,0,0-.08.11L33.59,203.21A8,8,0,0,0,40,216H72a8,8,0,0,0,0-16H56l19.08-25.53A23.47,23.47,0,0,0,79.77,156.72Z"/></svg></button><button data-a="check" class="ic" title="Checklist" aria-label="Checklist"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H128a8,8,0,0,1,0-16h88A8,8,0,0,1,224,128ZM128,72h88a8,8,0,0,0,0-16H128a8,8,0,0,0,0,16Zm88,112H128a8,8,0,0,0,0,16h88a8,8,0,0,0,0-16ZM82.34,42.34,56,68.69,45.66,58.34A8,8,0,0,0,34.34,69.66l16,16a8,8,0,0,0,11.32,0l32-32A8,8,0,0,0,82.34,42.34Zm0,64L56,132.69,45.66,122.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32,0l32-32a8,8,0,0,0-11.32-11.32Zm0,64L56,196.69,45.66,186.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32,0l32-32a8,8,0,0,0-11.32-11.32Z"/></svg></button><button data-a="outdent" class="ic dim" title="Outdent (Shift+Tab): move the list item out one level; at the top level it leaves the list and becomes a paragraph" aria-label="Outdent list item"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H112a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128ZM112,72H216a8,8,0,0,0,0-16H112a8,8,0,0,0,0,16ZM216,184H40a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16ZM72,144a8,8,0,0,0,5.66-13.66L43.31,96,77.66,61.66A8,8,0,0,0,66.34,50.34l-40,40a8,8,0,0,0,0,11.32l40,40A8,8,0,0,0,72,144Z"/></svg></button><button data-a="indent" class="ic dim" title="Indent (Tab): move the list item in one level, under the item above" aria-label="Indent list item"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H112a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128ZM112,72H216a8,8,0,0,0,0-16H112a8,8,0,0,0,0,16ZM216,184H40a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16ZM34.34,141.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0,0-11.32l-40-40A8,8,0,0,0,34.34,61.66L68.69,96,34.34,130.34A8,8,0,0,0,34.34,141.66Z"/></svg></button><button data-a="ldense" class="ic dim" title="Compact list on or off: less space between the lines of the list the cursor is in" aria-label="Compact list on or off"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128ZM122.34,101.66a8,8,0,0,0,11.32,0l32-32a8,8,0,0,0-11.32-11.32L136,76.69V16a8,8,0,0,0-16,0V76.69L101.66,58.34A8,8,0,0,0,90.34,69.66Zm11.32,52.68a8,8,0,0,0-11.32,0l-32,32a8,8,0,0,0,11.32,11.32L120,179.31V240a8,8,0,0,0,16,0V179.31l18.34,18.35a8,8,0,0,0,11.32-11.32Z"/></svg></button><button data-a="olstart" class="ic dim" title="Start numbering at: set the first number of the numbered list the cursor is in, to carry on from an earlier list" aria-label="Start numbering at"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M224,88H175.4l8.47-46.57a8,8,0,0,0-15.74-2.86l-9,49.43H111.4l8.47-46.57a8,8,0,0,0-15.74-2.86L95.14,88H48a8,8,0,0,0,0,16H92.23L83.5,152H32a8,8,0,0,0,0,16H80.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,80,224a8,8,0,0,0,7.86-6.57l9-49.43H144.6l-8.47,46.57a8,8,0,0,0,6.44,9.3A7.79,7.79,0,0,0,144,224a8,8,0,0,0,7.86-6.57l9-49.43H208a8,8,0,0,0,0-16H163.77l8.73-48H224a8,8,0,0,0,0-16Zm-76.5,64H99.77l8.73-48h47.73Z"/></svg></button><button data-a="qa" class="ic" title="Q&amp;A question: makes the paragraph the cursor is in a question; press again to make it a paragraph" aria-label="Q&amp;A question"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M232.07,186.76a80,80,0,0,0-62.5-114.17A80,80,0,1,0,23.93,138.76l-7.27,24.71a16,16,0,0,0,19.87,19.87l24.71-7.27a80.39,80.39,0,0,0,25.18,7.35,80,80,0,0,0,108.34,40.65l24.71,7.27a16,16,0,0,0,19.87-19.86ZM62,159.5a8.28,8.28,0,0,0-2.26.32L32,168l8.17-27.76a8,8,0,0,0-.63-6,64,64,0,1,1,26.26,26.26A8,8,0,0,0,62,159.5Zm153.79,28.73L224,216l-27.76-8.17a8,8,0,0,0-6,.63,64.05,64.05,0,0,1-85.87-24.88A79.93,79.93,0,0,0,174.7,89.71a64,64,0,0,1,41.75,92.48A8,8,0,0,0,215.82,188.23Z"/></svg></button></span>
   <span class="grp" role="group" aria-label="Insert"><button data-a="link" class="ic" title="Link" aria-label="Link"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M240,88.23a54.43,54.43,0,0,1-16,37L189.25,160a54.27,54.27,0,0,1-38.63,16h-.05A54.63,54.63,0,0,1,96,119.84a8,8,0,0,1,16,.45A38.62,38.62,0,0,0,150.58,160h0a38.39,38.39,0,0,0,27.31-11.31l34.75-34.75a38.63,38.63,0,0,0-54.63-54.63l-11,11A8,8,0,0,1,135.7,59l11-11A54.65,54.65,0,0,1,224,48,54.86,54.86,0,0,1,240,88.23ZM109,185.66l-11,11A38.41,38.41,0,0,1,70.6,208h0a38.63,38.63,0,0,1-27.29-65.94L78,107.31A38.63,38.63,0,0,1,144,135.71a8,8,0,0,0,16,.45A54.86,54.86,0,0,0,144,96a54.65,54.65,0,0,0-77.27,0L32,130.75A54.62,54.62,0,0,0,70.56,224h0a54.28,54.28,0,0,0,38.64-16l11-11A8,8,0,0,0,109,185.66Z"/></svg></button><button data-a="tag" class="ic" title="ID tag: wrap the selection as an ID tag" aria-label="ID tag: wrap the selection as an ID tag"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M243.31,136,144,36.69A15.86,15.86,0,0,0,132.69,32H40a8,8,0,0,0-8,8v92.69A15.86,15.86,0,0,0,36.69,144L136,243.31a16,16,0,0,0,22.63,0l84.68-84.68a16,16,0,0,0,0-22.63Zm-96,96L48,132.69V48h84.69L232,147.31ZM96,84A12,12,0,1,1,84,72,12,12,0,0,1,96,84Z"/></svg></button><button data-a="code" class="ic" title="Code block" aria-label="Code block"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M58.34,101.66l-32-32a8,8,0,0,1,0-11.32l32-32A8,8,0,0,1,69.66,37.66L43.31,64,69.66,90.34a8,8,0,0,1-11.32,11.32Zm40,0a8,8,0,0,0,11.32,0l32-32a8,8,0,0,0,0-11.32l-32-32A8,8,0,0,0,98.34,37.66L124.69,64,98.34,90.34A8,8,0,0,0,98.34,101.66ZM200,40H176a8,8,0,0,0,0,16h24V200H56V136a8,8,0,0,0-16,0v64a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V56A16,16,0,0,0,200,40Z"/></svg></button><button data-a="diagram" class="ic" title="Diagram: draw a new diagram after the current block" aria-label="Diagram: draw a new diagram after the current block"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M71.59,61.47a8,8,0,0,0-15.18,0l-40,120A8,8,0,0,0,24,192h80a8,8,0,0,0,7.59-10.53ZM35.1,176,64,89.3,92.9,176ZM208,76a52,52,0,1,0-52,52A52.06,52.06,0,0,0,208,76Zm-88,0a36,36,0,1,1,36,36A36,36,0,0,1,120,76Zm104,68H136a8,8,0,0,0-8,8v56a8,8,0,0,0,8,8h88a8,8,0,0,0,8-8V152A8,8,0,0,0,224,144Zm-8,56H144V160h72Z"/></svg></button></span>
   <span class="grp" role="group" aria-label="Notes"><button data-a="note" class="ic" title="Note: add a note to the selected blocks, or to the note under the cursor" aria-label="Note"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M229.66,58.34l-32-32a8,8,0,0,0-11.32,0l-96,96A8,8,0,0,0,88,128v32a8,8,0,0,0,8,8h32a8,8,0,0,0,5.66-2.34l96-96A8,8,0,0,0,229.66,58.34ZM124.69,152H104V131.31l64-64L188.69,88ZM200,76.69,179.31,56,192,43.31,212.69,64ZM224,128v80a16,16,0,0,1-16,16H48a16,16,0,0,1-16-16V48A16,16,0,0,1,48,32h80a8,8,0,0,1,0,16H48V208H208V128a8,8,0,0,1,16,0Z"/></svg></button><button data-a="margin" class="ic flip" title="Show the notes margin" aria-label="Notes margin" aria-pressed="false"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM40,56H80V200H40ZM216,200H96V56H216V200Z"/></svg></button></span>
   <span class="grp" role="group" aria-label="Index"><button data-a="index" id="s-index" class="ic lv" title="Show Index Levels" aria-label="Show Index Levels" value="1"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M176,152h32a16,16,0,0,0,16-16V104a16,16,0,0,0-16-16H176a16,16,0,0,0-16,16v8H88V80h8a16,16,0,0,0,16-16V32A16,16,0,0,0,96,16H64A16,16,0,0,0,48,32V64A16,16,0,0,0,64,80h8V192a24,24,0,0,0,24,24h64v8a16,16,0,0,0,16,16h32a16,16,0,0,0,16-16V192a16,16,0,0,0-16-16H176a16,16,0,0,0-16,16v8H96a8,8,0,0,1-8-8V128h72v8A16,16,0,0,0,176,152ZM64,32H96V64H64ZM176,192h32v32H176Zm0-88h32v32H176Z"/></svg><em>1</em></button></span>
@@ -551,13 +554,14 @@ dialog.nb-dlg button[value=save], dialog.nb-dlg button[value=rename] { backgroun
  <div id="nbwarn" hidden><div class="row">Notebooks work best in Chrome or Edge. In this browser the notebook explorer is read-only, and new or changed pages are saved to the downloads folder for you to move. <button data-a="nbwarnx">Dismiss</button></div></div>
  <div id="draft" hidden><div class="row">An unsaved draft from an earlier session is available. <button data-a="restore">Restore it</button><button data-a="dismiss">Discard it</button></div></div>
 </div>
+<dialog id="numdlg" aria-labelledby="num-h"><b id="num-h">Start numbering at</b><label for="num-start">First number of this list</label><input type="text" id="num-start" autocomplete="off" spellcheck="false" inputmode="numeric"><p id="num-hint"></p><p id="num-err" role="alert"></p><div class="link-btns"><button type="button" data-a="numreset">Back to 1</button><span></span><button type="button" data-a="numcancel">Cancel</button><button type="button" data-a="numsave" class="go">Save</button></div></dialog>
 <dialog id="linkdlg" aria-labelledby="link-h"><b id="link-h">Add link</b><label for="link-text">Display text</label><input type="text" id="link-text" autocomplete="off" spellcheck="false"><label for="link-url">Address</label><input type="text" id="link-url" autocomplete="off" spellcheck="false" inputmode="url"><p id="link-err" role="alert"></p><div class="link-btns"><button type="button" data-a="linkremove" hidden>Remove link</button><span></span><button type="button" data-a="linkcancel">Cancel</button><button type="button" data-a="linksave" class="go">Save</button></div></dialog>
 <dialog id="insp" aria-labelledby="insp-h"><div class="insp-top"><b id="insp-h">Formatting here</b><button type="button" data-a="inspclose" aria-label="Close">Close</button></div><p id="insp-what"></p><ol id="insp-list"></ol><div id="insp-look"></div><p class="insp-note">Listed from the outside in. Clear format removes all text formatting at once.</p></dialog>
 <dialog id="help" aria-labelledby="help-h">
  <div class="help-top"><b id="help-h">Help</b><button data-a="helpclose" class="ic" title="Close (Esc)" aria-label="Close"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></svg></button></div>
  <p id="help-info"></p>
  <div class="help-body">
-  <section class="hc"><div class="hc-h"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M87.24,52.59a8,8,0,0,0-14.48,0l-64,136a8,8,0,1,0,14.48,6.81L39.9,160h80.2l16.66,35.4a8,8,0,1,0,14.48-6.81ZM47.43,144,80,74.79,112.57,144ZM200,96c-12.76,0-22.73,3.47-29.63,10.32a8,8,0,0,0,11.26,11.36c3.8-3.77,10-5.68,18.37-5.68,13.23,0,24,9,24,20v3.22A42.76,42.76,0,0,0,200,128c-22.06,0-40,16.15-40,36s17.94,36,40,36a42.73,42.73,0,0,0,24-7.25,8,8,0,0,0,16-.75V132C240,112.15,222.06,96,200,96Zm0,88c-13.23,0-24-9-24-20s10.77-20,24-20,24,9,24,20S213.23,184,200,184Z"/></svg><span>Writing and styles</span></div><ul><li>Type in the page. Hover over any button to see what it does.</li><li>Pick a style from the Style list: H1 is the title, H2 to H4 are heading levels.</li><li>The More list has superscript, subscript, strike-through and inline code: select text and choose one to switch it on or off. A tick marks the ones that are on at the cursor.</li><li>Indent and Outdent, or Tab and Shift+Tab, move list items in or out a level. Outdent at the top level turns the item into a paragraph. The first item of a list has nothing above it to go under, so it cannot be indented.</li><li>Link opens a small form for the display text and the address. The display text starts as the selected text; the address starts as the selected text when that is a web address, or as the clipboard when it holds one and the browser already allows this page to read it.</li><li>A Q&amp;A answer can hold a list: with the cursor on a line of the answer, press a list button. Enter on an empty item, or the same list button again, goes back to plain answer text. Questions cannot hold lists.</li><li>Inspect formatting (the magnifying glass) shows what formatting is on the text at the cursor or the selected word, marks anything the toolbar cannot make there, and can remove one format at a time.</li><li>Box: the Box list inserts a Note, Information, Tip, Warning or Critical box for the reader after the current block. Type or paste into it; what goes in keeps its own style. The label can be retyped. With the cursor in a box, the list changes its type. <kbd>Enter</kbd> on an empty last line leaves the box; Remove box takes it away and keeps the content.</li><li>Compact list, beside the list buttons, puts less space between the lines of the list the cursor is in; press it again to go back.</li><li>Checklist: the Checklist button makes a list with tick boxes. Click a box to tick it; ticks made here are saved with the document. In a saved document the boxes can still be ticked, but those ticks are not kept.</li><li>Each title or H2 can have a subtitle. H2 headings number themselves.</li><li>Repeat last toolbar command: <kbd>Option</kbd>+<kbd>Q</kbd> on a Mac or <kbd>Alt</kbd>+<kbd>Q</kbd> on Windows applies the last toolbar command again at the cursor or on the selection. Holding <kbd>Option</kbd> or <kbd>Alt</kbd> while you click or drag does the same in one move. The Repeat button beside Redo names the command. It covers the Style list, bold, italic, bulleted, numbered and Q&amp;A lists, code block, ID tag, Note, Clear format and the table buttons. Bold, italic, lists and Compact are set, not toggled.</li><li>Copy format copies a look from one place to another: put the cursor in the source text and press the button, then click a block to give it the block style, or select text to give it bold, italics and the ID tag as well. Double-click the button to keep it on; <kbd>Esc</kbd> ends. Links, list type and table settings are not copied.</li><li>Clear format removes bold and italics from the selected text only. With the cursor only, or with a whole block selected, it clears the whole block and turns a heading, styled paragraph or code block into a plain paragraph. Links and ID tags are never removed; tables, lists and diagrams stay.</li></ul></section>
+  <section class="hc"><div class="hc-h"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M87.24,52.59a8,8,0,0,0-14.48,0l-64,136a8,8,0,1,0,14.48,6.81L39.9,160h80.2l16.66,35.4a8,8,0,1,0,14.48-6.81ZM47.43,144,80,74.79,112.57,144ZM200,96c-12.76,0-22.73,3.47-29.63,10.32a8,8,0,0,0,11.26,11.36c3.8-3.77,10-5.68,18.37-5.68,13.23,0,24,9,24,20v3.22A42.76,42.76,0,0,0,200,128c-22.06,0-40,16.15-40,36s17.94,36,40,36a42.73,42.73,0,0,0,24-7.25,8,8,0,0,0,16-.75V132C240,112.15,222.06,96,200,96Zm0,88c-13.23,0-24-9-24-20s10.77-20,24-20,24,9,24,20S213.23,184,200,184Z"/></svg><span>Writing and styles</span></div><ul><li>Type in the page. Hover over any button to see what it does.</li><li>Pick a style from the Style list: H1 is the title, H2 to H4 are heading levels.</li><li>The More list has superscript, subscript, strike-through and inline code: select text and choose one to switch it on or off. A tick marks the ones that are on at the cursor.</li><li>Indent and Outdent, or Tab and Shift+Tab, move list items in or out a level. Outdent at the top level turns the item into a paragraph. The first item of a list has nothing above it to go under, so it cannot be indented.</li><li>Link opens a small form for the display text and the address. The display text starts as the selected text; the address starts as the selected text when that is a web address, or as the clipboard when it holds one and the browser already allows this page to read it.</li><li>A Q&amp;A answer can hold a list: with the cursor on a line of the answer, press a list button. Enter on an empty item, or the same list button again, goes back to plain answer text. Questions cannot hold lists.</li><li>Inspect formatting (the magnifying glass) shows what formatting is on the text at the cursor or the selected word, marks anything the toolbar cannot make there, and can remove one format at a time.</li><li>Box: the Box list inserts a Note, Information, Tip, Warning or Critical box for the reader after the current block. Type or paste into it; what goes in keeps its own style. The label can be retyped. With the cursor in a box, the list changes its type. <kbd>Enter</kbd> on an empty last line leaves the box; Remove box takes it away and keeps the content.</li><li>Compact list, beside the list buttons, puts less space between the lines of the list the cursor is in; press it again to go back.</li><li>Start numbering at, beside it, sets the first number of the numbered list the cursor is in, so a list can carry on from an earlier one. The form offers the next number; once set it stays until you change it.</li><li>Checklist: the Checklist button makes a list with tick boxes. Click a box to tick it; ticks made here are saved with the document. In a saved document the boxes can still be ticked, but those ticks are not kept.</li><li>Each title or H2 can have a subtitle. H2 headings number themselves.</li><li>Repeat last toolbar command: <kbd>Option</kbd>+<kbd>Q</kbd> on a Mac or <kbd>Alt</kbd>+<kbd>Q</kbd> on Windows applies the last toolbar command again at the cursor or on the selection. Holding <kbd>Option</kbd> or <kbd>Alt</kbd> while you click or drag does the same in one move. The Repeat button beside Redo names the command. It covers the Style list, bold, italic, bulleted, numbered and Q&amp;A lists, code block, ID tag, Note, Clear format and the table buttons. Bold, italic, lists and Compact are set, not toggled.</li><li>Copy format copies a look from one place to another: put the cursor in the source text and press the button, then click a block to give it the block style, or select text to give it bold, italics and the ID tag as well. Double-click the button to keep it on; <kbd>Esc</kbd> ends. Links, list type and table settings are not copied.</li><li>Clear format removes bold and italics from the selected text only. With the cursor only, or with a whole block selected, it clears the whole block and turns a heading, styled paragraph or code block into a plain paragraph. Links and ID tags are never removed; tables, lists and diagrams stay.</li></ul></section>
   <section class="hc"><div class="hc-h"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M176,152h32a16,16,0,0,0,16-16V104a16,16,0,0,0-16-16H176a16,16,0,0,0-16,16v8H88V80h8a16,16,0,0,0,16-16V32A16,16,0,0,0,96,16H64A16,16,0,0,0,48,32V64A16,16,0,0,0,64,80h8V192a24,24,0,0,0,24,24h64v8a16,16,0,0,0,16,16h32a16,16,0,0,0,16-16V192a16,16,0,0,0-16-16H176a16,16,0,0,0-16,16v8H96a8,8,0,0,1-8-8V128h72v8A16,16,0,0,0,176,152ZM64,32H96V64H64ZM176,192h32v32H176Zm0-88h32v32H176Z"/></svg><span>Index</span></div><ul><li>The index lists H2 headings.</li><li>Click Show Index Levels on the toolbar to step through 1, 2 and 3 levels; 2 and 3 add H3 and H4. The small number on the button is the current level.</li><li>The choice is saved with the document. New documents start at 1 level.</li></ul></section>
   <section class="hc"><div class="hc-h"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M168,152a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h64A8,8,0,0,1,168,152Zm-8-40H96a8,8,0,0,0,0,16h64a8,8,0,0,0,0-16Zm56-64V216a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V48A16,16,0,0,1,56,32H92.26a47.92,47.92,0,0,1,71.48,0H200A16,16,0,0,1,216,48ZM96,64h64a32,32,0,0,0-64,0ZM200,48H173.25A47.93,47.93,0,0,1,176,64v8a8,8,0,0,1-8,8H88a8,8,0,0,1-8-8V64a47.93,47.93,0,0,1,2.75-16H56V216H200Z"/></svg><span>Copy, cut and paste</span></div><ul><li>Copy, cut and paste keep formatting.</li><li>Copied in the editor: bold, italics, links, ID tags, headings, lists, tables, code and diagrams paste as they were.</li><li>From other programs: structure is kept (headings, lists, tables, bold, italics, links) and takes this document's style.</li><li>In a table cell, pasted text stays in the cell. In a code block, paste is plain text.</li></ul></section>
   <section class="hc"><div class="hc-h"><svg aria-hidden="true" viewBox="0 0 256 256" fill="currentColor"><path d="M224,48H32a8,8,0,0,0-8,8V192a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A8,8,0,0,0,224,48ZM40,112H80v32H40Zm56,0H216v32H96ZM216,64V96H40V64ZM40,160H80v32H40Zm176,32H96V160H216v32Z"/></svg><span>Tables</span></div><ul><li>To select a column, a row or a block of cells: click a cell, then <kbd>Shift</kbd>+click another, or drag from one cell into another. Bold, Italic, Clear format, the header and merge buttons, <kbd>Delete</kbd>, copy and cut then act on those cells. <kbd>Esc</kbd> or a click ends it.</li><li>Drag the border between two columns to resize them; the table keeps its width. Double-click a border to go back to automatic widths.</li><li>Header row, Sub header row, Header column and Sub header column set the whole row or column the cursor is in, or every one in the selection. The same button again makes it ordinary. Any row can be changed, including the top one.</li><li><kbd>Enter</kbd> and <kbd>Shift</kbd>+<kbd>Enter</kbd> start a new line in the same cell.</li><li><kbd>Tab</kbd> at the end of a line moves to the next cell in the row (nothing at the row end); elsewhere in a cell it inserts a tab space. <kbd>Shift</kbd>+<kbd>Tab</kbd> moves to the previous cell.</li><li><kbd>Down</kbd> and <kbd>Up</kbd> on the last or first line of a cell move to the cell below or above.</li><li>The add buttons put a row above or below, or a column left or right, of the cell under the cursor.</li><li>The merge buttons join a cell with its neighbour; select across several cells first to merge them all. Split undoes a merge, or splits a single cell into two.</li><li>The row, column, merge, split and compact buttons work on the cell under the cursor and are dimmed outside a table.</li></ul></section>
@@ -737,6 +741,7 @@ function status() { const sv = $('[data-a="save"]'); sv.classList.toggle('has', 
 function helpInfo() { const i = $('#help-info'); if (i) i.textContent = PRODUCT.name + ' v' + VERSION + ' | Document: ' + fname + (dirty ? ' (unsaved changes)' : '') + (statusEl.textContent ? ' | ' + statusEl.textContent : ''); }
 function keepGoing(what) { return !dirty || confirm('This document has unsaved changes. Save it first if you want to keep them.\n\nOK: discard the changes and ' + what + '.\nCancel: go back to the document.'); }
 function touch() {
+  olTidy();
   checkFix(doc); dirty = true; status(); clearTimeout(timer);
   timer = setTimeout(() => { histSnap(); try { localStorage.setItem(PRODUCT.key + '-draft', clean().innerHTML); } catch (e) { } }, 400);
 }
@@ -793,8 +798,8 @@ function styleUI() {
   [['bold', 'bold'], ['italic', 'italic'], ['ul', 'insertUnorderedList'], ['ol', 'insertOrderedList']].forEach(([a, c]) => { let on = false; try { on = document.queryCommandState(c); } catch (e) { } $('[data-a="' + a + '"]').classList.toggle('on', on); });
   const bx = boxAt(n); $('#s-boxtype').value = bx ? boxType(bx) : '';
   $$('#s-fmt option[value]').forEach(o => { if (FMT[o.value]) o.textContent = (fmtOn(o.value) ? '\u2713 ' : '') + FMT[o.value][0]; }); { const la = listAt(); $('[data-a="indent"]').classList.toggle('dim', !la); $('[data-a="outdent"]').classList.toggle('dim', !la); }
-  { const q = qaItem(), noList = !!(q && q.tagName === 'DT'); ['ul', 'ol', 'check'].forEach(a => $('[data-a="' + a + '"]').classList.toggle('dim', noList)); }
-  { const lt = listTop(); $('[data-a="ldense"]').classList.toggle('on', !!(lt && lt.classList.contains('dense'))); $('[data-a="ldense"]').classList.toggle('dim', !lt); }
+  { const q = qaItem(), noList = !!(q && q.tagName === 'DT'); ['ul', 'ol', 'check'].forEach(a => $('[data-a="' + a + '"]').classList.toggle('dim', noList)); $('[data-a="qa"]').classList.toggle('on', !!q); $('[data-a="qa"]').classList.toggle('dim', !q && !!n.closest('li,td,th,pre')); }
+  { const lt = listTop(); $('[data-a="ldense"]').classList.toggle('on', !!(lt && lt.classList.contains('dense'))); $('[data-a="ldense"]').classList.toggle('dim', !lt); const o = olAt(); $('[data-a="olstart"]').classList.toggle('dim', !o); $('[data-a="olstart"]').classList.toggle('on', !!(o && o.hasAttribute('start'))); }
   const ck = inCheck(); $('[data-a="check"]').classList.toggle('on', ck); if (ck) $('[data-a="ul"]').classList.remove('on');
 }
 function live() { const s = getSelection(); if (s.rangeCount && doc.contains(s.anchorNode)) { let n = s.anchorNode; if (n.nodeType !== 1) n = n.parentElement; if (!n.closest('.fig')) lastRange = s.getRangeAt(0).cloneRange(); } }
@@ -968,7 +973,7 @@ const clearable = e => !e.matches('a,span.id') && !e.closest('.fig,.dg,[class*="
 /* A paragraph or heading that sits inside a table cell or list item becomes a plain line there: its content stays in
    place, with a line break where it would otherwise run into the text beside it. Returns the cell or item. */
 function toLine(b) {
-  const par = b.parentNode, real = (n, step) => { while (n && n.nodeType === 3 && !n.data.trim()) n = n[step]; return n; };
+  const par = b.parentNode, real = (n, step) => { while (n && (n.nodeType === 8 || (n.nodeType === 3 && !n.data.trim()))) n = n[step]; return n; };
   const flows = n => !!n && n.nodeName !== 'BR' && !(n.nodeType === 1 && n.matches(BLOCKS + ',li,input'));
   const kids = [...b.childNodes]; while (kids.length && kids[kids.length - 1].nodeName === 'BR') kids.pop();
   if (flows(real(b.previousSibling, 'previousSibling'))) b.before(document.createElement('br'));
@@ -1023,6 +1028,9 @@ function clearFormat() {
     [...c.childNodes].forEach(n => { if (isBlock(n)) end(); else run.push(n); }); end();
   });
   if (!blocks.length && !runs.length) return;
+  // the selection is kept, ready for the next toolbar choice: two markers hold its ends while the blocks under it are rebuilt
+  const mark = r.collapsed ? null : [document.createComment('s'), document.createComment('e')];
+  if (mark) { const z = r.cloneRange(); z.collapse(false); z.insertNode(mark[1]); const a0 = r.cloneRange(); a0.collapse(true); a0.insertNode(mark[0]); }
   const dls = new Set(); let last = null, picked = null;
   runs.forEach(({ c, nodes, ir, whole }) => {
     if (!whole) { const o = clearPart(c, ir); if (!jobs.length && runs.length === 1) picked = o; last = c; return; }
@@ -1044,10 +1052,30 @@ function clearFormat() {
     [...dl.children].forEach(c => { if (c.tagName === 'P') { parts.push(c); cur = null; } else { if (!cur) { cur = mk('dl', 'qa', ''); parts.push(cur); } cur.appendChild(c); } });
     dl.replaceWith(...parts);
   });
-  if (picked) { const g = getSelection(); g.removeAllRanges(); g.addRange(picked); lastRange = picked.cloneRange(); } else if (last) caret(last, true);
+  let kept = picked;
+  if (mark) {
+    if (!kept && doc.contains(mark[0]) && doc.contains(mark[1])) { kept = document.createRange(); kept.setStartAfter(mark[0]); kept.setEndBefore(mark[1]); }
+    mark.forEach(m => { const p = m.parentNode; m.remove(); if (p) p.normalize(); });
+    if (kept && (kept.collapsed || !doc.contains(kept.startContainer))) kept = null;
+  }
+  if (kept) { const g = getSelection(); g.removeAllRanges(); g.addRange(kept); lastRange = kept.cloneRange(); } else if (last) caret(last, true);
   touch(); styleUI();
 }
-function insertBlock(node) { const b = curBlock(); if (b) b.after(node); else doc.appendChild(node); touch(); }
+/* A new block goes where the cursor is. An empty paragraph is replaced by it. With the cursor in a paragraph or heading it
+   goes before that (cursor at the start), after it (cursor at the end) or between its two halves. With text selected it goes
+   after the block the selection starts in. A list, table, Q&A list or code block cannot hold it, so there it goes after that;
+   with no cursor it goes at the end of the page. It never goes between the title and its subtitle. */
+function placeBlock(node) {
+  let b = curBlock(); const r = lastRange; if (!b) { doc.appendChild(node); return; }
+  if (b.tagName === 'H1') { if (b.nextElementSibling && b.nextElementSibling.matches('p.sub')) b = b.nextElementSibling; b.after(node); return; }
+  if (!r || !r.collapsed || !b.matches('p,h2,h3,h4') || b.matches('p.box-h') || !b.contains(r.startContainer)) { b.after(node); return; }
+  if (b.tagName === 'P' && !b.className && !hasContent(b)) { b.replaceWith(node); return; }
+  const head = document.createRange(), tail = document.createRange(); head.selectNodeContents(b); head.setEnd(r.startContainer, r.startOffset); tail.selectNodeContents(b); tail.setStart(r.startContainer, r.startOffset);
+  const some = x => { const f = x.cloneContents(); return !!(f.textContent.trim() || f.querySelector('img,svg')); };
+  if (!some(tail)) b.after(node); else if (!some(head)) b.before(node);
+  else { const rest = b.cloneNode(false); rest.removeAttribute('id'); rest.append(tail.extractContents()); b.after(node); node.after(rest); }
+}
+function insertBlock(node) { placeBlock(node); touch(); }
 /* Drag and drop: content dragged within the document moves as usual (it is already clean); anything dropped from
    outside arrives as plain text, and a dropped .html file is opened through the same cleaning as Open. */
 let dragInside = false;
@@ -1146,13 +1174,13 @@ const inTable = () => { live(); return !!cell(); };
 const REP = {
   bold: () => { let w = false; try { w = document.queryCommandState('bold'); } catch (e) { } return [w ? 'Bold' : 'Bold off', () => { restore(); setInline('bold', 'b,strong', w); }]; },
   italic: () => { let w = false; try { w = document.queryCommandState('italic'); } catch (e) { } return [w ? 'Italic' : 'Italic off', () => { restore(); setInline('italic', 'i,em', w); }]; },
-  ul: () => { let w = false; try { w = document.queryCommandState('insertUnorderedList'); } catch (e) { } return [w ? 'Bulleted list' : 'Bulleted list off', () => { if (qaList('ul')) return; if (document.queryCommandState('insertUnorderedList') !== w) document.execCommand('insertUnorderedList'); }]; },
-  ol: () => { let w = false; try { w = document.queryCommandState('insertOrderedList'); } catch (e) { } return [w ? 'Numbered list' : 'Numbered list off', () => { if (qaList('ol')) return; if (document.queryCommandState('insertOrderedList') !== w) document.execCommand('insertOrderedList'); }]; },
+  ul: () => { let w = false; try { w = document.queryCommandState('insertUnorderedList'); } catch (e) { } return [w ? 'Bulleted list' : 'Bulleted list off', () => { if (qaList('ul')) return; if (document.queryCommandState('insertUnorderedList') !== w) listCmd('insertUnorderedList'); }]; },
+  ol: () => { let w = false; try { w = document.queryCommandState('insertOrderedList'); } catch (e) { } return [w ? 'Numbered list' : 'Numbered list off', () => { if (qaList('ol')) return; if (document.queryCommandState('insertOrderedList') !== w) listCmd('insertOrderedList'); }]; },
   check: () => { const w = inCheck(); return [w ? 'Checklist' : 'Checklist off', () => { restore(); if (inCheck() !== w) checkList(); }]; },
   ldense: () => { const l = listTop(), w = !!(l && l.classList.contains('dense')); return [w ? 'Compact list' : 'Compact list off', () => { restore(); const t = listTop(); if (t && t.classList.contains('dense') !== w) listDense(); }]; },
   indent: () => ['Indent', () => listShift(1)], outdent: () => ['Outdent', () => listShift(-1)],
   clear: () => ['Clear format', clearFormat],
-  note: () => ['Note', addNote], code: () => ['Insert code block', addCode], qa: () => ['Insert Q&A list', addQa],
+  note: () => ['Note', addNote], code: () => ['Insert code block', addCode], qa: () => { const w = !!qaItem(lastRange); return [w ? 'Q&A question' : 'Q&A off', () => { live(); if (!!qaItem(lastRange) !== w) addQa(); }]; },
   tag: () => ['ID tag', () => { restore(); let n = getSelection().anchorNode; if (n && n.nodeType !== 1) n = n.parentElement; if (n && n.closest('span.id')) return; ACT.tag(); }],
   ...Object.fromEntries([['hr', 'Header row'], ['sr', 'Sub header row'], ['hc', 'Header column'], ['sc', 'Sub header column']].map(([a, name]) => [a, () => { live(); const c = cell(), w = !!(c && tHeaderState(c)[a]); return [w ? name : name + ' off', () => { if (!inTable()) return; if (!!tHeaderState(cell())[a] !== w) tableOp(a); }]; }])),
   dense: () => { live(); const c = cell(), w = !!(c && c.closest('table').classList.contains('dense')); return [w ? 'Compact table' : 'Compact table off', () => { if (!inTable()) return; if (cell().closest('table').classList.contains('dense') !== w) tableOp('dense'); }]; }
@@ -1206,8 +1234,7 @@ function setBox(v) {
     done(); return;
   }
   const box = el('<div class="box box-' + v + '" role="note"><p class="box-h"></p><p><br></p></div>'); box.firstChild.textContent = BOXES[v];
-  let b = curBlock(); if (b && b.tagName === 'H1' && b.nextElementSibling && b.nextElementSibling.matches('p.sub')) b = b.nextElementSibling; // not between the title and its subtitle
-  if (b && b.tagName === 'P' && !b.className && !hasContent(b)) b.replaceWith(box); else if (b) b.after(box); else doc.appendChild(box);
+  placeBlock(box);
   caret(box.lastChild); touch(); styleUI();
 }
 /* ---------- more formats ----------
@@ -1239,6 +1266,7 @@ function listItems() {
   const sibs = [...L.children].filter(x => x.tagName === 'LI'), i = sibs.indexOf(a), j = b2 ? sibs.indexOf(b2) : -1;
   if (j < i) return sibs.slice(i).filter(x => r.intersectsNode(x)); return sibs.slice(i, j + 1);
 }
+function olTidy() { $$('ul[start], ol[start="1"]', doc).forEach(l => l.removeAttribute('start')); }
 function listLike(L) { const n = document.createElement(L.tagName.toLowerCase()); if (L.classList.contains('check')) n.className = 'check'; return n; }
 function listShift(dir) {
   restore(); const lis = listItems(); if (!lis.length) return false; const s = getSelection(), keep = [s.anchorNode, s.anchorOffset, s.focusNode, s.focusOffset], L = lis[0].parentNode;
@@ -1332,19 +1360,162 @@ function checkFix(root) {
   $$('input', root).forEach(i => { if (!keep.has(i) && !i.closest('.fig,.dg')) i.remove(); });
   const s = getSelection(); if (s.rangeCount && s.isCollapsed && s.anchorNode.nodeType === 1 && s.anchorOffset === 0 && keep.has(s.anchorNode.firstChild)) s.collapse(s.anchorNode, 1);
 }
+/* ---------- ID tags, line breaks and joins in running text ----------
+   The browser's own editing commands treat an ID tag as a style: a line break typed beside one lands inside it, Enter after
+   one starts the next block inside a new one, and a tag at the start of a block is turned into plain text when that block
+   is joined to the one before. These put the break or the new block outside the tag, and put a lost tag back. */
+const TEXT_BLOCK = 'li,p,h1,h2,h3,h4,dt,dd,td,th';
+function tagEdge() { // the tag the cursor is in or right beside, and whether the cursor is at its front
+  const s = getSelection(); if (!s.rangeCount || !s.isCollapsed || !doc.contains(s.anchorNode)) return null;
+  const n = s.anchorNode, o = s.anchorOffset, t = (n.nodeType === 1 ? n : n.parentElement).closest('span.id'), isTag = x => !!x && x.nodeType === 1 && x.matches('span.id');
+  if (t) { const r = document.createRange(); r.selectNodeContents(t); r.setEnd(n, o); return { tag: t, before: !r.toString() && !!t.textContent }; }
+  if (n.nodeType === 3) return o === 0 && isTag(n.previousSibling) ? { tag: n.previousSibling, before: false } : o === n.length && isTag(n.nextSibling) ? { tag: n.nextSibling, before: true } : null;
+  return isTag(n.childNodes[o - 1]) ? { tag: n.childNodes[o - 1], before: false } : isTag(n.childNodes[o]) ? { tag: n.childNodes[o], before: true } : null;
+}
+function lineBreak() {
+  if (!getSelection().isCollapsed) document.execCommand('delete');
+  const e = tagEdge(); if (!e) { document.execCommand('insertLineBreak'); return; }
+  clearTimeout(timer); histSnap();
+  const br = document.createElement('br'); if (e.before) e.tag.before(br); else e.tag.after(br);
+  let nx = br.nextSibling; while (nx && nx.nodeType === 3 && !nx.data) nx = nx.nextSibling;
+  if (!nx || (nx.nodeType === 1 && nx.matches('ul,ol'))) br.after(document.createElement('br')); // a break at the end of a block needs a second one for the new line to show
+  const r = document.createRange(); r.setStartAfter(br); r.collapse(true); const s = getSelection(); s.removeAllRanges(); s.addRange(r); lastRange = r.cloneRange();
+}
+/* Enter at the end of a block that ends with a tag: the next block starts plain. */
+function enterAfterTag() {
+  const e = tagEdge(); if (!e || e.before) return false;
+  const blk = e.tag.closest('li,p,h1,h2,h3,h4'); if (!blk || !doc.contains(blk) || blk.closest('.fig,.dg,.note,dl.qa,td,th') || blk.matches('p.box-h')) return false;
+  const s = getSelection(), r = document.createRange(); r.setStart(s.anchorNode, s.anchorOffset); r.setEnd(blk, blk.childNodes.length);
+  const rest = r.cloneContents(); if (rest.textContent.trim() || rest.querySelector('ul,ol,img,table,input,.dg,.fig')) return false;
+  clearTimeout(timer); histSnap();
+  const n = blk.tagName === 'LI' ? mk('li') : mk('p'); blk.after(n); caret(n); touch(); styleUI(); return true;
+}
+/* Joining blocks (Backspace at the start of one, Delete at the end of one, or deleting a selection across them). */
+let joinWatch = null;
+const tagTexts = () => $$('span.id', doc).map(t => t.textContent);
+doc.addEventListener('beforeinput', e => {
+  joinWatch = null; if (!/^delete/.test(e.inputType)) return;
+  const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode)) return; const r = s.getRangeAt(0), blockOfNode = x => (x.nodeType === 1 ? x : x.parentElement).closest(TEXT_BLOCK);
+  const a = blockOfNode(r.startContainer), z = blockOfNode(r.endContainer); if (!a || !z || a.closest('.fig,.dg') || blockOf(r.startContainer)) return;
+  if (r.collapsed) {
+    const back = /Backward/.test(e.inputType), edge = document.createRange(); edge.selectNodeContents(a);
+    if (back) edge.setEnd(r.startContainer, r.startOffset); else edge.setStart(r.startContainer, r.startOffset);
+    const f = edge.cloneContents(); if (f.textContent || f.querySelector('br,img,ul,ol,table')) return; // only at the very edge of the block
+    joinWatch = { before: tagTexts(), only: null };
+  } else if (a !== z) { // a tag right after the end of the selection is the one at risk; tags inside the selection are meant to go
+    const n = r.endContainer, o = r.endOffset; let nx = n.nodeType === 3 ? (o === n.length ? n.nextSibling : null) : n.childNodes[o];
+    while (nx && nx.nodeType === 3 && !nx.data) nx = nx.nextSibling;
+    joinWatch = { before: tagTexts(), only: nx && nx.nodeType === 1 && nx.matches('span.id') ? nx.textContent : '' };
+  }
+});
+doc.addEventListener('input', () => {
+  const w = joinWatch; joinWatch = null; if (!w) return;
+  const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode)) return;
+  const blk = (s.anchorNode.nodeType === 1 ? s.anchorNode : s.anchorNode.parentElement).closest(TEXT_BLOCK); if (!blk) return;
+  // what the join leaves behind: styles copied onto the text that moved
+  $$('span,b,strong,i,em,u,s,code,a,sub,sup,font', blk).forEach(x => { if (x.closest('.fig,.dg,.note-log')) return; x.removeAttribute('style'); if ((x.tagName === 'SPAN' && !x.attributes.length) || x.tagName === 'FONT') x.replaceWith(...x.childNodes); });
+  const now = tagTexts(); if (now.length >= w.before.length) return;
+  const left = now.slice(), lost = w.before.filter(t => { const i = left.indexOf(t); if (i < 0) return true; left.splice(i, 1); return false; });
+  for (const t of (w.only === null ? [...new Set(lost)] : lost.includes(w.only) ? [w.only] : [])) if (t && retag(blk, t)) break;
+});
+function retag(blk, text) { // the text right after the cursor is the lost tag's: make it a tag again
+  const s = getSelection(), n = s.anchorNode, o = s.anchorOffset, r = document.createRange(); r.setStart(n, o); r.setEnd(blk, blk.childNodes.length);
+  const w = document.createTreeWalker(blk, NodeFilter.SHOW_TEXT); let tn, acc = '', sN = null, sO = 0, eN = null, eO = 0;
+  while ((tn = w.nextNode())) {
+    let from = 0; if (!sN) { if (tn === n) from = o; else if (r.comparePoint(tn, 0) < 0) continue; }
+    const piece = tn.data.slice(from, from + text.length - acc.length); if (!piece) { if (sN) break; continue; }
+    if (!sN) { sN = tn; sO = from; } acc += piece; eN = tn; eO = from + piece.length; if (acc.length === text.length) break;
+  }
+  if (acc !== text || sN.parentElement.closest('span.id') || eN.parentElement.closest('span.id')) return false;
+  const rr = document.createRange(); rr.setStart(sN, sO); rr.setEnd(eN, eO); rr.deleteContents();
+  const sp = document.createElement('span'); sp.className = 'id'; sp.textContent = text; rr.insertNode(sp);
+  const c = document.createRange(); c.setStartBefore(sp); c.collapse(true); s.removeAllRanges(); s.addRange(c); lastRange = c.cloneRange(); return true;
+}
+/* Enter at the end of a line that has a line break after it: the new block starts with the text, not a blank line. */
+doc.addEventListener('input', e => {
+  if (e.inputType !== 'insertParagraph') return; const s = getSelection(); if (!s.rangeCount || !s.isCollapsed) return;
+  const b = (s.anchorNode.nodeType === 1 ? s.anchorNode : s.anchorNode.parentElement).closest('li,p'); if (!b || !doc.contains(b) || b.closest('.fig,.dg')) return;
+  let f = b.firstChild; while (f && ((f.nodeType === 3 && !f.data) || f.nodeName === 'INPUT')) f = f.nextSibling;
+  if (!f || f.nodeName !== 'BR') return; let nx = f.nextSibling; while (nx && nx.nodeType === 3 && !nx.data) nx = nx.nextSibling;
+  if (!nx || (nx.nodeType === 1 && nx.matches('ul,ol,br'))) return;
+  f.remove(); const r = document.createRange(); r.selectNodeContents(b); r.collapse(true); if (nx.nodeType === 3) r.setStart(nx, 0); else r.setStartBefore(nx); r.collapse(true); s.removeAllRanges(); s.addRange(r); lastRange = r.cloneRange();
+});
+/* Line breaks inside a block are hidden from the browser's list command, which would make a list from one line only
+   (inside the paragraph, or as loose text): with them hidden the whole block becomes one item, or one paragraph. */
+const BRM = '\uE000';
+function brHide() {
+  const s = getSelection(); if (!s.rangeCount) return; const r = s.getRangeAt(0);
+  $$('p,li,h1,h2,h3,h4', doc).filter(b => !b.closest('.fig,.dg,td,th,dl.qa') && r.intersectsNode(b)).forEach(b => $$('br', b).forEach(br => {
+    if (br.parentNode.closest('p,li,h1,h2,h3,h4') !== b) return;
+    let nx = br.nextSibling; while (nx && nx.nodeType === 3 && !nx.data) nx = nx.nextSibling;
+    if (!nx || (nx.nodeType === 1 && nx.matches('ul,ol'))) return; // the break that holds an empty line open stays
+    br.replaceWith(document.createTextNode(BRM));
+  }));
+}
+function brShow() {
+  const w = document.createTreeWalker(doc, NodeFilter.SHOW_TEXT), hit = []; let n; while ((n = w.nextNode())) if (n.data.includes(BRM)) hit.push(n);
+  const s = getSelection(); let an = s.rangeCount ? s.anchorNode : null, ao = s.rangeCount ? s.anchorOffset : 0, moved = false;
+  hit.forEach(t => {
+    const parts = t.data.split(BRM), f = document.createDocumentFragment(); let pos = 0;
+    parts.forEach((p, i) => {
+      if (i) { f.appendChild(document.createElement('br')); pos++; }
+      const x = document.createTextNode(p); f.appendChild(x);
+      if (an === t && !moved && ao <= pos + p.length) { an = x; ao = Math.max(0, ao - pos); moved = true; }
+      pos += p.length;
+    });
+    t.replaceWith(f);
+  });
+  if (moved) { s.collapse(an, ao); lastRange = s.getRangeAt(0).cloneRange(); }
+}
 /* Make or remove a list. The browser moves a plain cursor to the start of the item; it goes back where it was. */
 function listCmd(c) {
   restore(); const s = getSelection(), at = () => { let n = s.rangeCount ? s.anchorNode : null; if (n && n.nodeType !== 1) n = n.parentElement; return n && n.closest('li,p,h1,h2,h3,h4'); };
+  // taking a list off is done here: the browser's own way leaves the text loose in the page, and in a box it takes the box with it
+  { let on = false; try { on = document.queryCommandState(c); } catch (e) { } if (on && listAt()) { listShift(-1); return; } }
+  brHide();
   let b = s.isCollapsed ? at() : null, text = '', k = 0;
   if (b && doc.contains(b)) { const r = document.createRange(); r.selectNodeContents(b); text = r.toString(); r.setEnd(s.anchorNode, s.anchorOffset); k = r.toString().length; } else b = null;
   document.execCommand(c); checkFix(doc);
-  const a = b && s.isCollapsed ? at() : null; if (!a || !doc.contains(a) || a.textContent !== text) return;
-  const w = document.createTreeWalker(a, NodeFilter.SHOW_TEXT); let n;
-  while ((n = w.nextNode())) { if (k <= n.length) { s.collapse(n, k); lastRange = s.getRangeAt(0).cloneRange(); return; } k -= n.length; }
+  const a = b && s.isCollapsed ? at() : null;
+  if (a && doc.contains(a) && a.textContent === text) { const w = document.createTreeWalker(a, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) { if (k <= n.length) { s.collapse(n, k); lastRange = s.getRangeAt(0).cloneRange(); break; } k -= n.length; } }
+  brShow();
 }
 function listAt() { const s = getSelection(); let n = s.rangeCount ? s.anchorNode : null; if (n && n.nodeType !== 1) n = n.parentElement; const li = n && n.closest('li'); return li && doc.contains(li) && !li.closest('.fig,.dg') ? li.parentNode : null; }
 /* Compact list: tighter lines for the whole list the cursor is in, its inner lists included. */
 function listTop() { let l = listAt(); if (!l) return null; for (let p = l.parentNode.closest('ul,ol'); p && doc.contains(p); p = p.parentNode.closest('ul,ol')) l = p; return l; }
+/* Start numbering at: a numbered list that carries on from an earlier one, after text, a table or a diagram between them.
+   It is the list's own start attribute, so a saved document needs no script. The number is fixed: nothing ties it to the
+   earlier list, and the author keeps it right. The form offers the number after the nearest numbered list above. */
+function olAt() { const l = listAt(); return l && l.tagName === 'OL' ? l : null; }
+const olFirst = l => { const v = parseInt(l.getAttribute('start'), 10); return isNaN(v) ? 1 : v; };
+function olAbove(l) { // the nearest numbered list before this one at the same depth (an inner list looks at inner lists)
+  const deep = !!l.parentNode.closest('li'), all = $$('ol', doc).filter(o => !o.closest('.fig,.dg') && !!o.parentNode.closest('li') === deep && !o.contains(l));
+  let prev = null; all.forEach(o => { if (o.compareDocumentPosition(l) & Node.DOCUMENT_POSITION_FOLLOWING) prev = o; }); return prev;
+}
+const olEnd = l => olFirst(l) + $$(':scope > li', l).length - 1;
+function olSet(l, n) { if (n === 1) l.removeAttribute('start'); else l.setAttribute('start', String(n)); }
+let numJob = null;
+function editStart() {
+  live(); restore(); const l = olAt(); if (!l) return;
+  const d = $('#numdlg'), N = $('#num-start'), up = olAbove(l);
+  numJob = { l }; $('#num-err').textContent = '';
+  N.value = l.hasAttribute('start') ? olFirst(l) : up ? olEnd(up) + 1 : 1;
+  $('#num-hint').textContent = up ? 'The numbered list above ends at ' + olEnd(up) + '.' : 'There is no numbered list above this one.';
+  d.showModal(); N.focus(); N.select();
+}
+function numDone(how) {
+  const d = $('#numdlg'), job = numJob; if (!job) { d.close(); return; }
+  const finish = () => { numJob = null; d.close(); restore(); };
+  if (how === 'cancel') { finish(); return; }
+  const t = $('#num-start').value.trim(), n = how === 'reset' ? 1 : /^\d{1,5}$/.test(t) ? parseInt(t, 10) : NaN;
+  if (isNaN(n)) { $('#num-err').textContent = 'Enter a whole number from 0 to 99999.'; return; }
+  finish(); if (!doc.contains(job.l)) return;
+  if (olFirst(job.l) !== n || (n === 1 && job.l.hasAttribute('start'))) { olSet(job.l, n); touch(); }
+  styleUI(); repSet('Start numbering at ' + n, () => { restore(); const l = olAt(); if (l && olFirst(l) !== n) { olSet(l, n); touch(); styleUI(); } });
+}
+$('#numdlg').addEventListener('click', e => { const b2 = e.target.closest('button[data-a]'); if (b2) numDone({ numsave: 'save', numreset: 'reset', numcancel: 'cancel' }[b2.dataset.a]); });
+$('#numdlg').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('input')) { e.preventDefault(); numDone('save'); } });
+$('#numdlg').addEventListener('cancel', e => { e.preventDefault(); numDone('cancel'); });
 function listDense() { restore(); const l = listTop(); if (!l) return; l.classList.toggle('dense'); if (!l.getAttribute('class')) l.removeAttribute('class'); touch(); styleUI(); }
 function inCheck() { const l = listAt(); return !!(l && l.matches('ul.check')); }
 /* The cursor at the very start of a checklist item, just after its box. */
@@ -1412,9 +1583,17 @@ function onCopy(e, cut) {
 document.addEventListener('copy', e => onCopy(e, false));
 document.addEventListener('cut', e => onCopy(e, true));
 const SAFE_HREF = /^\s*(https?:|mailto:|tel:|#)/i;
-const KEEP = { P: [], BR: [], B: [], STRONG: [], I: [], EM: [], SUB: [], SUP: [], S: [], A: ['href'], CODE: [], PRE: [], H2: [], H3: [], H4: [], UL: [], OL: [], LI: [], TABLE: [], THEAD: [], TBODY: [], TFOOT: [], TR: [], TH: ['colspan', 'rowspan'], TD: ['colspan', 'rowspan'], IMG: ['src', 'alt', 'width', 'height'] };
+const KEEP = { P: [], BR: [], B: [], STRONG: [], I: [], EM: [], SUB: [], SUP: [], S: [], A: ['href'], CODE: [], PRE: [], H2: [], H3: [], H4: [], UL: [], OL: ['start'], LI: [], TABLE: [], THEAD: [], TBODY: [], TFOOT: [], TR: [], TH: ['colspan', 'rowspan'], TD: ['colspan', 'rowspan'], IMG: ['src', 'alt', 'width', 'height'] };
 const BOXY = /^(DIV|SECTION|ARTICLE|HEADER|FOOTER|MAIN|ASIDE|FIGURE|FIGCAPTION|BLOCKQUOTE|ADDRESS|CENTER|NAV|DT|DD|DETAILS|SUMMARY)$/;
 function rename(e, tag) { const n = document.createElement(tag); n.append(...e.childNodes); e.replaceWith(n); return n; }
+/* Bold from another program counts only where it is emphasis. A header cell, heading, Q&A question or box label has its
+   own weight, and browsers copy that weight onto every element inside, so bold there says nothing and is dropped; bold
+   inside bold is one bold. all: the content is going into such a place, so none of its bold is kept. */
+const WEIGHTED = 'th,h1,h2,h3,h4,dt,p.box-h,tr.grp td';
+function unbold(root, all) {
+  const sel = all ? 'b,strong' : (WEIGHTED + ',b,strong').split(',').flatMap(w => [w + ' b', w + ' strong']).join();
+  $$(sel, root).forEach(x => x.replaceWith(...x.childNodes)); root.normalize();
+}
 /* HTML from another program: keep the structure, drop its styling. */
 function foreign(box) {
   $$('style,title,svg,math,head,xml,colgroup,col,caption,hr,noscript,template,canvas,map,area', box).forEach(n => n.remove());
@@ -1437,6 +1616,7 @@ function foreign(box) {
   $$('li,td,th', box).forEach(c => $$(':scope > p', c).forEach(p => { if (p.nextSibling && hasContent(p)) p.after(document.createElement('br')); p.replaceWith(...p.childNodes); }));
   // a heading inside a cell or list item becomes a bold line: the toolbar has no headings there, so it could not be made again
   $$('h2,h3,h4', box).filter(h => h.parentNode.closest('td,th,li')).forEach(h => { $$('b,strong', h).forEach(x => x.replaceWith(...x.childNodes)); if (!hasContent(h)) { h.remove(); return; } if (h.parentNode.closest('td,th,li').tagName !== 'TH') { const w = document.createElement('b'); w.append(...h.childNodes); h.appendChild(w); } toLine(h); });
+  unbold(box);
   $$('pre', box).forEach(pre => { const lines = pre.textContent.replace(/\n$/, '').split('\n'); pre.textContent = ''; lines.forEach((t, i) => { if (i) pre.appendChild(document.createElement('br')); if (t) pre.appendChild(document.createTextNode(t)); }); });
   $$('p,h2,h3,h4,li', box).forEach(n => { if (!hasContent(n) && !n.closest('table')) n.remove(); });
   $$('ul,ol', box).forEach(l => { if (!l.children.length) l.remove(); });
@@ -1494,8 +1674,11 @@ function insertInline(html) {
 }
 function clipInsert(box) {
   const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode)) return;
-  if (!box.querySelector(BLOCKS + ',.dg,.fig')) { insertInline(box.innerHTML); return; }
   let at = s.anchorNode; if (at.nodeType !== 1) at = at.parentElement;
+  // from another program, into a place with its own weight (or into bold): its bold is not kept
+  const heavy = !box.hasAttribute('data-fle-clip') && !!at.closest(WEIGHTED + ',b,strong');
+  const put = h => { if (heavy) { const t = document.createElement('div'); t.innerHTML = h; unbold(t, true); h = t.innerHTML; } insertInline(h); };
+  if (!box.querySelector(BLOCKS + ',.dg,.fig')) { put(box.innerHTML); return; }
   const li = at.closest('li'), lists = [...box.children].every(c => c.matches('ul,ol'));
   if (li && doc.contains(li) && !cellEl() && lists && !s.isCollapsed) document.execCommand('delete');
   if (li && doc.contains(li) && li.isConnected && !cellEl() && lists) {
@@ -1503,7 +1686,7 @@ function clipInsert(box) {
     if (hasContent(li)) li.after(...items); else li.replaceWith(...items);
     clipAdopt(items); caret(items[items.length - 1], true); return;
   }
-  if (cellEl() || at.closest('li,dt,dd,.note-log')) { const h = clipLines(box); if (h) insertInline(h); return; }
+  if (cellEl() || at.closest('li,dt,dd,.note-log')) { const h = clipLines(box); if (h) put(h); return; }
   if (!s.isCollapsed) document.execCommand('delete');
   const r = getSelection().getRangeAt(0); let cur = r.startContainer; if (cur === doc) cur = doc.childNodes[r.startOffset] || doc.lastChild;
   while (cur && cur.parentNode !== doc && !holds(cur.parentNode)) cur = cur.parentNode;
@@ -1571,7 +1754,7 @@ function inspectOne(e) {
   if (t === 'TABLE') return { name: (c.contains('lop') || c.contains('spine') ? 'Fancy table' : 'Table') + (c.contains('dense') ? ', compact' : '') + (c.contains('cw') ? ', set column widths' : '') };
   if (t === 'TD') return { name: 'Table cell' };
   if (t === 'TH') return { name: (c.contains('sub') ? 'Sub header cell' : 'Header cell') + (e.getAttribute('scope') === 'row' ? ' (header column)' : e.getAttribute('scope') === 'col' ? ' (header row)' : '') };
-  if (t === 'LI') { const l = e.parentNode, top = e.closest('ul.dense, ol.dense'); return { name: (l.classList.contains('check') ? 'Checklist item' : l.tagName === 'OL' ? 'Numbered list item' : 'Bulleted list item') + (l.parentNode.closest('li') ? ', in an inner list' : '') + (top ? ', compact' : '') }; }
+  if (t === 'LI') { const l = e.parentNode, top = e.closest('ul.dense, ol.dense'); return { name: (l.classList.contains('check') ? 'Checklist item' : l.tagName === 'OL' ? 'Numbered list item' + (l.hasAttribute('start') ? ', list starts at ' + olFirst(l) : '') : 'Bulleted list item') + (l.parentNode.closest('li') ? ', in an inner list' : '') + (top ? ', compact' : '') }; }
   if (t === 'DT') return { name: 'Q&A question' }; if (t === 'DD') return { name: 'Q&A answer' };
   if (t === 'PRE') return { name: 'Code block', odd: where ? 'The toolbar cannot make this in ' + where : '' };
   if (/^H[1-6]$/.test(t)) return { name: t === 'H1' ? 'Title (H1)' : 'Heading ' + t[1] + ' (H' + t[1] + ')', odd: where ? 'The toolbar cannot make a heading in ' + where : (+t[1] > 4 ? 'Not a toolbar style' : ''), line: !!where };
@@ -1897,14 +2080,28 @@ function qaConvert(tag, cls) {
   }
   touch(); styleUI();
 }
+/* The Q&A button works on the block the cursor is in, as the list buttons do: a paragraph or heading becomes a question
+   (each one, when several are selected), and a question or answer goes back to a paragraph. A list item, table cell or
+   code block cannot hold a Q&A list, so there it does nothing. */
 function addQa() {
-  const dl = el('<dl class="qa"><dt><br></dt></dl>'); insertBlock(dl); caret(dl.firstChild); styleUI();
+  live(); const r = lastRange; if (!r || !doc.contains(r.startContainer)) return; restore();
+  if (qaItem(r)) { qaConvert('p'); return; }
+  let n = r.startContainer; if (n.nodeType !== 1) n = n.parentElement; if (n.closest('li,td,th,pre,.fig,.dg,.note-log')) return;
+  const blocks = $$('p,h2,h3,h4', doc).filter(b => (b.parentNode === doc || holds(b.parentNode)) && !b.matches('p.box-h') && (r.collapsed ? b.contains(r.startContainer) : r.intersectsNode(b)));
+  if (!r.collapsed && r.endOffset === 0 && blocks.length > 1 && blocks[blocks.length - 1].contains(r.endContainer)) blocks.pop();
+  if (!blocks.length) return; let last = null;
+  blocks.forEach(b => {
+    const e = mk('dt', '', hasContent(b) ? b.innerHTML : '<br>'), prev = b.previousElementSibling;
+    if (prev && prev.matches('dl.qa')) { prev.appendChild(e); b.remove(); } else { const dl = mk('dl', 'qa', ''); dl.appendChild(e); b.replaceWith(dl); }
+    last = e;
+  });
+  mergeQa(last.parentNode); caret(last, true); touch(); styleUI();
 }
 function frag(r) { const f = r.cloneContents(), out = []; const w = document.createTreeWalker(f, NodeFilter.SHOW_ALL); let n; while ((n = w.nextNode())) out.push(n); return out; }
 function lineText(nodes, reverse) { let t = ''; for (const n of (reverse ? nodes.reverse() : nodes)) { if (n.nodeName === 'BR') break; if (n.nodeType === 3) t += n.data; } return t.trim(); }
 function qaEnter(item, shift) {
   const s = getSelection(), r = s.getRangeAt(0);
-  if (shift) { document.execCommand('insertLineBreak'); touch(); return; }
+  if (shift) { lineBreak(); touch(); return; }
   if (item.tagName === 'DT') {
     if (!item.textContent.trim()) { const p = mk('p'); splitOut(item, p); caret(p); touch(); return; }
     let dd = item.nextElementSibling; if (!dd || dd.tagName !== 'DD') { dd = mk('dd'); item.after(dd); }
@@ -1914,7 +2111,7 @@ function qaEnter(item, shift) {
   const before = document.createRange(); before.setStart(item, 0); before.setEnd(r.startContainer, r.startOffset);
   let lead = frag(before).filter(n => !(n.parentElement && n.parentElement.closest('ul,ol'))); { let cut = -1; lead.forEach((n, i) => { if (n.nodeType === 1 && /^(UL|OL)$/.test(n.tagName)) cut = i; }); lead = lead.slice(cut + 1); } // a list in the answer ends the line before it
   const atEnd = !after.toString().trim(), empty = atEnd && !lineText(lead, true);
-  if (!empty) { document.execCommand('insertLineBreak'); touch(); return; }
+  if (!empty) { lineBreak(); touch(); return; }
   while (item.lastChild && (item.lastChild.nodeName === 'BR' || (item.lastChild.nodeType === 3 && !item.lastChild.data.trim()))) item.lastChild.remove();
   const dt = mk('dt'); item.after(dt); if (!item.textContent.trim()) item.remove(); caret(dt); touch();
 }
@@ -2151,7 +2348,9 @@ document.addEventListener('keydown', e => {
   }
   if (k === 'Enter' && !e.shiftKey && !ctrl && !e.altKey && !editing && !inCell()) { const s0 = getSelection(); let n0 = s0.anchorNode; if (n0 && n0.nodeType !== 1) n0 = n0.parentElement; const pb = n0 && n0.closest('.note-body > p'); if (pb && !pb.textContent.trim() && !pb.nextElementSibling && pb.previousElementSibling) { e.preventDefault(); const note = pb.closest('.note'); pb.remove(); const q = mk('p'); note.after(q); caret(q); touch(); styleUI(); return; } }
   if (k === 'Enter' && !e.shiftKey && !ctrl && !e.altKey && !editing && !inCell()) { const p = styledParaEnd(); if (p) { e.preventDefault(); const n = mk('p'); p.after(n); caret(n); touch(); styleUI(); return; } }
-  if (k === 'Enter' && !ctrl && !e.altKey && !editing && inCell()) { e.preventDefault(); document.execCommand('insertLineBreak'); touch(); return; }
+  if (k === 'Enter' && e.shiftKey && !ctrl && !e.altKey && !editing && !board && doc.contains(e.target) && !inCell() && tagEdge()) { e.preventDefault(); lineBreak(); touch(); return; }
+  if (k === 'Enter' && !e.shiftKey && !ctrl && !e.altKey && !editing && !board && doc.contains(e.target) && !inCell() && enterAfterTag()) { e.preventDefault(); return; }
+  if (k === 'Enter' && !ctrl && !e.altKey && !editing && inCell()) { e.preventDefault(); lineBreak(); touch(); return; }
   if (editing) { if (k === 'Enter' && !e.shiftKey) { e.preventDefault(); document.execCommand('insertLineBreak'); } if (k === 'Escape') editing.blur(); return; }
   if (!board || e.target.closest('#chrome')) return;
   if (ctrl && k.toLowerCase() === 'z') { e.preventDefault(); undoDiagram(); return; }
@@ -2246,7 +2445,7 @@ function dgApply(m) {
   if (fig && !fig.classList.contains('dg')) { const n = document.createElement('div'); n.className = 'dg'; fig.replaceWith(n); fig = n; } // a page diagram, now converted
   if (!fig) {
     fig = document.createElement('div'); fig.className = 'dg';
-    const b = curBlock(); if (b) b.after(fig); else doc.appendChild(fig);
+    placeBlock(fig);
     const cap = el('<p class="cap">Figure. Caption</p>'); fig.after(cap);
   }
   fig.setAttribute('contenteditable', 'false'); fig.setAttribute('title', 'Double-click to edit');
@@ -2491,8 +2690,15 @@ const ACT = {
   bold: () => cmd('bold'), italic: () => cmd('italic'), ul: () => { if (qaList('ul')) return; const l = listAt(); if (l && l.matches('ul.check')) { l.classList.remove('check'); if (!l.getAttribute('class')) l.removeAttribute('class'); touch(); } else { listCmd('insertUnorderedList'); touch(); } }, ol: () => { if (qaList('ol')) return; listCmd('insertOrderedList'); touch(); }, check: checkList, ldense: listDense, indent: () => { listShift(1); }, outdent: () => { listShift(-1); },
   undo: () => histGo(-1), redo: () => histGo(1),
   code: addCode, clear: clearFormat, paint: () => { if (paint) paintStop(); else paintPick(false); }, note: addNote, margin: toggleNotes, who: () => initials(true), saveclean: saveClean, repeat: repeatLast, nosaved: () => { $('#savedbar').hidden = true; chromeHeight(); }, noclean: () => { $('#cleanbar').hidden = true; chromeHeight(); },
-  inspect: inspect, link: editLink, index: () => { idxDepth = idxDepth % 3 + 1; rebuild(); touch(); }, // steps 1, 2, 3 and back to 1
-  tag: () => { restore(); const t = getSelection().toString() || 'ID'; document.execCommand('insertHTML', false, '<span class="id">' + esc(t) + '</span>&nbsp;'); touch(); },
+  inspect: inspect, link: editLink, olstart: editStart, index: () => { idxDepth = idxDepth % 3 + 1; rebuild(); touch(); }, // steps 1, 2, 3 and back to 1
+  tag: () => { // put in by hand: the browser's own insert drops the tag in a list item and adds styles to it elsewhere
+    restore(); const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode)) return; const none = !s.toString(), t = s.toString() || 'ID', r = s.getRangeAt(0), blk = x => (x.nodeType === 1 ? x : x.parentElement).closest(TEXT_BLOCK);
+    if (blk(r.startContainer) !== blk(r.endContainer) || /[\r\n]/.test(t)) { document.execCommand('insertHTML', false, '<span class="id">' + esc(t) + '</span>&nbsp;'); touch(); return; }
+    r.deleteContents(); const sp = document.createElement('span'), gap = document.createTextNode('\u00a0'); sp.className = 'id'; sp.textContent = t; r.insertNode(gap); r.insertNode(sp);
+    [sp.previousSibling, gap.nextSibling].forEach(x => { if (x && x.nodeName === 'BR' && x.parentNode.matches(TEXT_BLOCK) && (x === x.parentNode.lastChild || (x === x.parentNode.firstChild && gap === x.parentNode.lastChild))) x.remove(); }); // the break that held an empty line open is not needed now
+    const c = document.createRange(); if (none) c.selectNodeContents(sp.firstChild); else { c.setStart(gap, 1); c.collapse(true); } // with nothing selected the placeholder is selected, ready to type over
+    s.removeAllRanges(); s.addRange(c); lastRange = c.cloneRange(); touch();
+  },
   table: addTable, stage: addStage, mr: () => tableOp('mr'), md: () => tableOp('md'), split: () => tableOp('split'), qa: addQa, 'r+': () => tableOp('r+'), ra: () => tableOp('ra'), cl: () => tableOp('cl'), 'r-': () => tableOp('r-'), 'c+': () => tableOp('c+'), 'c-': () => tableOp('c-'), dense: () => tableOp('dense'), hr: () => tableOp('hr'), sr: () => tableOp('sr'), hc: () => tableOp('hc'), sc: () => tableOp('sc'),
   diagram: () => openDiagram(null), dgedit: () => dgSel && openDiagram(dgSel), dgdel: dgDelete, help: () => { const h = $('#help'); if (h.open) h.close(); else { helpInfo(); h.showModal(); } },
   connect: () => setMode(mode === 'connect' ? null : 'connect'), del: remove, dup: duplicate, deldiagram: deleteDiagram,

@@ -51,6 +51,7 @@ function status() { const sv = $('[data-a="save"]'); sv.classList.toggle('has', 
 function helpInfo() { const i = $('#help-info'); if (i) i.textContent = PRODUCT.name + ' v' + VERSION + ' | Document: ' + fname + (dirty ? ' (unsaved changes)' : '') + (statusEl.textContent ? ' | ' + statusEl.textContent : ''); }
 function keepGoing(what) { return !dirty || confirm('This document has unsaved changes. Save it first if you want to keep them.\n\nOK: discard the changes and ' + what + '.\nCancel: go back to the document.'); }
 function touch() {
+  olTidy();
   checkFix(doc); dirty = true; status(); clearTimeout(timer);
   timer = setTimeout(() => { histSnap(); try { localStorage.setItem(PRODUCT.key + '-draft', clean().innerHTML); } catch (e) { } }, 400);
 }
@@ -107,8 +108,8 @@ function styleUI() {
   [['bold', 'bold'], ['italic', 'italic'], ['ul', 'insertUnorderedList'], ['ol', 'insertOrderedList']].forEach(([a, c]) => { let on = false; try { on = document.queryCommandState(c); } catch (e) { } $('[data-a="' + a + '"]').classList.toggle('on', on); });
   const bx = boxAt(n); $('#s-boxtype').value = bx ? boxType(bx) : '';
   $$('#s-fmt option[value]').forEach(o => { if (FMT[o.value]) o.textContent = (fmtOn(o.value) ? '\u2713 ' : '') + FMT[o.value][0]; }); { const la = listAt(); $('[data-a="indent"]').classList.toggle('dim', !la); $('[data-a="outdent"]').classList.toggle('dim', !la); }
-  { const q = qaItem(), noList = !!(q && q.tagName === 'DT'); ['ul', 'ol', 'check'].forEach(a => $('[data-a="' + a + '"]').classList.toggle('dim', noList)); }
-  { const lt = listTop(); $('[data-a="ldense"]').classList.toggle('on', !!(lt && lt.classList.contains('dense'))); $('[data-a="ldense"]').classList.toggle('dim', !lt); }
+  { const q = qaItem(), noList = !!(q && q.tagName === 'DT'); ['ul', 'ol', 'check'].forEach(a => $('[data-a="' + a + '"]').classList.toggle('dim', noList)); $('[data-a="qa"]').classList.toggle('on', !!q); $('[data-a="qa"]').classList.toggle('dim', !q && !!n.closest('li,td,th,pre')); }
+  { const lt = listTop(); $('[data-a="ldense"]').classList.toggle('on', !!(lt && lt.classList.contains('dense'))); $('[data-a="ldense"]').classList.toggle('dim', !lt); const o = olAt(); $('[data-a="olstart"]').classList.toggle('dim', !o); $('[data-a="olstart"]').classList.toggle('on', !!(o && o.hasAttribute('start'))); }
   const ck = inCheck(); $('[data-a="check"]').classList.toggle('on', ck); if (ck) $('[data-a="ul"]').classList.remove('on');
 }
 function live() { const s = getSelection(); if (s.rangeCount && doc.contains(s.anchorNode)) { let n = s.anchorNode; if (n.nodeType !== 1) n = n.parentElement; if (!n.closest('.fig')) lastRange = s.getRangeAt(0).cloneRange(); } }
@@ -282,7 +283,7 @@ const clearable = e => !e.matches('a,span.id') && !e.closest('.fig,.dg,[class*="
 /* A paragraph or heading that sits inside a table cell or list item becomes a plain line there: its content stays in
    place, with a line break where it would otherwise run into the text beside it. Returns the cell or item. */
 function toLine(b) {
-  const par = b.parentNode, real = (n, step) => { while (n && n.nodeType === 3 && !n.data.trim()) n = n[step]; return n; };
+  const par = b.parentNode, real = (n, step) => { while (n && (n.nodeType === 8 || (n.nodeType === 3 && !n.data.trim()))) n = n[step]; return n; };
   const flows = n => !!n && n.nodeName !== 'BR' && !(n.nodeType === 1 && n.matches(BLOCKS + ',li,input'));
   const kids = [...b.childNodes]; while (kids.length && kids[kids.length - 1].nodeName === 'BR') kids.pop();
   if (flows(real(b.previousSibling, 'previousSibling'))) b.before(document.createElement('br'));
@@ -337,6 +338,9 @@ function clearFormat() {
     [...c.childNodes].forEach(n => { if (isBlock(n)) end(); else run.push(n); }); end();
   });
   if (!blocks.length && !runs.length) return;
+  // the selection is kept, ready for the next toolbar choice: two markers hold its ends while the blocks under it are rebuilt
+  const mark = r.collapsed ? null : [document.createComment('s'), document.createComment('e')];
+  if (mark) { const z = r.cloneRange(); z.collapse(false); z.insertNode(mark[1]); const a0 = r.cloneRange(); a0.collapse(true); a0.insertNode(mark[0]); }
   const dls = new Set(); let last = null, picked = null;
   runs.forEach(({ c, nodes, ir, whole }) => {
     if (!whole) { const o = clearPart(c, ir); if (!jobs.length && runs.length === 1) picked = o; last = c; return; }
@@ -358,10 +362,30 @@ function clearFormat() {
     [...dl.children].forEach(c => { if (c.tagName === 'P') { parts.push(c); cur = null; } else { if (!cur) { cur = mk('dl', 'qa', ''); parts.push(cur); } cur.appendChild(c); } });
     dl.replaceWith(...parts);
   });
-  if (picked) { const g = getSelection(); g.removeAllRanges(); g.addRange(picked); lastRange = picked.cloneRange(); } else if (last) caret(last, true);
+  let kept = picked;
+  if (mark) {
+    if (!kept && doc.contains(mark[0]) && doc.contains(mark[1])) { kept = document.createRange(); kept.setStartAfter(mark[0]); kept.setEndBefore(mark[1]); }
+    mark.forEach(m => { const p = m.parentNode; m.remove(); if (p) p.normalize(); });
+    if (kept && (kept.collapsed || !doc.contains(kept.startContainer))) kept = null;
+  }
+  if (kept) { const g = getSelection(); g.removeAllRanges(); g.addRange(kept); lastRange = kept.cloneRange(); } else if (last) caret(last, true);
   touch(); styleUI();
 }
-function insertBlock(node) { const b = curBlock(); if (b) b.after(node); else doc.appendChild(node); touch(); }
+/* A new block goes where the cursor is. An empty paragraph is replaced by it. With the cursor in a paragraph or heading it
+   goes before that (cursor at the start), after it (cursor at the end) or between its two halves. With text selected it goes
+   after the block the selection starts in. A list, table, Q&A list or code block cannot hold it, so there it goes after that;
+   with no cursor it goes at the end of the page. It never goes between the title and its subtitle. */
+function placeBlock(node) {
+  let b = curBlock(); const r = lastRange; if (!b) { doc.appendChild(node); return; }
+  if (b.tagName === 'H1') { if (b.nextElementSibling && b.nextElementSibling.matches('p.sub')) b = b.nextElementSibling; b.after(node); return; }
+  if (!r || !r.collapsed || !b.matches('p,h2,h3,h4') || b.matches('p.box-h') || !b.contains(r.startContainer)) { b.after(node); return; }
+  if (b.tagName === 'P' && !b.className && !hasContent(b)) { b.replaceWith(node); return; }
+  const head = document.createRange(), tail = document.createRange(); head.selectNodeContents(b); head.setEnd(r.startContainer, r.startOffset); tail.selectNodeContents(b); tail.setStart(r.startContainer, r.startOffset);
+  const some = x => { const f = x.cloneContents(); return !!(f.textContent.trim() || f.querySelector('img,svg')); };
+  if (!some(tail)) b.after(node); else if (!some(head)) b.before(node);
+  else { const rest = b.cloneNode(false); rest.removeAttribute('id'); rest.append(tail.extractContents()); b.after(node); node.after(rest); }
+}
+function insertBlock(node) { placeBlock(node); touch(); }
 /* Drag and drop: content dragged within the document moves as usual (it is already clean); anything dropped from
    outside arrives as plain text, and a dropped .html file is opened through the same cleaning as Open. */
 let dragInside = false;
@@ -460,13 +484,13 @@ const inTable = () => { live(); return !!cell(); };
 const REP = {
   bold: () => { let w = false; try { w = document.queryCommandState('bold'); } catch (e) { } return [w ? 'Bold' : 'Bold off', () => { restore(); setInline('bold', 'b,strong', w); }]; },
   italic: () => { let w = false; try { w = document.queryCommandState('italic'); } catch (e) { } return [w ? 'Italic' : 'Italic off', () => { restore(); setInline('italic', 'i,em', w); }]; },
-  ul: () => { let w = false; try { w = document.queryCommandState('insertUnorderedList'); } catch (e) { } return [w ? 'Bulleted list' : 'Bulleted list off', () => { if (qaList('ul')) return; if (document.queryCommandState('insertUnorderedList') !== w) document.execCommand('insertUnorderedList'); }]; },
-  ol: () => { let w = false; try { w = document.queryCommandState('insertOrderedList'); } catch (e) { } return [w ? 'Numbered list' : 'Numbered list off', () => { if (qaList('ol')) return; if (document.queryCommandState('insertOrderedList') !== w) document.execCommand('insertOrderedList'); }]; },
+  ul: () => { let w = false; try { w = document.queryCommandState('insertUnorderedList'); } catch (e) { } return [w ? 'Bulleted list' : 'Bulleted list off', () => { if (qaList('ul')) return; if (document.queryCommandState('insertUnorderedList') !== w) listCmd('insertUnorderedList'); }]; },
+  ol: () => { let w = false; try { w = document.queryCommandState('insertOrderedList'); } catch (e) { } return [w ? 'Numbered list' : 'Numbered list off', () => { if (qaList('ol')) return; if (document.queryCommandState('insertOrderedList') !== w) listCmd('insertOrderedList'); }]; },
   check: () => { const w = inCheck(); return [w ? 'Checklist' : 'Checklist off', () => { restore(); if (inCheck() !== w) checkList(); }]; },
   ldense: () => { const l = listTop(), w = !!(l && l.classList.contains('dense')); return [w ? 'Compact list' : 'Compact list off', () => { restore(); const t = listTop(); if (t && t.classList.contains('dense') !== w) listDense(); }]; },
   indent: () => ['Indent', () => listShift(1)], outdent: () => ['Outdent', () => listShift(-1)],
   clear: () => ['Clear format', clearFormat],
-  note: () => ['Note', addNote], code: () => ['Insert code block', addCode], qa: () => ['Insert Q&A list', addQa],
+  note: () => ['Note', addNote], code: () => ['Insert code block', addCode], qa: () => { const w = !!qaItem(lastRange); return [w ? 'Q&A question' : 'Q&A off', () => { live(); if (!!qaItem(lastRange) !== w) addQa(); }]; },
   tag: () => ['ID tag', () => { restore(); let n = getSelection().anchorNode; if (n && n.nodeType !== 1) n = n.parentElement; if (n && n.closest('span.id')) return; ACT.tag(); }],
   ...Object.fromEntries([['hr', 'Header row'], ['sr', 'Sub header row'], ['hc', 'Header column'], ['sc', 'Sub header column']].map(([a, name]) => [a, () => { live(); const c = cell(), w = !!(c && tHeaderState(c)[a]); return [w ? name : name + ' off', () => { if (!inTable()) return; if (!!tHeaderState(cell())[a] !== w) tableOp(a); }]; }])),
   dense: () => { live(); const c = cell(), w = !!(c && c.closest('table').classList.contains('dense')); return [w ? 'Compact table' : 'Compact table off', () => { if (!inTable()) return; if (cell().closest('table').classList.contains('dense') !== w) tableOp('dense'); }]; }
@@ -520,8 +544,7 @@ function setBox(v) {
     done(); return;
   }
   const box = el('<div class="box box-' + v + '" role="note"><p class="box-h"></p><p><br></p></div>'); box.firstChild.textContent = BOXES[v];
-  let b = curBlock(); if (b && b.tagName === 'H1' && b.nextElementSibling && b.nextElementSibling.matches('p.sub')) b = b.nextElementSibling; // not between the title and its subtitle
-  if (b && b.tagName === 'P' && !b.className && !hasContent(b)) b.replaceWith(box); else if (b) b.after(box); else doc.appendChild(box);
+  placeBlock(box);
   caret(box.lastChild); touch(); styleUI();
 }
 /* ---------- more formats ----------
@@ -553,6 +576,7 @@ function listItems() {
   const sibs = [...L.children].filter(x => x.tagName === 'LI'), i = sibs.indexOf(a), j = b2 ? sibs.indexOf(b2) : -1;
   if (j < i) return sibs.slice(i).filter(x => r.intersectsNode(x)); return sibs.slice(i, j + 1);
 }
+function olTidy() { $$('ul[start], ol[start="1"]', doc).forEach(l => l.removeAttribute('start')); }
 function listLike(L) { const n = document.createElement(L.tagName.toLowerCase()); if (L.classList.contains('check')) n.className = 'check'; return n; }
 function listShift(dir) {
   restore(); const lis = listItems(); if (!lis.length) return false; const s = getSelection(), keep = [s.anchorNode, s.anchorOffset, s.focusNode, s.focusOffset], L = lis[0].parentNode;
@@ -646,19 +670,162 @@ function checkFix(root) {
   $$('input', root).forEach(i => { if (!keep.has(i) && !i.closest('.fig,.dg')) i.remove(); });
   const s = getSelection(); if (s.rangeCount && s.isCollapsed && s.anchorNode.nodeType === 1 && s.anchorOffset === 0 && keep.has(s.anchorNode.firstChild)) s.collapse(s.anchorNode, 1);
 }
+/* ---------- ID tags, line breaks and joins in running text ----------
+   The browser's own editing commands treat an ID tag as a style: a line break typed beside one lands inside it, Enter after
+   one starts the next block inside a new one, and a tag at the start of a block is turned into plain text when that block
+   is joined to the one before. These put the break or the new block outside the tag, and put a lost tag back. */
+const TEXT_BLOCK = 'li,p,h1,h2,h3,h4,dt,dd,td,th';
+function tagEdge() { // the tag the cursor is in or right beside, and whether the cursor is at its front
+  const s = getSelection(); if (!s.rangeCount || !s.isCollapsed || !doc.contains(s.anchorNode)) return null;
+  const n = s.anchorNode, o = s.anchorOffset, t = (n.nodeType === 1 ? n : n.parentElement).closest('span.id'), isTag = x => !!x && x.nodeType === 1 && x.matches('span.id');
+  if (t) { const r = document.createRange(); r.selectNodeContents(t); r.setEnd(n, o); return { tag: t, before: !r.toString() && !!t.textContent }; }
+  if (n.nodeType === 3) return o === 0 && isTag(n.previousSibling) ? { tag: n.previousSibling, before: false } : o === n.length && isTag(n.nextSibling) ? { tag: n.nextSibling, before: true } : null;
+  return isTag(n.childNodes[o - 1]) ? { tag: n.childNodes[o - 1], before: false } : isTag(n.childNodes[o]) ? { tag: n.childNodes[o], before: true } : null;
+}
+function lineBreak() {
+  if (!getSelection().isCollapsed) document.execCommand('delete');
+  const e = tagEdge(); if (!e) { document.execCommand('insertLineBreak'); return; }
+  clearTimeout(timer); histSnap();
+  const br = document.createElement('br'); if (e.before) e.tag.before(br); else e.tag.after(br);
+  let nx = br.nextSibling; while (nx && nx.nodeType === 3 && !nx.data) nx = nx.nextSibling;
+  if (!nx || (nx.nodeType === 1 && nx.matches('ul,ol'))) br.after(document.createElement('br')); // a break at the end of a block needs a second one for the new line to show
+  const r = document.createRange(); r.setStartAfter(br); r.collapse(true); const s = getSelection(); s.removeAllRanges(); s.addRange(r); lastRange = r.cloneRange();
+}
+/* Enter at the end of a block that ends with a tag: the next block starts plain. */
+function enterAfterTag() {
+  const e = tagEdge(); if (!e || e.before) return false;
+  const blk = e.tag.closest('li,p,h1,h2,h3,h4'); if (!blk || !doc.contains(blk) || blk.closest('.fig,.dg,.note,dl.qa,td,th') || blk.matches('p.box-h')) return false;
+  const s = getSelection(), r = document.createRange(); r.setStart(s.anchorNode, s.anchorOffset); r.setEnd(blk, blk.childNodes.length);
+  const rest = r.cloneContents(); if (rest.textContent.trim() || rest.querySelector('ul,ol,img,table,input,.dg,.fig')) return false;
+  clearTimeout(timer); histSnap();
+  const n = blk.tagName === 'LI' ? mk('li') : mk('p'); blk.after(n); caret(n); touch(); styleUI(); return true;
+}
+/* Joining blocks (Backspace at the start of one, Delete at the end of one, or deleting a selection across them). */
+let joinWatch = null;
+const tagTexts = () => $$('span.id', doc).map(t => t.textContent);
+doc.addEventListener('beforeinput', e => {
+  joinWatch = null; if (!/^delete/.test(e.inputType)) return;
+  const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode)) return; const r = s.getRangeAt(0), blockOfNode = x => (x.nodeType === 1 ? x : x.parentElement).closest(TEXT_BLOCK);
+  const a = blockOfNode(r.startContainer), z = blockOfNode(r.endContainer); if (!a || !z || a.closest('.fig,.dg') || blockOf(r.startContainer)) return;
+  if (r.collapsed) {
+    const back = /Backward/.test(e.inputType), edge = document.createRange(); edge.selectNodeContents(a);
+    if (back) edge.setEnd(r.startContainer, r.startOffset); else edge.setStart(r.startContainer, r.startOffset);
+    const f = edge.cloneContents(); if (f.textContent || f.querySelector('br,img,ul,ol,table')) return; // only at the very edge of the block
+    joinWatch = { before: tagTexts(), only: null };
+  } else if (a !== z) { // a tag right after the end of the selection is the one at risk; tags inside the selection are meant to go
+    const n = r.endContainer, o = r.endOffset; let nx = n.nodeType === 3 ? (o === n.length ? n.nextSibling : null) : n.childNodes[o];
+    while (nx && nx.nodeType === 3 && !nx.data) nx = nx.nextSibling;
+    joinWatch = { before: tagTexts(), only: nx && nx.nodeType === 1 && nx.matches('span.id') ? nx.textContent : '' };
+  }
+});
+doc.addEventListener('input', () => {
+  const w = joinWatch; joinWatch = null; if (!w) return;
+  const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode)) return;
+  const blk = (s.anchorNode.nodeType === 1 ? s.anchorNode : s.anchorNode.parentElement).closest(TEXT_BLOCK); if (!blk) return;
+  // what the join leaves behind: styles copied onto the text that moved
+  $$('span,b,strong,i,em,u,s,code,a,sub,sup,font', blk).forEach(x => { if (x.closest('.fig,.dg,.note-log')) return; x.removeAttribute('style'); if ((x.tagName === 'SPAN' && !x.attributes.length) || x.tagName === 'FONT') x.replaceWith(...x.childNodes); });
+  const now = tagTexts(); if (now.length >= w.before.length) return;
+  const left = now.slice(), lost = w.before.filter(t => { const i = left.indexOf(t); if (i < 0) return true; left.splice(i, 1); return false; });
+  for (const t of (w.only === null ? [...new Set(lost)] : lost.includes(w.only) ? [w.only] : [])) if (t && retag(blk, t)) break;
+});
+function retag(blk, text) { // the text right after the cursor is the lost tag's: make it a tag again
+  const s = getSelection(), n = s.anchorNode, o = s.anchorOffset, r = document.createRange(); r.setStart(n, o); r.setEnd(blk, blk.childNodes.length);
+  const w = document.createTreeWalker(blk, NodeFilter.SHOW_TEXT); let tn, acc = '', sN = null, sO = 0, eN = null, eO = 0;
+  while ((tn = w.nextNode())) {
+    let from = 0; if (!sN) { if (tn === n) from = o; else if (r.comparePoint(tn, 0) < 0) continue; }
+    const piece = tn.data.slice(from, from + text.length - acc.length); if (!piece) { if (sN) break; continue; }
+    if (!sN) { sN = tn; sO = from; } acc += piece; eN = tn; eO = from + piece.length; if (acc.length === text.length) break;
+  }
+  if (acc !== text || sN.parentElement.closest('span.id') || eN.parentElement.closest('span.id')) return false;
+  const rr = document.createRange(); rr.setStart(sN, sO); rr.setEnd(eN, eO); rr.deleteContents();
+  const sp = document.createElement('span'); sp.className = 'id'; sp.textContent = text; rr.insertNode(sp);
+  const c = document.createRange(); c.setStartBefore(sp); c.collapse(true); s.removeAllRanges(); s.addRange(c); lastRange = c.cloneRange(); return true;
+}
+/* Enter at the end of a line that has a line break after it: the new block starts with the text, not a blank line. */
+doc.addEventListener('input', e => {
+  if (e.inputType !== 'insertParagraph') return; const s = getSelection(); if (!s.rangeCount || !s.isCollapsed) return;
+  const b = (s.anchorNode.nodeType === 1 ? s.anchorNode : s.anchorNode.parentElement).closest('li,p'); if (!b || !doc.contains(b) || b.closest('.fig,.dg')) return;
+  let f = b.firstChild; while (f && ((f.nodeType === 3 && !f.data) || f.nodeName === 'INPUT')) f = f.nextSibling;
+  if (!f || f.nodeName !== 'BR') return; let nx = f.nextSibling; while (nx && nx.nodeType === 3 && !nx.data) nx = nx.nextSibling;
+  if (!nx || (nx.nodeType === 1 && nx.matches('ul,ol,br'))) return;
+  f.remove(); const r = document.createRange(); r.selectNodeContents(b); r.collapse(true); if (nx.nodeType === 3) r.setStart(nx, 0); else r.setStartBefore(nx); r.collapse(true); s.removeAllRanges(); s.addRange(r); lastRange = r.cloneRange();
+});
+/* Line breaks inside a block are hidden from the browser's list command, which would make a list from one line only
+   (inside the paragraph, or as loose text): with them hidden the whole block becomes one item, or one paragraph. */
+const BRM = '\uE000';
+function brHide() {
+  const s = getSelection(); if (!s.rangeCount) return; const r = s.getRangeAt(0);
+  $$('p,li,h1,h2,h3,h4', doc).filter(b => !b.closest('.fig,.dg,td,th,dl.qa') && r.intersectsNode(b)).forEach(b => $$('br', b).forEach(br => {
+    if (br.parentNode.closest('p,li,h1,h2,h3,h4') !== b) return;
+    let nx = br.nextSibling; while (nx && nx.nodeType === 3 && !nx.data) nx = nx.nextSibling;
+    if (!nx || (nx.nodeType === 1 && nx.matches('ul,ol'))) return; // the break that holds an empty line open stays
+    br.replaceWith(document.createTextNode(BRM));
+  }));
+}
+function brShow() {
+  const w = document.createTreeWalker(doc, NodeFilter.SHOW_TEXT), hit = []; let n; while ((n = w.nextNode())) if (n.data.includes(BRM)) hit.push(n);
+  const s = getSelection(); let an = s.rangeCount ? s.anchorNode : null, ao = s.rangeCount ? s.anchorOffset : 0, moved = false;
+  hit.forEach(t => {
+    const parts = t.data.split(BRM), f = document.createDocumentFragment(); let pos = 0;
+    parts.forEach((p, i) => {
+      if (i) { f.appendChild(document.createElement('br')); pos++; }
+      const x = document.createTextNode(p); f.appendChild(x);
+      if (an === t && !moved && ao <= pos + p.length) { an = x; ao = Math.max(0, ao - pos); moved = true; }
+      pos += p.length;
+    });
+    t.replaceWith(f);
+  });
+  if (moved) { s.collapse(an, ao); lastRange = s.getRangeAt(0).cloneRange(); }
+}
 /* Make or remove a list. The browser moves a plain cursor to the start of the item; it goes back where it was. */
 function listCmd(c) {
   restore(); const s = getSelection(), at = () => { let n = s.rangeCount ? s.anchorNode : null; if (n && n.nodeType !== 1) n = n.parentElement; return n && n.closest('li,p,h1,h2,h3,h4'); };
+  // taking a list off is done here: the browser's own way leaves the text loose in the page, and in a box it takes the box with it
+  { let on = false; try { on = document.queryCommandState(c); } catch (e) { } if (on && listAt()) { listShift(-1); return; } }
+  brHide();
   let b = s.isCollapsed ? at() : null, text = '', k = 0;
   if (b && doc.contains(b)) { const r = document.createRange(); r.selectNodeContents(b); text = r.toString(); r.setEnd(s.anchorNode, s.anchorOffset); k = r.toString().length; } else b = null;
   document.execCommand(c); checkFix(doc);
-  const a = b && s.isCollapsed ? at() : null; if (!a || !doc.contains(a) || a.textContent !== text) return;
-  const w = document.createTreeWalker(a, NodeFilter.SHOW_TEXT); let n;
-  while ((n = w.nextNode())) { if (k <= n.length) { s.collapse(n, k); lastRange = s.getRangeAt(0).cloneRange(); return; } k -= n.length; }
+  const a = b && s.isCollapsed ? at() : null;
+  if (a && doc.contains(a) && a.textContent === text) { const w = document.createTreeWalker(a, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) { if (k <= n.length) { s.collapse(n, k); lastRange = s.getRangeAt(0).cloneRange(); break; } k -= n.length; } }
+  brShow();
 }
 function listAt() { const s = getSelection(); let n = s.rangeCount ? s.anchorNode : null; if (n && n.nodeType !== 1) n = n.parentElement; const li = n && n.closest('li'); return li && doc.contains(li) && !li.closest('.fig,.dg') ? li.parentNode : null; }
 /* Compact list: tighter lines for the whole list the cursor is in, its inner lists included. */
 function listTop() { let l = listAt(); if (!l) return null; for (let p = l.parentNode.closest('ul,ol'); p && doc.contains(p); p = p.parentNode.closest('ul,ol')) l = p; return l; }
+/* Start numbering at: a numbered list that carries on from an earlier one, after text, a table or a diagram between them.
+   It is the list's own start attribute, so a saved document needs no script. The number is fixed: nothing ties it to the
+   earlier list, and the author keeps it right. The form offers the number after the nearest numbered list above. */
+function olAt() { const l = listAt(); return l && l.tagName === 'OL' ? l : null; }
+const olFirst = l => { const v = parseInt(l.getAttribute('start'), 10); return isNaN(v) ? 1 : v; };
+function olAbove(l) { // the nearest numbered list before this one at the same depth (an inner list looks at inner lists)
+  const deep = !!l.parentNode.closest('li'), all = $$('ol', doc).filter(o => !o.closest('.fig,.dg') && !!o.parentNode.closest('li') === deep && !o.contains(l));
+  let prev = null; all.forEach(o => { if (o.compareDocumentPosition(l) & Node.DOCUMENT_POSITION_FOLLOWING) prev = o; }); return prev;
+}
+const olEnd = l => olFirst(l) + $$(':scope > li', l).length - 1;
+function olSet(l, n) { if (n === 1) l.removeAttribute('start'); else l.setAttribute('start', String(n)); }
+let numJob = null;
+function editStart() {
+  live(); restore(); const l = olAt(); if (!l) return;
+  const d = $('#numdlg'), N = $('#num-start'), up = olAbove(l);
+  numJob = { l }; $('#num-err').textContent = '';
+  N.value = l.hasAttribute('start') ? olFirst(l) : up ? olEnd(up) + 1 : 1;
+  $('#num-hint').textContent = up ? 'The numbered list above ends at ' + olEnd(up) + '.' : 'There is no numbered list above this one.';
+  d.showModal(); N.focus(); N.select();
+}
+function numDone(how) {
+  const d = $('#numdlg'), job = numJob; if (!job) { d.close(); return; }
+  const finish = () => { numJob = null; d.close(); restore(); };
+  if (how === 'cancel') { finish(); return; }
+  const t = $('#num-start').value.trim(), n = how === 'reset' ? 1 : /^\d{1,5}$/.test(t) ? parseInt(t, 10) : NaN;
+  if (isNaN(n)) { $('#num-err').textContent = 'Enter a whole number from 0 to 99999.'; return; }
+  finish(); if (!doc.contains(job.l)) return;
+  if (olFirst(job.l) !== n || (n === 1 && job.l.hasAttribute('start'))) { olSet(job.l, n); touch(); }
+  styleUI(); repSet('Start numbering at ' + n, () => { restore(); const l = olAt(); if (l && olFirst(l) !== n) { olSet(l, n); touch(); styleUI(); } });
+}
+$('#numdlg').addEventListener('click', e => { const b2 = e.target.closest('button[data-a]'); if (b2) numDone({ numsave: 'save', numreset: 'reset', numcancel: 'cancel' }[b2.dataset.a]); });
+$('#numdlg').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('input')) { e.preventDefault(); numDone('save'); } });
+$('#numdlg').addEventListener('cancel', e => { e.preventDefault(); numDone('cancel'); });
 function listDense() { restore(); const l = listTop(); if (!l) return; l.classList.toggle('dense'); if (!l.getAttribute('class')) l.removeAttribute('class'); touch(); styleUI(); }
 function inCheck() { const l = listAt(); return !!(l && l.matches('ul.check')); }
 /* The cursor at the very start of a checklist item, just after its box. */
@@ -726,9 +893,17 @@ function onCopy(e, cut) {
 document.addEventListener('copy', e => onCopy(e, false));
 document.addEventListener('cut', e => onCopy(e, true));
 const SAFE_HREF = /^\s*(https?:|mailto:|tel:|#)/i;
-const KEEP = { P: [], BR: [], B: [], STRONG: [], I: [], EM: [], SUB: [], SUP: [], S: [], A: ['href'], CODE: [], PRE: [], H2: [], H3: [], H4: [], UL: [], OL: [], LI: [], TABLE: [], THEAD: [], TBODY: [], TFOOT: [], TR: [], TH: ['colspan', 'rowspan'], TD: ['colspan', 'rowspan'], IMG: ['src', 'alt', 'width', 'height'] };
+const KEEP = { P: [], BR: [], B: [], STRONG: [], I: [], EM: [], SUB: [], SUP: [], S: [], A: ['href'], CODE: [], PRE: [], H2: [], H3: [], H4: [], UL: [], OL: ['start'], LI: [], TABLE: [], THEAD: [], TBODY: [], TFOOT: [], TR: [], TH: ['colspan', 'rowspan'], TD: ['colspan', 'rowspan'], IMG: ['src', 'alt', 'width', 'height'] };
 const BOXY = /^(DIV|SECTION|ARTICLE|HEADER|FOOTER|MAIN|ASIDE|FIGURE|FIGCAPTION|BLOCKQUOTE|ADDRESS|CENTER|NAV|DT|DD|DETAILS|SUMMARY)$/;
 function rename(e, tag) { const n = document.createElement(tag); n.append(...e.childNodes); e.replaceWith(n); return n; }
+/* Bold from another program counts only where it is emphasis. A header cell, heading, Q&A question or box label has its
+   own weight, and browsers copy that weight onto every element inside, so bold there says nothing and is dropped; bold
+   inside bold is one bold. all: the content is going into such a place, so none of its bold is kept. */
+const WEIGHTED = 'th,h1,h2,h3,h4,dt,p.box-h,tr.grp td';
+function unbold(root, all) {
+  const sel = all ? 'b,strong' : (WEIGHTED + ',b,strong').split(',').flatMap(w => [w + ' b', w + ' strong']).join();
+  $$(sel, root).forEach(x => x.replaceWith(...x.childNodes)); root.normalize();
+}
 /* HTML from another program: keep the structure, drop its styling. */
 function foreign(box) {
   $$('style,title,svg,math,head,xml,colgroup,col,caption,hr,noscript,template,canvas,map,area', box).forEach(n => n.remove());
@@ -751,6 +926,7 @@ function foreign(box) {
   $$('li,td,th', box).forEach(c => $$(':scope > p', c).forEach(p => { if (p.nextSibling && hasContent(p)) p.after(document.createElement('br')); p.replaceWith(...p.childNodes); }));
   // a heading inside a cell or list item becomes a bold line: the toolbar has no headings there, so it could not be made again
   $$('h2,h3,h4', box).filter(h => h.parentNode.closest('td,th,li')).forEach(h => { $$('b,strong', h).forEach(x => x.replaceWith(...x.childNodes)); if (!hasContent(h)) { h.remove(); return; } if (h.parentNode.closest('td,th,li').tagName !== 'TH') { const w = document.createElement('b'); w.append(...h.childNodes); h.appendChild(w); } toLine(h); });
+  unbold(box);
   $$('pre', box).forEach(pre => { const lines = pre.textContent.replace(/\n$/, '').split('\n'); pre.textContent = ''; lines.forEach((t, i) => { if (i) pre.appendChild(document.createElement('br')); if (t) pre.appendChild(document.createTextNode(t)); }); });
   $$('p,h2,h3,h4,li', box).forEach(n => { if (!hasContent(n) && !n.closest('table')) n.remove(); });
   $$('ul,ol', box).forEach(l => { if (!l.children.length) l.remove(); });
@@ -808,8 +984,11 @@ function insertInline(html) {
 }
 function clipInsert(box) {
   const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode)) return;
-  if (!box.querySelector(BLOCKS + ',.dg,.fig')) { insertInline(box.innerHTML); return; }
   let at = s.anchorNode; if (at.nodeType !== 1) at = at.parentElement;
+  // from another program, into a place with its own weight (or into bold): its bold is not kept
+  const heavy = !box.hasAttribute('data-fle-clip') && !!at.closest(WEIGHTED + ',b,strong');
+  const put = h => { if (heavy) { const t = document.createElement('div'); t.innerHTML = h; unbold(t, true); h = t.innerHTML; } insertInline(h); };
+  if (!box.querySelector(BLOCKS + ',.dg,.fig')) { put(box.innerHTML); return; }
   const li = at.closest('li'), lists = [...box.children].every(c => c.matches('ul,ol'));
   if (li && doc.contains(li) && !cellEl() && lists && !s.isCollapsed) document.execCommand('delete');
   if (li && doc.contains(li) && li.isConnected && !cellEl() && lists) {
@@ -817,7 +996,7 @@ function clipInsert(box) {
     if (hasContent(li)) li.after(...items); else li.replaceWith(...items);
     clipAdopt(items); caret(items[items.length - 1], true); return;
   }
-  if (cellEl() || at.closest('li,dt,dd,.note-log')) { const h = clipLines(box); if (h) insertInline(h); return; }
+  if (cellEl() || at.closest('li,dt,dd,.note-log')) { const h = clipLines(box); if (h) put(h); return; }
   if (!s.isCollapsed) document.execCommand('delete');
   const r = getSelection().getRangeAt(0); let cur = r.startContainer; if (cur === doc) cur = doc.childNodes[r.startOffset] || doc.lastChild;
   while (cur && cur.parentNode !== doc && !holds(cur.parentNode)) cur = cur.parentNode;
@@ -885,7 +1064,7 @@ function inspectOne(e) {
   if (t === 'TABLE') return { name: (c.contains('lop') || c.contains('spine') ? 'Fancy table' : 'Table') + (c.contains('dense') ? ', compact' : '') + (c.contains('cw') ? ', set column widths' : '') };
   if (t === 'TD') return { name: 'Table cell' };
   if (t === 'TH') return { name: (c.contains('sub') ? 'Sub header cell' : 'Header cell') + (e.getAttribute('scope') === 'row' ? ' (header column)' : e.getAttribute('scope') === 'col' ? ' (header row)' : '') };
-  if (t === 'LI') { const l = e.parentNode, top = e.closest('ul.dense, ol.dense'); return { name: (l.classList.contains('check') ? 'Checklist item' : l.tagName === 'OL' ? 'Numbered list item' : 'Bulleted list item') + (l.parentNode.closest('li') ? ', in an inner list' : '') + (top ? ', compact' : '') }; }
+  if (t === 'LI') { const l = e.parentNode, top = e.closest('ul.dense, ol.dense'); return { name: (l.classList.contains('check') ? 'Checklist item' : l.tagName === 'OL' ? 'Numbered list item' + (l.hasAttribute('start') ? ', list starts at ' + olFirst(l) : '') : 'Bulleted list item') + (l.parentNode.closest('li') ? ', in an inner list' : '') + (top ? ', compact' : '') }; }
   if (t === 'DT') return { name: 'Q&A question' }; if (t === 'DD') return { name: 'Q&A answer' };
   if (t === 'PRE') return { name: 'Code block', odd: where ? 'The toolbar cannot make this in ' + where : '' };
   if (/^H[1-6]$/.test(t)) return { name: t === 'H1' ? 'Title (H1)' : 'Heading ' + t[1] + ' (H' + t[1] + ')', odd: where ? 'The toolbar cannot make a heading in ' + where : (+t[1] > 4 ? 'Not a toolbar style' : ''), line: !!where };
@@ -1211,14 +1390,28 @@ function qaConvert(tag, cls) {
   }
   touch(); styleUI();
 }
+/* The Q&A button works on the block the cursor is in, as the list buttons do: a paragraph or heading becomes a question
+   (each one, when several are selected), and a question or answer goes back to a paragraph. A list item, table cell or
+   code block cannot hold a Q&A list, so there it does nothing. */
 function addQa() {
-  const dl = el('<dl class="qa"><dt><br></dt></dl>'); insertBlock(dl); caret(dl.firstChild); styleUI();
+  live(); const r = lastRange; if (!r || !doc.contains(r.startContainer)) return; restore();
+  if (qaItem(r)) { qaConvert('p'); return; }
+  let n = r.startContainer; if (n.nodeType !== 1) n = n.parentElement; if (n.closest('li,td,th,pre,.fig,.dg,.note-log')) return;
+  const blocks = $$('p,h2,h3,h4', doc).filter(b => (b.parentNode === doc || holds(b.parentNode)) && !b.matches('p.box-h') && (r.collapsed ? b.contains(r.startContainer) : r.intersectsNode(b)));
+  if (!r.collapsed && r.endOffset === 0 && blocks.length > 1 && blocks[blocks.length - 1].contains(r.endContainer)) blocks.pop();
+  if (!blocks.length) return; let last = null;
+  blocks.forEach(b => {
+    const e = mk('dt', '', hasContent(b) ? b.innerHTML : '<br>'), prev = b.previousElementSibling;
+    if (prev && prev.matches('dl.qa')) { prev.appendChild(e); b.remove(); } else { const dl = mk('dl', 'qa', ''); dl.appendChild(e); b.replaceWith(dl); }
+    last = e;
+  });
+  mergeQa(last.parentNode); caret(last, true); touch(); styleUI();
 }
 function frag(r) { const f = r.cloneContents(), out = []; const w = document.createTreeWalker(f, NodeFilter.SHOW_ALL); let n; while ((n = w.nextNode())) out.push(n); return out; }
 function lineText(nodes, reverse) { let t = ''; for (const n of (reverse ? nodes.reverse() : nodes)) { if (n.nodeName === 'BR') break; if (n.nodeType === 3) t += n.data; } return t.trim(); }
 function qaEnter(item, shift) {
   const s = getSelection(), r = s.getRangeAt(0);
-  if (shift) { document.execCommand('insertLineBreak'); touch(); return; }
+  if (shift) { lineBreak(); touch(); return; }
   if (item.tagName === 'DT') {
     if (!item.textContent.trim()) { const p = mk('p'); splitOut(item, p); caret(p); touch(); return; }
     let dd = item.nextElementSibling; if (!dd || dd.tagName !== 'DD') { dd = mk('dd'); item.after(dd); }
@@ -1228,7 +1421,7 @@ function qaEnter(item, shift) {
   const before = document.createRange(); before.setStart(item, 0); before.setEnd(r.startContainer, r.startOffset);
   let lead = frag(before).filter(n => !(n.parentElement && n.parentElement.closest('ul,ol'))); { let cut = -1; lead.forEach((n, i) => { if (n.nodeType === 1 && /^(UL|OL)$/.test(n.tagName)) cut = i; }); lead = lead.slice(cut + 1); } // a list in the answer ends the line before it
   const atEnd = !after.toString().trim(), empty = atEnd && !lineText(lead, true);
-  if (!empty) { document.execCommand('insertLineBreak'); touch(); return; }
+  if (!empty) { lineBreak(); touch(); return; }
   while (item.lastChild && (item.lastChild.nodeName === 'BR' || (item.lastChild.nodeType === 3 && !item.lastChild.data.trim()))) item.lastChild.remove();
   const dt = mk('dt'); item.after(dt); if (!item.textContent.trim()) item.remove(); caret(dt); touch();
 }
@@ -1465,7 +1658,9 @@ document.addEventListener('keydown', e => {
   }
   if (k === 'Enter' && !e.shiftKey && !ctrl && !e.altKey && !editing && !inCell()) { const s0 = getSelection(); let n0 = s0.anchorNode; if (n0 && n0.nodeType !== 1) n0 = n0.parentElement; const pb = n0 && n0.closest('.note-body > p'); if (pb && !pb.textContent.trim() && !pb.nextElementSibling && pb.previousElementSibling) { e.preventDefault(); const note = pb.closest('.note'); pb.remove(); const q = mk('p'); note.after(q); caret(q); touch(); styleUI(); return; } }
   if (k === 'Enter' && !e.shiftKey && !ctrl && !e.altKey && !editing && !inCell()) { const p = styledParaEnd(); if (p) { e.preventDefault(); const n = mk('p'); p.after(n); caret(n); touch(); styleUI(); return; } }
-  if (k === 'Enter' && !ctrl && !e.altKey && !editing && inCell()) { e.preventDefault(); document.execCommand('insertLineBreak'); touch(); return; }
+  if (k === 'Enter' && e.shiftKey && !ctrl && !e.altKey && !editing && !board && doc.contains(e.target) && !inCell() && tagEdge()) { e.preventDefault(); lineBreak(); touch(); return; }
+  if (k === 'Enter' && !e.shiftKey && !ctrl && !e.altKey && !editing && !board && doc.contains(e.target) && !inCell() && enterAfterTag()) { e.preventDefault(); return; }
+  if (k === 'Enter' && !ctrl && !e.altKey && !editing && inCell()) { e.preventDefault(); lineBreak(); touch(); return; }
   if (editing) { if (k === 'Enter' && !e.shiftKey) { e.preventDefault(); document.execCommand('insertLineBreak'); } if (k === 'Escape') editing.blur(); return; }
   if (!board || e.target.closest('#chrome')) return;
   if (ctrl && k.toLowerCase() === 'z') { e.preventDefault(); undoDiagram(); return; }
@@ -1560,7 +1755,7 @@ function dgApply(m) {
   if (fig && !fig.classList.contains('dg')) { const n = document.createElement('div'); n.className = 'dg'; fig.replaceWith(n); fig = n; } // a page diagram, now converted
   if (!fig) {
     fig = document.createElement('div'); fig.className = 'dg';
-    const b = curBlock(); if (b) b.after(fig); else doc.appendChild(fig);
+    placeBlock(fig);
     const cap = el('<p class="cap">Figure. Caption</p>'); fig.after(cap);
   }
   fig.setAttribute('contenteditable', 'false'); fig.setAttribute('title', 'Double-click to edit');
@@ -1697,8 +1892,15 @@ const ACT = {
   bold: () => cmd('bold'), italic: () => cmd('italic'), ul: () => { if (qaList('ul')) return; const l = listAt(); if (l && l.matches('ul.check')) { l.classList.remove('check'); if (!l.getAttribute('class')) l.removeAttribute('class'); touch(); } else { listCmd('insertUnorderedList'); touch(); } }, ol: () => { if (qaList('ol')) return; listCmd('insertOrderedList'); touch(); }, check: checkList, ldense: listDense, indent: () => { listShift(1); }, outdent: () => { listShift(-1); },
   undo: () => histGo(-1), redo: () => histGo(1),
   code: addCode, clear: clearFormat, paint: () => { if (paint) paintStop(); else paintPick(false); }, note: addNote, margin: toggleNotes, who: () => initials(true), saveclean: saveClean, repeat: repeatLast, nosaved: () => { $('#savedbar').hidden = true; chromeHeight(); }, noclean: () => { $('#cleanbar').hidden = true; chromeHeight(); },
-  inspect: inspect, link: editLink, index: () => { idxDepth = idxDepth % 3 + 1; rebuild(); touch(); }, // steps 1, 2, 3 and back to 1
-  tag: () => { restore(); const t = getSelection().toString() || 'ID'; document.execCommand('insertHTML', false, '<span class="id">' + esc(t) + '</span>&nbsp;'); touch(); },
+  inspect: inspect, link: editLink, olstart: editStart, index: () => { idxDepth = idxDepth % 3 + 1; rebuild(); touch(); }, // steps 1, 2, 3 and back to 1
+  tag: () => { // put in by hand: the browser's own insert drops the tag in a list item and adds styles to it elsewhere
+    restore(); const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode)) return; const none = !s.toString(), t = s.toString() || 'ID', r = s.getRangeAt(0), blk = x => (x.nodeType === 1 ? x : x.parentElement).closest(TEXT_BLOCK);
+    if (blk(r.startContainer) !== blk(r.endContainer) || /[\r\n]/.test(t)) { document.execCommand('insertHTML', false, '<span class="id">' + esc(t) + '</span>&nbsp;'); touch(); return; }
+    r.deleteContents(); const sp = document.createElement('span'), gap = document.createTextNode('\u00a0'); sp.className = 'id'; sp.textContent = t; r.insertNode(gap); r.insertNode(sp);
+    [sp.previousSibling, gap.nextSibling].forEach(x => { if (x && x.nodeName === 'BR' && x.parentNode.matches(TEXT_BLOCK) && (x === x.parentNode.lastChild || (x === x.parentNode.firstChild && gap === x.parentNode.lastChild))) x.remove(); }); // the break that held an empty line open is not needed now
+    const c = document.createRange(); if (none) c.selectNodeContents(sp.firstChild); else { c.setStart(gap, 1); c.collapse(true); } // with nothing selected the placeholder is selected, ready to type over
+    s.removeAllRanges(); s.addRange(c); lastRange = c.cloneRange(); touch();
+  },
   table: addTable, stage: addStage, mr: () => tableOp('mr'), md: () => tableOp('md'), split: () => tableOp('split'), qa: addQa, 'r+': () => tableOp('r+'), ra: () => tableOp('ra'), cl: () => tableOp('cl'), 'r-': () => tableOp('r-'), 'c+': () => tableOp('c+'), 'c-': () => tableOp('c-'), dense: () => tableOp('dense'), hr: () => tableOp('hr'), sr: () => tableOp('sr'), hc: () => tableOp('hc'), sc: () => tableOp('sc'),
   diagram: () => openDiagram(null), dgedit: () => dgSel && openDiagram(dgSel), dgdel: dgDelete, help: () => { const h = $('#help'); if (h.open) h.close(); else { helpInfo(); h.showModal(); } },
   connect: () => setMode(mode === 'connect' ? null : 'connect'), del: remove, dup: duplicate, deldiagram: deleteDiagram,

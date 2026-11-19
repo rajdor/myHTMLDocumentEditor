@@ -12,6 +12,7 @@ Open `fine-line-notebook.html` in Chrome or Edge. Nothing is loaded from the net
 - Clear format: removes all text formatting from the selected text, including inline code, superscript, subscript and anything pasted in; with the cursor only, or a whole block selected, the block also becomes a plain paragraph (a plain line inside a table cell or list item). Links and ID tags stay.
 - More formats: superscript, subscript, strike-through and inline code from one toolbar list.
 - List indent and outdent: buttons, or Tab and Shift+Tab; outdent at the top level turns the item into a paragraph.
+- Start numbering at: sets the first number of a numbered list so it can carry on from an earlier list; the number is fixed once set, and pasted lists keep theirs.
 - Links: a form for the display text and the address, with defaults from the selected text and, when the browser already allows it, the clipboard.
 - Inspect formatting: a button opens a popup that lists the formatting on the text at the cursor or the selected word, marks anything the toolbar cannot make there, shows the font, size, weight and colour, and can remove one format at a time. It reads the document only when pressed.
 - Copy format: a format painter for block style, bold, italics and ID tags; one press applies once, a double-click keeps it on.
@@ -102,7 +103,12 @@ Tests use puppeteer-core with a local Chrome or Edge (or `CHROME_PATH`). `npm te
 | t27-more-formats | Superscript, subscript, strike-through and inline code from the More list: on, off, ticks, undo, repeat, limits, Clear format, pasted strike-through kept, toolbar on one row |
 | t28-list-indent | List indent and outdent by button and by Tab: levels, several items, cursor kept, top level becomes a paragraph, numbered lists and checklists, Q&A untouched, lists in table cells |
 | t29-qa-lists | Lists inside a Q&A answer: made from the current line or the selected lines, kinds and changing kind, Enter and Backspace, leaving the list, indent, the Q&A stays whole, questions refuse lists, saved markup |
-| t30-notebook | Notebook explorer on an in-memory folder (`test/mockfs.mjs`): panel and landing, tree order, hidden files and settings, opening pages, the Save, Discard, Cancel prompt, first save named from the H1, name clashes, rename, new folder, move by drag, trash and restore, changes made outside the editor, import of other HTML, Markdown and plain text, copy where the browser cannot move, read-only mode, the notice for browsers without folder access |
+| t30-paste-bold | Bold is a set 700; bold pasted from other programs is dropped in header cells, headings, Q&A questions and box labels, collapsed when nested, kept elsewhere; bold copied in the editor is kept |
+| t31-list-start | Start numbering at: the button, the suggested number, typed numbers, Back to 1, inner lists and lists in tables, undo, save and re-open, paste, repeat, Inspect formatting |
+| t32-breaks-tags-joins | Line breaks beside ID tags, Enter after a tag, the ID tag button in list items and cells, tags kept when blocks are joined, blocks with line breaks made into list items and back, Enter before a line break |
+| t33-clear-keeps-selection | Clear format keeps the selection: whole blocks, several blocks, part of a block, list items, table cells; a style, list or bold applied next; undo |
+| t34-insert-at-cursor | Inserts go where the cursor is: code block, table, box in an empty paragraph, at the start, end and middle of a paragraph, headings, the title, lists; the Q&A button on empty and filled paragraphs, several paragraphs, toggling off, lists and cells, boxes, undo, repeat |
+| nb1-notebook | Notebook explorer on an in-memory folder (`test/mockfs.mjs`): panel and landing, tree order, hidden files and settings, opening pages, the Save, Discard, Cancel prompt, first save named from the H1, name clashes, rename, new folder, move by drag, trash and restore, changes made outside the editor, import of other HTML, Markdown and plain text, copy where the browser cannot move, read-only mode, the notice for browsers without folder access |
 
 ## Updating the diagram editor
 

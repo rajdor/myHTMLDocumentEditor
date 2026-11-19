@@ -1,4 +1,4 @@
-// Runs every test/t*.mjs in order from the project root and reports failures. Output goes to test/out/results.txt.
+// Runs every test/t*.mjs (shared editor tests), then every test/nb*.mjs (notebook tests), in order from the project root and reports failures. Output goes to test/out/results.txt.
 // A test fails if it exits non-zero or prints a page error.
 //   node test/run-all.mjs           run everything
 //   node test/run-all.mjs t2 t6     run only these
@@ -8,8 +8,8 @@ import path from 'path';
 import { ROOT } from './harness.mjs';
 
 const only = process.argv.slice(2).map(a => a.replace(/\.mjs$/, '') + '.mjs');
-const tests = fs.readdirSync(path.join(ROOT, 'test')).filter(f => /^t\d+[\w-]*\.mjs$/.test(f) && (!only.length || only.some(o => f === o || f.startsWith(o.replace('.mjs', '-')))))
-  .sort((a, b) => parseInt(a.slice(1)) - parseInt(b.slice(1)));
+const tests = fs.readdirSync(path.join(ROOT, 'test')).filter(f => /^(t|nb)\d+[\w-]*\.mjs$/.test(f) && (!only.length || only.some(o => f === o || f.startsWith(o.replace('.mjs', '-')))))
+  .sort((a, b) => (a[0] === 'n') - (b[0] === 'n') || parseInt(a.replace(/^\D+/, '')) - parseInt(b.replace(/^\D+/, '')));
 let failed = 0, log = '';
 const t0 = Date.now();
 for (const t of tests) {

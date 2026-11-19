@@ -208,6 +208,8 @@ h4 { font-size: 14px; font-weight: 600; color: var(--ink-soft); margin: 20px 0 6
 .h2sub { color: var(--ink-soft); margin: -4px 0 18px; }
 pre { font: 13px/1.5 var(--mono); font-variant-ligatures: none; color: var(--ink); background: #f6f9fc; border: 1px solid var(--dots); border-radius: 3px; padding: 10px 12px; margin: 10px 0 16px; max-width: 900px; overflow-x: auto; white-space: pre; tab-size: 4; }
 p { margin: 8px 0; max-width: 900px; }
+/* bold is one set weight: the browser's own rule is relative (bolder than the text around it), which gives 900 in a header cell or heading */
+main b, main strong { font-weight: 700; }
 .bluf { font-size: 17px; border-left: 4px solid var(--ink); padding: 4px 0 4px 16px; }
 .cap { font-size: 13px; color: var(--ink-soft); margin: 6px 0 16px; max-width: none; }
 ul, ol { margin: 8px 0; padding-left: 22px; max-width: 900px; }

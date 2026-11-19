@@ -22,7 +22,7 @@ Special folders are created on first use. They stay reachable when hidden files 
 
 ## Explorer panel
 
-- Show and hide from the toolbar; resizable; state is remembered.
+- Shown from a tab at the left edge of the window; hidden from the arrows at the top of the panel; resizable; state is remembered.
 - A tree of unlimited depth. Folders load when expanded.
 - All files are listed. Pages the editor can open are normal; all others are greyed.
 - Hidden (dot) files are shown, with a show or hide option.
@@ -66,14 +66,15 @@ New page, new page from template, new folder, rename, move by drag, delete, add 
 
 ## History
 
-- A full self-contained snapshot is written to `.history/` every 5 minutes while the page has changed since the last snapshot, and on every save.
+- A full self-contained copy is written to `.history/<page path>/`: the version being replaced, on every save over an earlier version; and the unsaved work, every 5 minutes while the page has changed since the last copy. Nothing is written when nothing has changed.
 - There is no automatic limit.
 - Moving or renaming a page inside the editor moves its history with it.
 - A Page history list shows a page's snapshots, with open and restore.
+- Opening a page whose newest copy is unsaved work newer than the file offers to recover it.
 
 ## Status bar
 
-Shows the total size of history with a status icon. Thresholds are held in settings.
+A line at the foot of the explorer shows the total size of history and trash with a status icon, and opens the clean-up dialog. Thresholds are held in settings.
 
 | Status | Default range |
 |---|---|

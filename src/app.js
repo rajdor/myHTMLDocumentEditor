@@ -1787,12 +1787,21 @@ function clean() {
   $$('[class=""]', c).forEach(n => n.removeAttribute('class'));
   return c;
 }
+/* A saved page holds only plain ASCII bytes: every other character is written as its HTML code (&mdash;, &rarr;, &#9472;).
+   Browsers and this editor show the same page, and a program that reads the file with the wrong encoding cannot garble it.
+   Common characters get their name, so the code still reads sensibly if something shows it as text; the rest get their number. */
+const CHAR_NAMES = { 160: 'nbsp', 169: 'copy', 174: 'reg', 176: 'deg', 177: 'plusmn', 183: 'middot', 215: 'times', 247: 'divide', 163: 'pound', 8364: 'euro', 8482: 'trade',
+  8211: 'ndash', 8212: 'mdash', 8216: 'lsquo', 8217: 'rsquo', 8220: 'ldquo', 8221: 'rdquo', 8226: 'bull', 8230: 'hellip',
+  8592: 'larr', 8593: 'uarr', 8594: 'rarr', 8595: 'darr', 8596: 'harr', 8656: 'lArr', 8658: 'rArr', 8660: 'hArr', 8800: 'ne', 8804: 'le', 8805: 'ge', 8776: 'asymp',
+  224: 'agrave', 225: 'aacute', 226: 'acirc', 228: 'auml', 231: 'ccedil', 232: 'egrave', 233: 'eacute', 234: 'ecirc', 235: 'euml', 237: 'iacute', 239: 'iuml', 241: 'ntilde', 243: 'oacute', 244: 'ocirc', 246: 'ouml', 250: 'uacute', 252: 'uuml',
+  192: 'Agrave', 193: 'Aacute', 196: 'Auml', 199: 'Ccedil', 201: 'Eacute', 209: 'Ntilde', 214: 'Ouml', 220: 'Uuml', 223: 'szlig' };
+const asciiHtml = t => t.replace(/[^\x00-\x7F]/gu, ch => { const n = ch.codePointAt(0); return '&' + (CHAR_NAMES[n] || '#' + n) + ';'; });
 function build(opts) {
   tidyNotes(false); rebuild(); const c = clean(), h1 = $('h1', c);
   if (opts && opts.noNotes) $$('.note', c).forEach(unwrapNote);
   $$('a[href]', c).forEach(a => { if (/^\s*https?:/i.test(a.getAttribute('href'))) { a.setAttribute('target', '_blank'); a.setAttribute('rel', 'noopener noreferrer'); } });
   const nav = indexHtml(c, idxDepth);
-  return '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<meta name="generator" content="fine-line-editor">\n<title>' + esc(h1 ? h1.textContent.trim() : 'Document') + '</title>\n<style>' + DOC_CSS + '</style>\n</head>\n<body>\n<div class="page">\n<nav aria-label="Index" data-depth="' + idxDepth + '"><b>Index</b><ol>' + nav + '</ol></nav>\n<main' + (showNotes && !(opts && opts.noNotes) ? ' class="notes-on"' : '') + '>\n' + c.innerHTML + '\n</main>\n</div>\n' + ($('.fig', c) ? '<script>' + FIT_JS + '<\/script>\n' : '') + '</body>\n</html>\n';
+  return '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<meta name="generator" content="fine-line-editor">\n<title>' + asciiHtml(esc(h1 ? h1.textContent.trim() : 'Document')) + '</title>\n<style>' + DOC_CSS + '</style>\n</head>\n<body>\n<div class="page">\n<nav aria-label="Index" data-depth="' + idxDepth + '"><b>Index</b><ol>' + asciiHtml(nav) + '</ol></nav>\n<main' + (showNotes && !(opts && opts.noNotes) ? ' class="notes-on"' : '') + '>\n' + asciiHtml(c.innerHTML) + '\n</main>\n</div>\n' + ($('.fig', c) ? '<script>' + FIT_JS + '<\/script>\n' : '') + '</body>\n</html>\n';
 }
 function prepView() { dgSel = null; $('#gbar').hidden = true; $$('.dg, .fig', doc).forEach(f => f.classList.remove('ed-dsel')); fit(); chromeHeight(); }
 function prep() {

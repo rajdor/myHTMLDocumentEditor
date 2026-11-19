@@ -5,7 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'url';
 import path from 'path';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-export const APP_URL = pathToFileURL(path.join(ROOT, 'fine-line-editor.html')).href;
+export const APP_URL = pathToFileURL(path.join(ROOT, 'fine-line-notebook.html')).href;
 export const file = (name) => fs.readFileSync(path.join(ROOT, 'test', 'files', name), 'utf8');
 fs.mkdirSync(path.join(ROOT, 'test', 'out'), { recursive: true });
 

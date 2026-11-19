@@ -44,7 +44,7 @@ await load(pg, '<main><h2>Same</h2><h2>Same 2</h2><h2>Same</h2></main>');
 const ids = await pg.evaluate(() => [...document.querySelectorAll('#doc h2')].map(h => h.id));
 same('heading ids are unique', new Set(ids).size, 3);
 
-await pg.evaluate(() => { localStorage.removeItem('fle-draft'); document.getElementById('draft').hidden = false; document.querySelector('[data-a="restore"]').click(); });
+await pg.evaluate(() => { localStorage.removeItem('fln-draft'); document.getElementById('draft').hidden = false; document.querySelector('[data-a="restore"]').click(); });
 check('Restore with no draft leaves the document alone', (await html()).includes('Same'));
 // a heading before the first H2 is listed, unnumbered
 await load(pg, '<main><h1>T</h1><h3>Before</h3><h2>A</h2><h3>A1</h3></main>'); await idxTo(pg, '2'); await sleep(50);

@@ -1,8 +1,8 @@
-# Fine Line document editor
+# Fine Line notebook
 
-A single, offline HTML file for writing documents in the Fine Line Blueprint style: what you see while editing is what the saved document looks like. Diagrams are drawn in the built-in diagram editor (myDiagramer).
+A single, offline HTML file that turns a folder into a notebook of pages, with the Fine Line document editor built in. Documents are written in the Fine Line Blueprint style: what you see while editing is what the saved document looks like. Diagrams are drawn in the built-in diagram editor (myDiagramer).
 
-Open `fine-line-editor.html` in Chrome or Edge. Nothing is loaded from the network.
+Open `fine-line-notebook.html` in Chrome or Edge. Nothing is loaded from the network.
 
 `candy-shop-sop.html` is an example document that uses every kind of content the editor makes. Open it in a browser to read it, or in the editor to change it.
 
@@ -44,7 +44,7 @@ The SVG is what readers see: it scales, prints and keeps its text searchable. Th
 
 | Path | Contents |
 |---|---|
-| `fine-line-editor.html` | The built editor; this one file is all a user needs |
+| `fine-line-notebook.html` | The built editor; this one file is all a user needs |
 | `candy-shop-sop.html` | Example document: a standard operating procedure that uses every kind of content the editor makes |
 | `THIRD-PARTY-NOTICES.md` | Copyright notices and licence texts for the icons, fonts and libraries the editor includes |
 | `src/index.html` | Page template: toolbar, help, overlay |
@@ -57,7 +57,7 @@ The SVG is what readers see: it scales, prints and keeps its text searchable. Th
 | `vendor/diagram-editor.html` | The built diagram editor from myDiagramer, embedded at build time |
 | `docs/notebook-explorer-spec.md` | Specification for the notebook explorer |
 | `spike/folder-spike.html` | Throwaway page used to confirm folder access from a `file://` page |
-| `build.js` | Builds `fine-line-editor.html` |
+| `build.js` | Builds `fine-line-notebook.html` |
 | `test/` | Regression tests; `test/files/legacy-document.html` is a small document in the older format used by t4 and t7; `test/mockfs.mjs` is an in-memory folder for the notebook tests |
 | `CHANGELOG.md` | What changed in each version |
 

@@ -48,11 +48,11 @@ idx.addEventListener('click', e => { const a = e.target.closest('a'); if (!a) re
 let remoteImgs = 0;
 function status() { const sv = $('[data-a="save"]'); sv.classList.toggle('has', dirty); sv.title = 'Save (Ctrl+S)' + (dirty ? ': unsaved changes' : ''); statusEl.textContent = [remoteImgs ? remoteImgs + (remoteImgs === 1 ? ' web item shown as a link card' : ' web items shown as link cards') + ', not downloaded' : ''].filter(Boolean).join(' | '); helpInfo(); }
 /* The editor version and the document name are shown in the Help dialog. */
-function helpInfo() { const i = $('#help-info'); if (i) i.textContent = 'Editor v' + VERSION + ' | Document: ' + fname + (dirty ? ' (unsaved changes)' : '') + (statusEl.textContent ? ' | ' + statusEl.textContent : ''); }
+function helpInfo() { const i = $('#help-info'); if (i) i.textContent = PRODUCT.name + ' v' + VERSION + ' | Document: ' + fname + (dirty ? ' (unsaved changes)' : '') + (statusEl.textContent ? ' | ' + statusEl.textContent : ''); }
 function keepGoing(what) { return !dirty || confirm('This document has unsaved changes. Save it first if you want to keep them.\n\nOK: discard the changes and ' + what + '.\nCancel: go back to the document.'); }
 function touch() {
   checkFix(doc); dirty = true; status(); clearTimeout(timer);
-  timer = setTimeout(() => { histSnap(); try { localStorage.setItem('fle-draft', clean().innerHTML); } catch (e) { } }, 400);
+  timer = setTimeout(() => { histSnap(); try { localStorage.setItem(PRODUCT.key + '-draft', clean().innerHTML); } catch (e) { } }, 400);
 }
 doc.addEventListener('input', touch);
 /* Document history: whole-document snapshots, so structural changes (tables, Q&A, code, Clear format, diagrams) undo as well as typing. */
@@ -1654,7 +1654,7 @@ function pickerOpts(o) { o.id = 'fine-line-documents'; o.types = TYPES_HTML; if 
 /* After a save, a line names the file. A page is told the file's name only, never its folder, so the name is all it can show. */
 function savedLine(name, dl) { $('#savedmsg').textContent = (dl ? 'File saved to the browser\'s downloads folder: ' : 'File saved: ') + name; $('#savedbar').hidden = false; chromeHeight(); }
 function afterSave(dl) {
-  dirty = false; status(); try { localStorage.removeItem('fle-draft'); } catch (e) { }
+  dirty = false; status(); try { localStorage.removeItem(PRODUCT.key + '-draft'); } catch (e) { }
   savedLine(fname, dl);
   if (notesIn(doc)) { $('#cleanbar').hidden = false; chromeHeight(); }
 }
@@ -1702,8 +1702,8 @@ const ACT = {
   table: addTable, stage: addStage, mr: () => tableOp('mr'), md: () => tableOp('md'), split: () => tableOp('split'), qa: addQa, 'r+': () => tableOp('r+'), ra: () => tableOp('ra'), cl: () => tableOp('cl'), 'r-': () => tableOp('r-'), 'c+': () => tableOp('c+'), 'c-': () => tableOp('c-'), dense: () => tableOp('dense'), hr: () => tableOp('hr'), sr: () => tableOp('sr'), hc: () => tableOp('hc'), sc: () => tableOp('sc'),
   diagram: () => openDiagram(null), dgedit: () => dgSel && openDiagram(dgSel), dgdel: dgDelete, help: () => { const h = $('#help'); if (h.open) h.close(); else { helpInfo(); h.showModal(); } },
   connect: () => setMode(mode === 'connect' ? null : 'connect'), del: remove, dup: duplicate, deldiagram: deleteDiagram,
-  restore: () => { try { const d = localStorage.getItem('fle-draft'); if (d) { const t = new DOMParser().parseFromString('<main>' + d + '</main>', 'text/html'); sanitize(t.querySelector('main')); cardify(t.querySelector('main')); doc.innerHTML = t.querySelector('main').innerHTML; prep(); histReset(); dirty = true; status(); } } catch (e) { } $('#draft').hidden = true; chromeHeight(); },
-  dismiss: () => { try { localStorage.removeItem('fle-draft'); } catch (e) { } $('#draft').hidden = true; chromeHeight(); },
+  restore: () => { try { const d = localStorage.getItem(PRODUCT.key + '-draft'); if (d) { const t = new DOMParser().parseFromString('<main>' + d + '</main>', 'text/html'); sanitize(t.querySelector('main')); cardify(t.querySelector('main')); doc.innerHTML = t.querySelector('main').innerHTML; prep(); histReset(); dirty = true; status(); } } catch (e) { } $('#draft').hidden = true; chromeHeight(); },
+  dismiss: () => { try { localStorage.removeItem(PRODUCT.key + '-draft'); } catch (e) { } $('#draft').hidden = true; chromeHeight(); },
 };
 $('#chrome').addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
 $('#chrome').addEventListener('click', e => { const b = e.target.closest('button[data-a]'); if (!b) return; const a = b.dataset.a; if (!board && !['undo', 'redo', 'help', 'inspect', 'new', 'open', 'save', 'saveas', 'who', 'saveclean', 'noclean', 'nosaved', 'margin', 'paint', 'repeat', 'nb', 'nbwarnx'].includes(a)) { clearTimeout(timer); histSnap(); } if (cellSel && (a === 'bold' || a === 'italic' || a === 'clear')) cellFormat(a); else if (ACT[a]) { ACT[a](); if (!board) repNote(a); } else if (ADD[a] && board) ADD[a](); });
@@ -1734,7 +1734,7 @@ $('#s-state').innerHTML = STATES.map(s => '<option value="' + s + '">' + s + '</
 
 /* ---------- start ---------- */
 doc.innerHTML = STARTER; prep(); histReset(); status(); whoUI(); chromeHeight(); $$('#tbar button.t').forEach(x => x.classList.add('dim'));
-try { const d = localStorage.getItem('fle-draft'); if (d && d !== clean().innerHTML) $('#draft').hidden = false; } catch (e) { }
+try { const d = localStorage.getItem(PRODUCT.key + '-draft'); if (d && d !== clean().innerHTML) $('#draft').hidden = false; } catch (e) { }
 chromeHeight();
 NB.init();
 window.FLE = { load, build, NB, ADD, activate, connect, select, newDiagram, DE, boardToDrawio, get board() { return board; } };

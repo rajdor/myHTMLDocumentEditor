@@ -1820,12 +1820,26 @@ const CHAR_NAMES = { 160: 'nbsp', 169: 'copy', 174: 'reg', 176: 'deg', 177: 'plu
   224: 'agrave', 225: 'aacute', 226: 'acirc', 228: 'auml', 231: 'ccedil', 232: 'egrave', 233: 'eacute', 234: 'ecirc', 235: 'euml', 237: 'iacute', 239: 'iuml', 241: 'ntilde', 243: 'oacute', 244: 'ocirc', 246: 'ouml', 250: 'uacute', 252: 'uuml',
   192: 'Agrave', 193: 'Aacute', 196: 'Auml', 199: 'Ccedil', 201: 'Eacute', 209: 'Ntilde', 214: 'Ouml', 220: 'Uuml', 223: 'szlig' };
 const asciiHtml = t => t.replace(/[^\x00-\x7F]/gu, ch => { const n = ch.codePointAt(0); return '&' + (CHAR_NAMES[n] || '#' + n) + ';'; });
+/* Fonts in a saved page. The body font and the heading font always go in. The italic font and the code font are two fifths
+   of a page's size, so each goes in only when something on the page is drawn with it: the page looks the same either way,
+   and the font comes back at the next save once the page uses it. What is used is read from how the browser has drawn the
+   page, so it covers text styled by the style sheet, by a tag, or by a diagram's own attributes. */
+const FONT_ITALIC = /@font-face \{ font-family: 'Instrument Sans'; font-style: italic;[^\n]*\n/, FONT_MONO = /@font-face \{ font-family: 'JetBrains Mono';[^\n]*\n/;
+let fontPseudo = null;   // style-sheet rules that draw text of their own before or after an element: [selector, '::before' or '::after']
+function fontsUsed() {
+  const use = { italic: false, mono: false }, see = cs => { if (/italic|oblique/.test(cs.fontStyle)) use.italic = true; if (/JetBrains Mono/.test(cs.fontFamily)) use.mono = true; };
+  for (const e of $$('*', doc)) { if (use.italic && use.mono) return use; for (let n = e.firstChild; n; n = n.nextSibling) if (n.nodeType === 3 && n.data.trim()) { see(getComputedStyle(e)); break; } }
+  if (!fontPseudo) { fontPseudo = []; try { for (const r of $('#doc-css').sheet.cssRules) if (r.selectorText) r.selectorText.split(',').forEach(x => { const m = x.match(/::?(before|after)\s*$/); if (m) fontPseudo.push([x.slice(0, m.index).trim() || '*', '::' + m[1]]); }); } catch (e) { } }
+  for (const [sel, ps] of fontPseudo) { if (use.italic && use.mono) break; let e = null; try { e = doc.querySelector(sel); } catch (x) { } if (e) { const cs = getComputedStyle(e, ps); if (cs.content && cs.content !== 'none' && cs.content !== 'normal') see(cs); } }
+  return use;
+}
+function docCss() { const u = fontsUsed(); return DOC_CSS.replace(FONT_ITALIC, m => u.italic ? m : '').replace(FONT_MONO, m => u.mono ? m : ''); }
 function build(opts) {
   tidyNotes(false); rebuild(); const c = clean(), h1 = $('h1', c);
   if (opts && opts.noNotes) $$('.note', c).forEach(unwrapNote);
   $$('a[href]', c).forEach(a => { if (/^\s*https?:/i.test(a.getAttribute('href'))) { a.setAttribute('target', '_blank'); a.setAttribute('rel', 'noopener noreferrer'); } });
   const nav = indexHtml(c, idxDepth);
-  return '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<meta name="generator" content="fine-line-editor">\n<title>' + asciiHtml(esc(h1 ? h1.textContent.trim() : 'Document')) + '</title>\n<style>' + DOC_CSS + '</style>\n</head>\n<body>\n<div class="page">\n<nav aria-label="Index" data-depth="' + idxDepth + '"><b>Index</b><ol>' + asciiHtml(nav) + '</ol></nav>\n<main' + (showNotes && !(opts && opts.noNotes) ? ' class="notes-on"' : '') + '>\n' + asciiHtml(c.innerHTML) + '\n</main>\n</div>\n' + ($('.fig', c) ? '<script>' + FIT_JS + '<\/script>\n' : '') + '</body>\n</html>\n';
+  return '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<meta name="generator" content="fine-line-editor">\n<title>' + asciiHtml(esc(h1 ? h1.textContent.trim() : 'Document')) + '</title>\n<style>' + docCss() + '</style>\n</head>\n<body>\n<div class="page">\n<nav aria-label="Index" data-depth="' + idxDepth + '"><b>Index</b><ol>' + asciiHtml(nav) + '</ol></nav>\n<main' + (showNotes && !(opts && opts.noNotes) ? ' class="notes-on"' : '') + '>\n' + asciiHtml(c.innerHTML) + '\n</main>\n</div>\n' + ($('.fig', c) ? '<script>' + FIT_JS + '<\/script>\n' : '') + '</body>\n</html>\n';
 }
 function prepView() { dgSel = null; $('#gbar').hidden = true; $$('.dg, .fig', doc).forEach(f => f.classList.remove('ed-dsel')); fit(); chromeHeight(); }
 function prep() {

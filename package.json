@@ -1,11 +1,13 @@
 {
-  "name": "fine-line-notebook",
+  "name": "fine-line",
   "version": "1.0.0",
   "private": true,
-  "description": "Offline, single-file notebook: a folder of pages with a WYSIWYG HTML document editor in the Fine Line Blueprint style and the diagram editor built in",
+  "description": "Fine Line: an offline, single-file WYSIWYG HTML document editor in the Fine Line Blueprint style with the diagram editor built in, and the same editor as a notebook over a folder of pages. One source, two built files.",
   "scripts": {
     "build": "node build.js",
-    "test": "node test/run-all.mjs"
+    "test": "node test/run-all.mjs",
+    "test:editor": "node test/run-all.mjs --product=editor",
+    "test:notebook": "node test/run-all.mjs --product=notebook"
   },
   "dependencies": {
     "@fontsource-variable/instrument-sans": "5.3.0",

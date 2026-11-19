@@ -1,16 +1,16 @@
 # Third-party notices
 
-Fine Line notebook includes the components below. Each stays under its own licence, and its copyright notice and licence text are reproduced here. Everything else in this repository was written for this program.
+The two Fine Line programs, the document editor and the notebook, include the components below. Each stays under its own licence, and its copyright notice and licence text are reproduced here. Everything else in this repository was written for these programs.
 
 | Component | Used for | Where it is | Licence |
 |---|---|---|---|
-| Phosphor Icons 2.1.1 | Toolbar, Help, box and note icons | Built into `fine-line-notebook.html`; a few icons are also written into saved documents | MIT |
-| Instrument Sans | Body text | Embedded in `fine-line-notebook.html` and in saved documents | SIL Open Font License 1.1 |
-| JetBrains Mono | Code blocks and ID tags | Embedded in `fine-line-notebook.html` and in saved documents | SIL Open Font License 1.1 |
-| Architects Daughter | Title and headings | Embedded in `fine-line-notebook.html` and in saved documents | SIL Open Font License 1.1 |
-| marked 18.2.1 | Converting Markdown files when they are imported into a notebook | Built into `fine-line-notebook.html` | MIT; includes the Markdown notice (BSD 3-Clause) |
-| Rough.js 4.6.6 | Hand-drawn rendering in the diagram editor | Inside `vendor/diagram-editor.html`, built into `fine-line-notebook.html` | MIT |
-| mxGraph 4.2.2, orthogonal line routing (port of mxEdgeStyle) | Line routing in the diagram editor | Inside `vendor/diagram-editor.html`, built into `fine-line-notebook.html` | Apache License 2.0 |
+| Phosphor Icons 2.1.1 | Toolbar, Help, box and note icons | Built into `fine-line-editor.html` and `fine-line-notebook.html`; a few icons are also written into saved documents | MIT |
+| Instrument Sans | Body text | Embedded in `fine-line-editor.html` and `fine-line-notebook.html` and in saved documents | SIL Open Font License 1.1 |
+| JetBrains Mono | Code blocks and ID tags | Embedded in `fine-line-editor.html` and `fine-line-notebook.html` and in saved documents | SIL Open Font License 1.1 |
+| Architects Daughter | Title and headings | Embedded in `fine-line-editor.html` and `fine-line-notebook.html` and in saved documents | SIL Open Font License 1.1 |
+| marked 18.2.1 | Converting Markdown files when they are imported into a notebook | Built into `fine-line-notebook.html` only | MIT; includes the Markdown notice (BSD 3-Clause) |
+| Rough.js 4.6.6 | Hand-drawn rendering in the diagram editor | Inside `vendor/diagram-editor.html`, built into `fine-line-editor.html` and `fine-line-notebook.html` | MIT |
+| mxGraph 4.2.2, orthogonal line routing (port of mxEdgeStyle) | Line routing in the diagram editor | Inside `vendor/diagram-editor.html`, built into `fine-line-editor.html` and `fine-line-notebook.html` | Apache License 2.0 |
 
 The fonts are the Latin subsets packaged by Fontsource. The diagram editor also uses Phosphor Icons and Architects Daughter, under the same licences as above.
 

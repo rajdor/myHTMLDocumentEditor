@@ -5,7 +5,13 @@ import { fileURLToPath, pathToFileURL } from 'url';
 import path from 'path';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-export const APP_URL = pathToFileURL(path.join(ROOT, 'fine-line-notebook.html')).href;
+// Which program is under test: FL_PRODUCT=editor (the default) or notebook. test/run-all.mjs sets it.
+export const PRODUCT = process.env.FL_PRODUCT === 'notebook' ? 'notebook' : 'editor';
+export const IS_NOTEBOOK = PRODUCT === 'notebook';
+export const APP_FILE = IS_NOTEBOOK ? 'fine-line-notebook.html' : 'fine-line-editor.html';
+export const HELP_LABEL = IS_NOTEBOOK ? 'Fine Line notebook' : 'Editor';   // the name beside the version in Help
+export const DRAFT_KEY = (IS_NOTEBOOK ? 'fln' : 'fle') + '-draft';         // where the browser keeps the unsaved draft
+export const APP_URL = pathToFileURL(path.join(ROOT, APP_FILE)).href;
 export const file = (name) => fs.readFileSync(path.join(ROOT, 'test', 'files', name), 'utf8');
 fs.mkdirSync(path.join(ROOT, 'test', 'out'), { recursive: true });
 

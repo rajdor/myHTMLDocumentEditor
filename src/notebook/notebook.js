@@ -120,7 +120,7 @@ const NB = (() => {
   }
   function render() {
     const on = !!root; land.hidden = on; tree.hidden = !on; $('#nb-name').textContent = on ? root.name + (ro ? ' (read-only)' : '') : 'Notebook';
-    $$('.nb-top button', panel).forEach(b => { const a = b.dataset.nb; b.hidden = a === 'pick' ? !on : !on || (ro && a !== 'hidden' && a !== 'newpage'); });
+    $$('.nb-top button', panel).forEach(b => { const a = b.dataset.nb; b.hidden = a === 'hide' ? false : a === 'pick' ? !on : !on || (ro && a !== 'hidden' && a !== 'newpage'); });
     const hb = $('[data-nb="hidden"]', panel); hb.setAttribute('aria-pressed', showHidden ? 'true' : 'false'); hb.classList.toggle('on', showHidden);
     tree.textContent = ''; flat = [];
     if (!on) { landUI(); return; }
@@ -351,7 +351,7 @@ const NB = (() => {
   }
   function toggle(show) {
     const on = show === undefined ? panel.hidden : show; panel.hidden = !on; document.documentElement.classList.toggle('nb-open', on);
-    const b = $('[data-a="nb"]'); b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.classList.toggle('on', on);
+    const b = $('#nb-tab'); b.hidden = on; b.setAttribute('aria-expanded', on ? 'true' : 'false');
     try { localStorage.setItem('fle-nb-open', on ? '1' : '0'); } catch (e) { }
     chromeHeight(); fit(); if (on) render();
     if (on && !root && remembered) remembered.queryPermission({ mode: 'readwrite' }).then(p => { if (p === 'granted' && !root) openRoot(remembered, false, true); }).catch(() => { });
@@ -367,9 +367,11 @@ const NB = (() => {
   }
   function wire() {
     panel.addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
+    $('#nb-tab').addEventListener('mousedown', e => e.preventDefault());
+    $('#nb-tab').addEventListener('click', () => toggle(true));
     panel.addEventListener('click', e => {
       const b = e.target.closest('button[data-nb]'); if (!b) return; const a = b.dataset.nb;
-      if (a === 'pick') pick(); else if (a === 'reconnect') reconnect(); else if (a === 'newpage') ACT.new(); else if (a === 'newfolder') newFolder(); else if (a === 'refresh') refresh();
+      if (a === 'hide') toggle(false); else if (a === 'pick') pick(); else if (a === 'reconnect') reconnect(); else if (a === 'newpage') ACT.new(); else if (a === 'newfolder') newFolder(); else if (a === 'refresh') refresh();
       else if (a === 'hidden') { showHidden = !showHidden; render(); saveSettings().then(() => readDir(root)).then(render, () => { }); }
     });
     tree.addEventListener('click', e => { if (renaming) return; const n = nodeOf(e); if (n) clickRow(n); else if (e.target === tree) { sel = null; render(); } });

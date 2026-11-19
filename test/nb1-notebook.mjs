@@ -23,11 +23,12 @@ const renameTo = async (p, name) => { await menu(p, 'Rename'); await pg.evaluate
 
 /* ----- panel and landing ----- */
 check('panel is hidden at start', await pg.$eval('#nb', e => e.hidden));
-await pg.click('#chrome button[data-a="nb"]'); await sleep(100);
-check('toolbar button shows the panel', await pg.$eval('#nb', e => !e.hidden) && await pg.$eval('html', e => e.classList.contains('nb-open')));
+check('a tab at the left edge offers the explorer, and the toolbar has no notebook button', await pg.$eval('#nb-tab', e => !e.hidden && e.getBoundingClientRect().left === 0) && !(await pg.$('#tbar [data-a="nb"]')));
+await pg.click('#nb-tab'); await sleep(100);
+check('the tab shows the panel and steps aside', await pg.$eval('#nb', e => !e.hidden) && await pg.$eval('html', e => e.classList.contains('nb-open')) && await pg.$eval('#nb-tab', e => e.hidden));
 check('landing screen is shown before a folder is chosen', await pg.$eval('#nb-land', e => !e.hidden && /folder/.test(e.textContent)) && await pg.$eval('#nb-tree', e => e.hidden));
-await pg.click('#chrome button[data-a="nb"]'); await sleep(100);
-check('toolbar button hides the panel again', await pg.$eval('#nb', e => e.hidden) && await pg.$eval('html', e => !e.classList.contains('nb-open')));
+await pg.click('#nb button[data-nb="hide"]'); await sleep(100);
+check('the arrows in the panel hide it again and the tab returns', await pg.$eval('#nb', e => e.hidden) && await pg.$eval('html', e => !e.classList.contains('nb-open')) && await pg.$eval('#nb-tab', e => !e.hidden));
 
 /* ----- open a notebook ----- */
 await pg.evaluate(async () => {

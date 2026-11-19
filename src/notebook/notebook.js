@@ -71,10 +71,11 @@ const NB = (() => {
   }
   /* Move a node and keep the open page pointing at its file when the page, or a folder above it, is what moved. */
   async function relocate(n, dest, name) {
-    const from = n.parent, wasOpen = n.open, curRel = cur && cur.node && within(cur.node, n) ? pathArr(cur.node).slice(pathArr(n).length) : null;
+    const from = n.parent, wasOpen = n.open, oldRel = pathArr(n), curRel = cur && cur.node && within(cur.node, n) ? pathArr(cur.node).slice(pathArr(n).length) : null;
     await moveEntry(n, dest, name);
     await readDir(from); if (dest !== from) await readDir(dest);
     const moved = find(dest, name); if (!moved) return null;
+    await moveHistory(oldRel, pathArr(moved));
     if (wasOpen && moved.kind === 'directory') { moved.open = true; await readDir(moved); }
     if (curRel) { const c = await nodeAt([...pathArr(moved), ...curRel]); if (c) { cur.node = c; cur.dir = c.parent; handle = c.handle; fname = c.name; try { cur.mtime = (await c.handle.getFile()).lastModified; } catch (e) { } status(); } }
     return moved;
@@ -82,8 +83,8 @@ const NB = (() => {
 
   /* ----- settings: .notebook/settings.json in the notebook; missing or damaged settings fall back to defaults ----- */
   async function loadSettings() {
-    showHidden = true;
-    try { const d = await root.handle.getDirectoryHandle('.notebook'), f = await (await d.getFileHandle('settings.json')).getFile(), s = JSON.parse(await f.text()); if (s && typeof s.showHidden === 'boolean') showHidden = s.showHidden; } catch (e) { }
+    showHidden = true; cfg = { ...CFG };
+    try { const d = await root.handle.getDirectoryHandle('.notebook'), f = await (await d.getFileHandle('settings.json')).getFile(), s = JSON.parse(await f.text()); if (s && typeof s.showHidden === 'boolean') showHidden = s.showHidden; for (const k of Object.keys(CFG)) if (s && typeof s[k] === 'number' && s[k] > 0) cfg[k] = s[k]; } catch (e) { }
   }
   async function saveSettings() {
     if (ro || !root) return;
@@ -122,7 +123,7 @@ const NB = (() => {
     const on = !!root; land.hidden = on; tree.hidden = !on; $('#nb-name').textContent = on ? root.name + (ro ? ' (read-only)' : '') : 'Notebook';
     $$('.nb-top button', panel).forEach(b => { const a = b.dataset.nb; b.hidden = a === 'hide' ? false : a === 'pick' ? !on : !on || (ro && a !== 'hidden' && a !== 'newpage'); });
     const hb = $('[data-nb="hidden"]', panel); hb.setAttribute('aria-pressed', showHidden ? 'true' : 'false'); hb.classList.toggle('on', showHidden);
-    tree.textContent = ''; flat = [];
+    tree.textContent = ''; flat = []; statusUI(); recUI();
     if (!on) { landUI(); return; }
     const pend = cur && !cur.node ? cur.dir : null;
     if (pend === root) tree.appendChild(row(null, 0, true));
@@ -203,11 +204,11 @@ const NB = (() => {
   async function openPage(n) {
     if (cur && cur.node === n) { sel = n; render(); return; }
     if (!(await leave())) return;
-    let text, mtime;
+    let text, mtime; rec = null;
     try { const f = await n.handle.getFile(); text = await f.text(); mtime = f.lastModified; } catch (e) { say('Could not open ' + n.name + ': ' + e.message, true); return; }
     sel = n;
     if (isText(n)) text = '<main>' + importText(n.name, text) + '</main>';
-    if (!isText(n) && isOwn(text)) { handle = ro ? null : n.handle; load(text, n.name); cur = { dir: n.parent, node: n, mtime, disk: text }; say(''); }
+    if (!isText(n) && isOwn(text)) { handle = ro ? null : n.handle; load(text, n.name); cur = { dir: n.parent, node: n, mtime, disk: text }; say(''); if (!ro && !inTrash(n)) await checkRecover(n, text, mtime); }
     else { handle = null; load(text, n.name); cur = { dir: inTrash(n) ? root : n.parent, node: null }; say('Imported ' + n.name + ' as a new page. The original file stays as it is; Save writes a new page named after the title.'); }
     render();
   }
@@ -218,9 +219,11 @@ const NB = (() => {
     try {
       if (cur.node) {
         /* Changed on disk means the content differs from what was last read or written here; a new date alone (a sync tool touching the file) does not count. */
-        let changed = false; try { const f = await cur.node.handle.getFile(); changed = !!cur.mtime && f.lastModified !== cur.mtime && (cur.disk === undefined || await f.text() !== cur.disk); } catch (e) { }
+        let changed = false, old = null, oldTime = 0; try { const f = await cur.node.handle.getFile(); old = await f.text(); oldTime = f.lastModified; changed = !!cur.mtime && oldTime !== cur.mtime && (cur.disk === undefined || old !== cur.disk); } catch (e) { }
         if (changed && !confirm('"' + label(cur.node) + '" has changed on disk since it was opened here.\n\nOK: save and replace what is on disk.\nCancel: do not save.')) return;
         await write(cur.node.handle, html);
+        /* The version just replaced goes into history, so every saved version can be brought back. */
+        if (old !== null && old !== html && isOwn(old) && !inTrash(cur.node)) { try { await addSnap(cur.node, old, oldTime, false); } catch (e) { say('The page was saved, but its earlier version could not be copied to history: ' + e.message, true); } }
       } else {
         const dir = attached(cur.dir) ? cur.dir : root; await readDir(dir);
         let name = fileName(pageTitle()) + '.html';
@@ -228,8 +231,8 @@ const NB = (() => {
         await write(await dir.handle.getFileHandle(name, { create: true }), html);
         await readDir(dir); cur.dir = dir; cur.node = find(dir, name); dir.open = true;
       }
-      handle = cur.node.handle; fname = cur.node.name; sel = cur.node; cur.mtime = (await handle.getFile()).lastModified; cur.disk = html;
-      afterSave(false); say(''); render();
+      handle = cur.node.handle; fname = cur.node.name; sel = cur.node; cur.mtime = (await handle.getFile()).lastModified; cur.disk = html; cur.snap = undefined; rec = null;
+      afterSave(false); if (!msgEl.classList.contains('bad')) say(''); render();
     } catch (e) { say('Could not save the page: ' + e.message, true); }
   }
   const targetDir = () => { let d = sel ? (sel.kind === 'directory' ? sel : sel.parent) : root; const t = trashNode(), h = find(root, '.history'), s = find(root, '.notebook'); if (!attached(d) || within(d, t) || within(d, h) || within(d, s)) d = root; return d; };
@@ -276,7 +279,7 @@ const NB = (() => {
       if (sel && !attached(sel)) sel = null;
       if (open) { blank(); cur = { dir: attached(from) ? from : root, node: null }; }
       else if (cur && !cur.node && !attached(cur.dir)) cur.dir = attached(from) ? from : root;
-      say('Moved to trash: ' + rel.join('/'));
+      say('Moved to trash: ' + rel.join('/')); measure();
     } catch (e) { say('Could not move to trash: ' + e.message, true); }
     render();
   }
@@ -285,25 +288,143 @@ const NB = (() => {
     try {
       const d = await nodeAt(rel.slice(0, -1), true); await readDir(d);
       if (find(d, n.name)) { say('"' + n.name + '" is already in ' + (d === root ? 'the notebook folder' : '"' + d.name + '"') + '. Rename one of them, then restore.', true); return; }
-      const m = await relocate(n, d, n.name); for (let p = d; p; p = p.parent) p.open = true; sel = m; say('Restored: ' + rel.join('/'));
+      const m = await relocate(n, d, n.name); for (let p = d; p; p = p.parent) p.open = true; sel = m; say('Restored: ' + rel.join('/')); measure();
     } catch (e) { say('Could not restore: ' + e.message, true); }
     render();
   }
   async function removeForever(n) {
     if (!inTrash(n) || !confirm('Delete "' + n.name + '" permanently? This cannot be undone.')) return;
-    try { await n.parent.handle.removeEntry(n.name, { recursive: true }); await readDir(n.parent); if (sel === n) sel = null; } catch (e) { say('Could not delete: ' + e.message, true); }
+    try { await n.parent.handle.removeEntry(n.name, { recursive: true }); await readDir(n.parent); if (sel === n) sel = null; measure(); } catch (e) { say('Could not delete: ' + e.message, true); }
     render();
   }
   async function emptyTrash() {
     const t = trashNode(); if (!t) return; await readDir(t);
     if (!t.kids.length) { say('The trash is empty.'); return; }
     if (!confirm('Delete everything in the trash permanently (' + t.kids.length + (t.kids.length === 1 ? ' item' : ' items') + ' at the top level)? This cannot be undone.')) return;
-    try { for (const k of [...t.kids]) await t.handle.removeEntry(k.name, { recursive: true }); await readDir(t); if (sel && !attached(sel)) sel = null; say('Trash emptied.'); } catch (e) { say('Could not empty the trash: ' + e.message, true); }
+    try { for (const k of [...t.kids]) await t.handle.removeEntry(k.name, { recursive: true }); await readDir(t); if (sel && !attached(sel)) sel = null; say('Trash emptied.'); measure(); } catch (e) { say('Could not empty the trash: ' + e.message, true); }
     render();
   }
   /* Files the editor does not open can be shown by the browser in a new tab. Files that can carry script are left out. */
   const tabOk = n => n.kind === 'file' && !/\.(html?|xhtml|svg|xml|js|mjs)$/i.test(n.name);
   async function openTab(n) { try { const u = URL.createObjectURL(await n.handle.getFile()); window.open(u, '_blank', 'noopener'); setTimeout(() => URL.revokeObjectURL(u), 60000); } catch (e) { say('Could not open ' + n.name + ': ' + e.message, true); } }
+
+  /* ----- history: full copies of pages, kept in .history/<page path>/, one file a copy -----
+     "<date time>.html" is a version that was saved and later replaced, named for when it was saved.
+     "<date time> unsaved.html" is work that had not been saved when the copy was taken.
+     Nothing is written unless the page differs from what is on disk and from the copy before it. */
+  const CFG = { historyMinutes: 5, historyNoteMB: 50, historyWarnMB: 100 };   // can be set in .notebook/settings.json
+  let cfg = { ...CFG }, lastTick = Date.now(), sizes = { history: 0, trash: 0, ready: false }, rec = null;
+  const SNAP = /^(\d{4})-(\d\d)-(\d\d) (\d\d)\.(\d\d)\.(\d\d)(?:-(\d+))?( unsaved)?\.html$/;
+  const p2 = n => String(n).padStart(2, '0');
+  const snapName = (ms, unsaved, i) => { const d = new Date(ms); return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()) + ' ' + p2(d.getHours()) + '.' + p2(d.getMinutes()) + '.' + p2(d.getSeconds()) + (i ? '-' + i : '') + (unsaved ? ' unsaved' : '') + '.html'; };
+  const snapTime = name => { const m = name.match(SNAP); return m ? new Date(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime() : 0; };
+  const snapKey = name => snapTime(name) + (+(name.match(SNAP) || [])[7] || 1);   // copies made in the same second keep their order
+  const isSnap = k => k.kind === 'file' && SNAP.test(k.name);
+  const fmt = b => b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : (b ? Math.max(1, Math.round(b / 1024)) : 0) + ' KB';
+  const when = name => new Date(snapTime(name)).toLocaleString();
+  /* A page's copies, newest first. */
+  async function snaps(n) { const d = await nodeAt(['.history', ...pathArr(n)]); if (!d || d.kind !== 'directory') return []; await readDir(d); return d.kids.filter(isSnap).sort((a, b) => snapKey(b.name) - snapKey(a.name)); }
+  async function addSnap(n, html, ms, unsaved) {
+    const d = await nodeAt(['.history', ...pathArr(n)], true); await readDir(d);
+    const bytes = new Blob([html]).size;
+    for (const k of d.kids.filter(isSnap)) { try { const f = await k.handle.getFile(); if (f.size === bytes && await f.text() === html) return false; } catch (e) { } }   // already kept
+    let name = snapName(ms, unsaved), i = 2; while (find(d, name)) name = snapName(ms, unsaved, i++);
+    await write(await d.handle.getFileHandle(name, { create: true }), html); await readDir(d);
+    sizes.history += bytes; statusUI(); return true;
+  }
+  /* Unsaved work on the open page. Called on a timer; a page left open and untouched writes nothing. */
+  async function snapshot() {
+    if (!root || ro || !cur || !cur.node || !dirty || inTrash(cur.node)) return false;
+    const html = build(); if (html === cur.disk || html === cur.snap) return false;
+    try { const made = await addSnap(cur.node, html, Date.now(), true); cur.snap = html; return made; } catch (e) { say('Could not write the history copy: ' + e.message, true); return false; }
+  }
+  /* On opening a page: unsaved work newer than the file means the editor closed before it was saved. */
+  async function checkRecover(n, text, mtime) {
+    try { const s = (await snaps(n))[0]; if (s && / unsaved\.html$/.test(s.name) && snapTime(s.name) >= Math.floor(mtime / 1000) * 1000 && await (await s.handle.getFile()).text() !== text) rec = { node: n, snap: s }; } catch (e) { }
+  }
+  function recUI() { const b = $('#nb-rec'), on = !!(rec && cur && cur.node === rec.node); b.hidden = !on; if (on) $('#nb-rec-t').textContent = 'Unsaved changes to this page from ' + when(rec.snap.name) + ' were found in its history.'; }
+  /* Restore puts a copy in the editor as unsaved changes. Nothing on disk changes until Save, and that save keeps the version it replaces. */
+  async function restoreSnap(n, s) {
+    if (!(await leave())) return;
+    let text; try { text = await (await s.handle.getFile()).text(); } catch (e) { say('Could not read the history copy: ' + e.message, true); return; }
+    dirty = false; if (!cur || cur.node !== n) { await openPage(n); if (!cur || cur.node !== n) return; }
+    load(text, n.name); handle = n.handle; dirty = true; status(); cur.snap = undefined; rec = null; sel = n;
+    say('Restored the copy from ' + when(s.name) + '. It is not saved yet: press Save to keep it.'); render();
+  }
+  async function showHistory(n) {
+    const list = await snaps(n), box = $('#nb-hist-list'); box.textContent = '';
+    $('#nb-hist-h').textContent = 'History: ' + label(n);
+    $('#nb-hist-t').textContent = list.length ? 'Restore puts a copy in the editor as unsaved changes. Nothing on disk changes until you press Save.' : 'No copies yet. A copy is kept each time you save over an earlier version, and every ' + cfg.historyMinutes + ' minutes while the page has unsaved changes.';
+    for (const [i, s] of list.entries()) {
+      let size = 0; try { size = (await s.handle.getFile()).size; } catch (e) { }
+      const r = document.createElement('div'); r.className = 'nb-li';
+      for (const t of [when(s.name), / unsaved\.html$/.test(s.name) ? 'Unsaved changes' : 'Saved version', fmt(size)]) { const c = document.createElement('span'); c.textContent = t; r.appendChild(c); }
+      const b = document.createElement('button'); b.type = 'button'; b.value = 'r' + i; b.textContent = 'Restore'; r.appendChild(b); box.appendChild(r);
+    }
+    const a = await dlg($('#nb-hist')); if (a[0] === 'r') await restoreSnap(n, list[+a.slice(1)]);
+  }
+  async function moveHistory(a, b) {
+    if ([a[0], b[0]].some(x => x === '.trash' || x === '.history' || x === '.notebook')) return;
+    try { const h = await nodeAt(['.history', ...a]); if (!h) return; const d = await nodeAt(['.history', ...b.slice(0, -1)], true); await readDir(d); if (find(d, b[b.length - 1])) return; const from = h.parent; await moveEntry(h, d, b[b.length - 1]); await readDir(from); await readDir(d); } catch (e) { }
+  }
+
+  /* ----- sizes, the status line, and clean-up ----- */
+  async function walkFiles(dir, pre, out) {
+    for await (const h of dir.values()) { if (h.kind === 'file') { try { out.push({ name: h.name, pre, size: (await h.getFile()).size, dir }); } catch (e) { } } else await walkFiles(h, pre + h.name + '/', out); }
+    return out;
+  }
+  const filesIn = async name => { try { return await walkFiles(await root.handle.getDirectoryHandle(name), '', []); } catch (e) { return []; } };
+  const total = fs => fs.reduce((t, f) => t + f.size, 0);
+  async function measure() {
+    if (!root || ro) return sizes;
+    const r = root, h = await filesIn('.history'), t = await filesIn('.trash'); if (r !== root) return sizes;
+    sizes = { history: total(h), trash: total(t), ready: true, hist: h, tr: t }; statusUI(); return sizes;
+  }
+  function statusUI() {
+    const b = $('#nb-status'); b.hidden = !root || ro; if (b.hidden) return;
+    const mb = sizes.history / 1048576, lvl = mb >= cfg.historyWarnMB ? 'warn' : mb >= cfg.historyNoteMB ? 'note' : 'ok';
+    b.className = 'is-' + lvl; $('#nb-status-ic').innerHTML = ic(lvl === 'warn' ? 'warning' : lvl === 'note' ? 'info' : 'check-circle');
+    $('#nb-status-t').textContent = sizes.ready ? 'History ' + fmt(sizes.history) + (sizes.trash ? ' | Trash ' + fmt(sizes.trash) : '') : 'History: measuring';
+    b.title = (lvl === 'warn' ? 'History is over ' + cfg.historyWarnMB + ' MB. ' : lvl === 'note' ? 'History is over ' + cfg.historyNoteMB + ' MB. ' : '') + 'Click to review and clean up history and trash';
+  }
+  /* History grouped by page; a page that is in neither the notebook nor the trash is an orphan. */
+  async function analyse() {
+    const s = await measure(), pages = new Map();
+    for (const f of s.hist || []) { if (!SNAP.test(f.name) || !f.pre) continue; const k = f.pre.slice(0, -1); if (!pages.has(k)) pages.set(k, { path: k, files: [] }); pages.get(k).files.push(f); }
+    for (const p of pages.values()) {
+      p.files.sort((a, b) => snapKey(b.name) - snapKey(a.name)); p.size = total(p.files);
+      const arr = p.path.split('/'); p.gone = !(await nodeAt(arr)) && !(await nodeAt(['.trash', ...arr]));
+    }
+    return { pages: [...pages.values()].sort((a, b) => b.size - a.size), history: s.history, trash: s.trash, trashCount: (s.tr || []).length };
+  }
+  async function prune(dir) { let n = 0; for await (const h of dir.values()) { if (h.kind === 'directory' && await prune(h) === 0) { try { await dir.removeEntry(h.name); continue; } catch (e) { } } n++; } return n; }
+  async function cleanUp() {
+    const box = $('#nb-clean-list'), note = $('#nb-clean-e'); note.textContent = '';
+    for (; ;) {
+      const A = await analyse(), all = A.pages.flatMap(p => p.files), gone = A.pages.filter(p => p.gone);
+      $('#nb-clean-t').textContent = 'History: ' + all.length + (all.length === 1 ? ' copy' : ' copies') + ' of ' + A.pages.length + (A.pages.length === 1 ? ' page, ' : ' pages, ') + fmt(A.history) + '. Trash: ' + A.trashCount + (A.trashCount === 1 ? ' file, ' : ' files, ') + fmt(A.trash) + '.';
+      box.textContent = '';
+      for (const p of A.pages) {
+        const r = document.createElement('div'); r.className = 'nb-li' + (p.gone ? ' is-gone' : '');
+        for (const t of [p.path + (p.gone ? ' (page no longer exists)' : ''), p.files.length + (p.files.length === 1 ? ' copy' : ' copies'), fmt(p.size), 'oldest ' + new Date(snapTime(p.files[p.files.length - 1].name)).toLocaleDateString()]) { const c = document.createElement('span'); c.textContent = t; r.appendChild(c); }
+        box.appendChild(r);
+      }
+      $('#nb-orph-t').textContent = 'History of pages that no longer exist: ' + gone.length + (gone.length === 1 ? ' page, ' : ' pages, ') + fmt(total(gone.flatMap(p => p.files)));
+      $('#nb-trash-t').textContent = 'Trash: ' + A.trashCount + (A.trashCount === 1 ? ' file, ' : ' files, ') + fmt(A.trash);
+      const a = await dlg($('#nb-clean')); if (a === 'cancel') break;
+      if (a === 'trash') { await emptyTrash(); note.textContent = msgEl.textContent; continue; }
+      const keep = Math.max(1, Math.floor(+$('#nb-keep').value) || 0), days = Math.max(1, Math.floor(+$('#nb-days').value) || 0), cut = Date.now() - days * 86400000;
+      const del = a === 'keep' ? A.pages.flatMap(p => p.files.slice(keep)) : a === 'days' ? all.filter(f => snapTime(f.name) < cut) : gone.flatMap(p => p.files);
+      const what = a === 'keep' ? 'beyond the newest ' + keep + ' of each page' : a === 'days' ? 'older than ' + days + ' days' : 'of pages that no longer exist';
+      if (!del.length) { note.textContent = 'Nothing to delete: there are no copies ' + what + '.'; continue; }
+      const names = del.slice(0, 6).map(f => '  ' + f.pre + f.name).join('\n') + (del.length > 6 ? '\n  and ' + (del.length - 6) + ' more' : '');
+      if (!confirm('Delete ' + del.length + (del.length === 1 ? ' history copy' : ' history copies') + ' ' + what + ' (' + fmt(total(del)) + ')? This cannot be undone.\n\n' + names)) { note.textContent = 'Nothing was deleted.'; continue; }
+      let done = 0; try { for (const f of del) { await f.dir.removeEntry(f.name); done++; } await prune(await root.handle.getDirectoryHandle('.history')); } catch (e) { note.textContent = 'Stopped: ' + e.message; }
+      if (done === del.length) note.textContent = 'Deleted ' + done + (done === 1 ? ' copy, ' : ' copies, ') + fmt(total(del)) + '.';
+      rec = null; await refresh();
+    }
+    await measure();
+  }
 
   /* ----- right-click menu ----- */
   function menuFor(n) {
@@ -313,7 +434,7 @@ const NB = (() => {
     if (inTrash(n)) { m.push(['Restore', () => restore(n)]); if (opens(n)) m.push(['Open', () => openPage(n)]); if (tabOk(n)) m.push(['Open in new browser tab', () => openTab(n)]); m.push(null, ['Delete permanently', () => removeForever(n)]); return m; }
     if (n === t) return [['Empty trash', emptyTrash]];
     if (n.kind === 'directory') { if (!(n.parent === root && (n.name === '.history' || n.name === '.notebook'))) m.push(['New page here', () => { sel = n; ACT.new(); }], ['New folder here', () => { sel = n; newFolder(); }]); }
-    else { if (opens(n)) m.push(['Open', () => openPage(n)]); if (tabOk(n)) m.push(['Open in new browser tab', () => openTab(n)]); }
+    else { if (opens(n)) m.push(['Open', () => openPage(n)]); if (isPage(n) && !within(n, find(root, '.history'))) m.push(['Page history', () => showHistory(n)]); if (tabOk(n)) m.push(['Open in new browser tab', () => openTab(n)]); }
     if (!isProtected(n)) { if (m.length) m.push(null); m.push(['Rename', () => { renaming = n; render(); }], ['Move to trash', () => toTrash(n)]); }
     return m;
   }
@@ -328,11 +449,11 @@ const NB = (() => {
   async function openRoot(h, readOnly, auto) {
     const wasPage = !!cur; root = { name: h.name, kind: 'directory', handle: h, parent: null, kids: null, open: true }; ro = !!readOnly; sel = null; renaming = null;
     try { await readDir(root); } catch (e) { root = null; say('The folder could not be read: ' + e.message, true); render(); return; }
-    await loadSettings();
+    await loadSettings(); rec = null; sizes = { history: 0, trash: 0, ready: false };
     if (!auto && wasPage) blank();
     cur = handle ? null : { dir: root, node: null };
     if (!ro) { remembered = h; try { await kv('readwrite', s => s.put(h, 'root')); } catch (e) { } }
-    say(''); render();
+    say(''); render(); if (!ro) measure();
   }
   async function pick() {
     const switching = !!root; if (switching && !(await leave())) return;
@@ -371,7 +492,7 @@ const NB = (() => {
     $('#nb-tab').addEventListener('click', () => toggle(true));
     panel.addEventListener('click', e => {
       const b = e.target.closest('button[data-nb]'); if (!b) return; const a = b.dataset.nb;
-      if (a === 'hide') toggle(false); else if (a === 'pick') pick(); else if (a === 'reconnect') reconnect(); else if (a === 'newpage') ACT.new(); else if (a === 'newfolder') newFolder(); else if (a === 'refresh') refresh();
+      if (a === 'hide') toggle(false); else if (a === 'clean') cleanUp(); else if (a === 'recover') { if (rec) restoreSnap(rec.node, rec.snap); } else if (a === 'norecover') { rec = null; recUI(); } else if (a === 'pick') pick(); else if (a === 'reconnect') reconnect(); else if (a === 'newpage') ACT.new(); else if (a === 'newfolder') newFolder(); else if (a === 'refresh') refresh();
       else if (a === 'hidden') { showHidden = !showHidden; render(); saveSettings().then(() => readDir(root)).then(render, () => { }); }
     });
     tree.addEventListener('click', e => { if (renaming) return; const n = nodeOf(e); if (n) clickRow(n); else if (e.target === tree) { sel = null; render(); } });
@@ -411,13 +532,14 @@ const NB = (() => {
     let open = false, warn = true, w = '';
     try { open = localStorage.getItem('fle-nb-open') === '1'; warn = localStorage.getItem('fle-nb-warn') !== '0'; w = localStorage.getItem('fle-nb-w') || ''; } catch (e) { }
     if (/^\d+px$/.test(w)) document.documentElement.style.setProperty('--nbw', w);
+    setInterval(() => { if (Date.now() - lastTick >= cfg.historyMinutes * 60000) { lastTick = Date.now(); snapshot(); } }, 20000);
     if (!canWrite && warn) { $('#nbwarn').hidden = false; chromeHeight(); }
     if (open) toggle(true);
     if (canWrite) { try { const h = await kv('readonly', s => s.get('root')); if (h) { remembered = h; if (open && !root && await h.queryPermission({ mode: 'readwrite' }) === 'granted') await openRoot(h, false, true); } } catch (e) { } }
     render();
   }
   return {
-    init, toggle, warnOff, leave, savePage, newPage, refresh, openRoot, listTree,
+    init, toggle, warnOff, leave, savePage, newPage, refresh, openRoot, listTree, snapshot, measure,
     on: () => !!root, page: () => !!(root && cur), detach: () => { if (cur) { cur = null; if (root) render(); } },
     get state() { return { root: root && root.name, ro, cur: cur && { dir: pathArr(cur.dir).join('/'), node: cur.node && pathArr(cur.node).join('/') }, sel: sel && pathArr(sel).join('/'), rows: flat.map(n => pathArr(n).join('/')) }; },
   };

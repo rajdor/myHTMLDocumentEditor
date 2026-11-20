@@ -16,6 +16,9 @@ same('the browser tab names each program', [editor.match(/<title>([^<]*)<\/title
 check('each program keeps its unsaved draft under its own key', /PRODUCT = \{[^}]*"key":"fle"/.test(editor) && /PRODUCT = \{[^}]*"key":"fln"/.test(notebook));
 check('both write the same page format marker', [editor, notebook].every(h => h.includes('<meta name="generator" content="fine-line-editor">')));
 check('both carry a Content Security Policy that allows no outside source', [editor, notebook].every(h => /Content-Security-Policy" content="default-src 'none'; script-src 'sha256-/.test(h)));
-check('neither has a placeholder left from the build', [editor, notebook].every(h => !/\{\{(nb|ic):[a-z0-9-]+\}\}|\{\{product\}\}|\/\*NOTEBOOK\*\//.test(h)));
+check('neither has a placeholder left from the build', [editor, notebook].every(h => !/\{\{(nb|icf?):[a-z0-9-]+\}\}|\{\{product\}\}|\/\*NOTEBOOK\*\//.test(h)));
 check('neither loads anything from the network', [editor, notebook].every(h => !/<(script|link|img)[^>]+(src|href)="https?:/i.test(h)));
+const bar = (h) => (h.match(/<div class="row" id="tbar">[\s\S]*?<div class="row" id="gbar"/) || [''])[0];
+check('the toolbar is the same in both, button for button', bar(editor).length > 1000 && bar(editor) === bar(notebook));
+check('both carry the same emoji list', [editor, notebook].every(h => / EMOJI = \[\{"char":/.test(h)) && editor.match(/ EMOJI = (\[.*?\]);/)[1] === notebook.match(/ EMOJI = (\[.*?\]);/)[1]);
 check('the notebook is the larger file', notebook.length > editor.length, [editor.length, notebook.length]);

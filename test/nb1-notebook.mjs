@@ -134,7 +134,7 @@ check('renaming a folder carries its content and the open page', (await paths())
 await pg.evaluate(() => { document.querySelector('#doc p').textContent = 'after folder rename'; document.querySelector('#doc').dispatchEvent(new Event('input', { bubbles: true })); });
 await save();
 check('a page saves into its renamed folder', /after folder rename/.test(await text('Projects/Alpha one.html')));
-same('special folders cannot be renamed or deleted', await menuItems('_templates'), ['New page here', 'New folder here']);
+same('special folders cannot be renamed or deleted', await menuItems('_templates'), ['New page here', 'New folder here', 'Sort this folder']);
 
 /* ----- new folder ----- */
 await pg.click(row('Projects')); await sleep(200); if (!(await state()).rows.includes('Projects/Sub')) { await pg.click(row('Projects')); await sleep(200); }

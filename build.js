@@ -18,6 +18,9 @@ const src = (f) => fs.readFileSync(path.join(__dirname, 'src', f), 'utf8');
 const fontB64 = fs.readFileSync(path.join(__dirname, 'node_modules/@fontsource/architects-daughter/files/architects-daughter-latin-400-normal.woff2')).toString('base64');
 const diagramEditor = fs.readFileSync(path.join(__dirname, 'vendor', 'diagram-editor.html'));
 const icons = JSON.parse(src('icons.json'));
+// The emoji list on the toolbar. Written into the program as \u codes, so the list reads the same whatever encoding the file is opened with.
+const emoji = JSON.parse(src('emoji.default.json')).emojis.map(e => { if (!e.char || !e.tooltip) throw new Error('An emoji needs a char and a tooltip: ' + JSON.stringify(e)); return { char: e.char, code: e.code, tooltip: e.tooltip }; });
+const emojiJs = JSON.stringify(emoji).replace(/[^\x00-\x7F]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
 
 // marked (Markdown import, notebook only) is included whole, ahead of the editor's own code; it defines the global `marked`.
 const markedJs = fs.readFileSync(path.join(__dirname, 'node_modules/marked/lib/marked.umd.js'), 'utf8').replace(/\/\/# sourceMappingURL=.*\s*$/, '');
@@ -26,15 +29,16 @@ const nbParts = Object.fromEntries(src('notebook/notebook.html').split(/<!--part
 const NB_AFTER = { warn: '\n', panel: '\n', help: '\n  ' };
 
 const ICON_DIR = path.join(__dirname, 'node_modules/@phosphor-icons/core/assets/regular');
-const icon = (n) => fs.readFileSync(path.join(ICON_DIR, n + '.svg'), 'utf8').replace(/\s*xmlns="[^"]*"/, '').replace('<svg', '<svg aria-hidden="true"').trim();
+const icon = (n, fill) => fs.readFileSync(path.join(ICON_DIR, fill ? '../fill' : '', n + (fill ? '-fill' : '') + '.svg'), 'utf8').replace(/\s*xmlns="[^"]*"/, '').replace('<svg', '<svg aria-hidden="true"').trim();
 
 function build(PRODUCT) {
-const app = "'use strict';\nconst VERSION = " + JSON.stringify(pkg.version) + ", PRODUCT = " + JSON.stringify({ id: PRODUCT.id, label: PRODUCT.label, key: PRODUCT.key }) + ";\n" + (PRODUCT.notebook ? markedJs + "\n" : '')
-  + src('app.js').replace('/*CONVERT*/', () => src('convert.js')).replace('/*NOTEBOOK*/', () => src(PRODUCT.notebook ? 'notebook/notebook.js' : 'notebook/none.js'));
+const app = "'use strict';\nconst VERSION = " + JSON.stringify(pkg.version) + ", PRODUCT = " + JSON.stringify({ id: PRODUCT.id, label: PRODUCT.label, key: PRODUCT.key }) + ", EMOJI = " + emojiJs + ";\n" + (PRODUCT.notebook ? markedJs + "\n" : '')
+  + src('app.js').replace('/*CONVERT*/', () => src('convert.js') + '\n' + src('convert-drawings.js')).replace('/*NOTEBOOK*/', () => src(PRODUCT.notebook ? 'notebook/notebook.js' : 'notebook/none.js'));
 let html = src('index.html')
   .replace('{{product}}', PRODUCT.title)
   .replace(/\{\{nb:([a-z]+)\}\}/g, (m, n) => { if (!(n in nbParts)) throw new Error('No notebook part named ' + n); return PRODUCT.notebook ? nbParts[n] + NB_AFTER[n] : ''; })
   .replace(/\{\{ic:([a-z0-9-]+)\}\}/g, (m, n) => icon(n))
+  .replace(/\{\{icf:([a-z0-9-]+)\}\}/g, (m, n) => icon(n, true))   // the filled drawing of an icon
   .replace('/*DOC_CSS*/', () => src('doc.css').replace('/*FONT_B64*/', fontB64).replace(/\/\*FONTFILE:([@\w./-]+)\*\//g, (m, f) => fs.readFileSync(path.join(__dirname, 'node_modules', f)).toString('base64')).replace(/\/\*ICONURL:([a-z0-9-]+)\*\//g, (m, n) => 'url("data:image/svg+xml,' + encodeURIComponent(icon(n).replace(' aria-hidden="true"', ' xmlns="http://www.w3.org/2000/svg"')) + '")'))
   .replace('/*ED_CSS*/', () => src('editor.css') + (PRODUCT.notebook ? src('notebook/notebook.css') : ''))
   .replace('/*DIAGRAM_EDITOR_B64*/', () => diagramEditor.toString('base64'))
@@ -49,7 +53,7 @@ const allowed = [...scripts(html), ...scripts(diagramEditor.toString('utf8'))].m
 const csp = "default-src 'none'; script-src " + allowed.join(' ') + "; style-src 'unsafe-inline' data:; img-src data: blob:; font-src data:; connect-src data: blob:; frame-src 'self' blob: data:; child-src 'self' blob: data:; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'";
 html = html.replace('/*CSP*/', csp);
 if (scripts(html).length !== 2) throw new Error('Expected two runnable scripts in ' + PRODUCT.file + ' (icons and app)');
-if (/\{\{(nb|ic):[a-z0-9-]+\}\}|\{\{product\}\}/.test(html)) throw new Error('A placeholder was left in ' + PRODUCT.file);
+if (/\{\{(nb|icf?):[a-z0-9-]+\}\}|\{\{product\}\}/.test(html)) throw new Error('A placeholder was left in ' + PRODUCT.file);
 
 for (const ch of ['—', '–']) if (html.includes(ch)) throw new Error('Dash character found in ' + PRODUCT.file);
 const out = path.join(__dirname, PRODUCT.file);

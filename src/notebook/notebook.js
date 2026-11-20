@@ -9,6 +9,7 @@ const NB = (() => {
   const PROTECTED = ['_templates', '.history', '.trash', '.notebook']; // root folders that cannot be renamed, moved or deleted
   const KEEP = ['.history', '.trash'];                             // stay listed when hidden files are off
   let root = null, ro = false, cur = null, sel = null, renaming = null, flat = [], remembered = null, dragged = null;
+  let sort = { by: 'name', desc: false }, folderSort = {}, favs = [], favOpen = true, favGone = new Set();
   let showHidden = true, lastScan = 0, msgTimer = null, queue = Promise.resolve();
 
   const ic = n => $('#nb-ic').content.querySelector('[data-ic="' + n + '"]').innerHTML;
@@ -38,7 +39,7 @@ const NB = (() => {
   async function readDir(n) {
     const old = n.kids || [], kids = [];
     for await (const h of n.handle.values()) { const o = old.find(k => k.name === h.name && k.kind === h.kind); kids.push(o ? Object.assign(o, { handle: h }) : { name: h.name, kind: h.kind, handle: h, parent: n, kids: null, open: false }); }
-    n.kids = kids; return kids;
+    n.kids = kids; n.statAt = 0; return kids;
   }
   /* One write at a time, tried up to three times, and read back to confirm what is on disk. */
   function write(h, text) {
@@ -76,6 +77,7 @@ const NB = (() => {
     await readDir(from); if (dest !== from) await readDir(dest);
     const moved = find(dest, name); if (!moved) return null;
     await moveHistory(oldRel, pathArr(moved));
+    if (repath(oldRel, pathArr(moved))) saveSettings();
     if (wasOpen && moved.kind === 'directory') { moved.open = true; await readDir(moved); }
     if (curRel) { const c = await nodeAt([...pathArr(moved), ...curRel]); if (c) { cur.node = c; cur.dir = c.parent; handle = c.handle; fname = c.name; try { cur.mtime = (await c.handle.getFile()).lastModified; } catch (e) { } status(); } }
     return moved;
@@ -83,23 +85,108 @@ const NB = (() => {
 
   /* ----- settings: .notebook/settings.json in the notebook; missing or damaged settings fall back to defaults ----- */
   async function loadSettings() {
-    showHidden = true; cfg = { ...CFG };
-    try { const d = await root.handle.getDirectoryHandle('.notebook'), f = await (await d.getFileHandle('settings.json')).getFile(), s = JSON.parse(await f.text()); if (s && typeof s.showHidden === 'boolean') showHidden = s.showHidden; for (const k of Object.keys(CFG)) if (s && typeof s[k] === 'number' && s[k] > 0) cfg[k] = s[k]; } catch (e) { }
+    showHidden = true; cfg = { ...CFG }; sort = { by: 'name', desc: false }; folderSort = {}; favs = []; favOpen = true; favGone = new Set();
+    try {
+      const d = await root.handle.getDirectoryHandle('.notebook'), f = await (await d.getFileHandle('settings.json')).getFile(), s = JSON.parse(await f.text()) || {};
+      if (typeof s.showHidden === 'boolean') showHidden = s.showHidden; for (const k of Object.keys(CFG)) if (typeof s[k] === 'number' && s[k] > 0) cfg[k] = s[k];
+      const good = v => v && SORTS[v.by] ? { by: v.by, desc: !!v.desc } : null; sort = good(s.sort) || sort;
+      if (s.folderSort && typeof s.folderSort === 'object') for (const [k, v] of Object.entries(s.folderSort)) { const o = good(v); if (o && k) folderSort[k] = o; }
+      if (Array.isArray(s.favourites)) favs = [...new Set(s.favourites.filter(p => p && typeof p === 'string'))];
+      if (typeof s.favouritesOpen === 'boolean') favOpen = s.favouritesOpen;
+    } catch (e) { }
   }
   async function saveSettings() {
     if (ro || !root) return;
     try {
       const d = await root.handle.getDirectoryHandle('.notebook', { create: true }), fh = await d.getFileHandle('settings.json', { create: true });
       let s = {}; try { s = JSON.parse(await (await fh.getFile()).text()) || {}; } catch (e) { }
-      s.showHidden = showHidden; await write(fh, JSON.stringify(s, null, 2) + '\n');
+      s.showHidden = showHidden; s.sort = sort; s.folderSort = folderSort; s.favourites = favs; s.favouritesOpen = favOpen; await write(fh, JSON.stringify(s, null, 2) + '\n');
     } catch (e) { say('Could not save the notebook settings: ' + e.message, true); }
+  }
+
+  /* ----- sorting and favourites: kept in the notebook's settings -----
+     One sort for the whole notebook. A folder can be given its own; setting the notebook sort again clears those.
+     Folders always come first. Modified date and size are read from the files only when a sort needs them.
+     Favourites are pages, held as paths within the notebook and listed above the tree. */
+  const SORTS = { name: 'Name', modified: 'Modified date', size: 'Size', type: 'Type' }, TICK = '\u2713 ';
+  const key = n => pathArr(n).join('/');
+  const sortOf = dir => (dir !== root && folderSort[key(dir)]) || sort;
+  const needsStat = dir => { const b = sortOf(dir).by; return b === 'modified' || b === 'size'; };
+  const ext = n => { const i = n.name.lastIndexOf('.'); return i > 0 ? lower(n.name.slice(i + 1)) : ''; };
+  const byName = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+  function order(dir) {
+    const s = sortOf(dir), sign = s.desc ? -1 : 1, num = { modified: n => n.meta ? n.meta.mtime : 0, size: n => n.meta ? n.meta.size : 0 }[s.by];
+    return (a, b) => {
+      if (a.kind !== b.kind) return a.kind === 'directory' ? -1 : 1;
+      if (s.by === 'name') return sign * byName(a, b);
+      if (a.kind === 'directory') return byName(a, b);   // a folder has no date, size or type of its own
+      return sign * (num ? num(a) - num(b) : ext(a).localeCompare(ext(b))) || byName(a, b);
+    };
+  }
+  async function stat(dir) {
+    dir.statAt = Date.now();
+    await Promise.all(dir.kids.filter(k => k.kind === 'file').map(async k => { try { const f = await k.handle.getFile(); k.meta = { mtime: f.lastModified, size: f.size }; } catch (e) { k.meta = k.meta || { mtime: 0, size: 0 }; } }));
+  }
+  function sortMenu(dir, x, y) {
+    const s = dir ? sortOf(dir) : sort, own = !!(dir && folderSort[key(dir)]);
+    const set = ch => {
+      const v = { ...s, ...ch };
+      if (dir) folderSort[key(dir)] = v;
+      else { const had = Object.keys(folderSort).length; sort = v; folderSort = {}; say(had ? 'The whole notebook is sorted this way now, including the ' + (had === 1 ? 'folder that had its own sort.' : had + ' folders that had their own sort.') : ''); }
+      saveSettings(); render();
+    };
+    const m = Object.entries(SORTS).map(([k, l]) => [(s.by === k ? TICK : '') + l, () => set({ by: k })]);
+    m.push(null, [(s.desc ? '' : TICK) + 'Ascending', () => set({ desc: false })], [(s.desc ? TICK : '') + 'Descending', () => set({ desc: true })]);
+    if (own) m.push(null, ['Use the notebook sort', () => { delete folderSort[key(dir)]; saveSettings(); render(); }]);
+    drawMenu(m, x, y);
+  }
+  const canFav = n => !ro && isPage(n) && !inTrash(n) && !within(n, find(root, '.history'));
+  const isFav = n => favs.includes(key(n));
+  function dropFav(p) { favs = favs.filter(x => x !== p); favGone.delete(p); saveSettings(); render(); }
+  function toggleFav(n) { const p = key(n); if (favs.includes(p)) dropFav(p); else { favs.push(p); favGone.delete(p); saveSettings(); render(); } }
+  async function openFav(p) {
+    let n = null; try { n = await nodeAt(p.split('/')); } catch (e) { }
+    if (!n || !isPage(n)) { favGone.add(p); render(); say('"' + p + '" is no longer in the notebook. Click its star to take it out of favourites.', true); return; }
+    favGone.delete(p); for (let d = n.parent; d && d !== root; d = d.parent) d.open = true;
+    await openPage(n);
+  }
+  /* A favourite whose page has gone (renamed, moved or deleted outside the editor) stays listed, greyed. */
+  async function checkFavs() {
+    const r = root, gone = new Set();
+    for (const p of favs) { let n = null; try { n = await nodeAt(p.split('/')); } catch (e) { } if (r !== root) return; if (!n || !isPage(n)) gone.add(p); }
+    if (gone.size !== favGone.size || [...gone].some(p => !favGone.has(p))) { favGone = gone; if (!renaming) render(); }
+  }
+  /* A page or folder moved or renamed here takes its favourites and folder sorts with it; one sent to the trash loses them. */
+  function repath(a, b) {
+    a = a.join('/'); b = b.join('/'); let ch = false; const fix = p => p === a ? b : p.startsWith(a + '/') ? b + p.slice(a.length) : p;
+    favs = favs.map(p => { const q = fix(p); if (q !== p) ch = true; return q; });
+    for (const k of Object.keys(folderSort)) { const q = fix(k); if (q !== k) { folderSort[q] = folderSort[k]; delete folderSort[k]; ch = true; } }
+    return ch;
+  }
+  function unpath(a) {
+    a = a.join('/'); const hit = p => p === a || p.startsWith(a + '/'), n = favs.length + Object.keys(folderSort).length;
+    favs = favs.filter(p => !hit(p)); for (const k of Object.keys(folderSort)) if (hit(k)) delete folderSort[k];
+    return n !== favs.length + Object.keys(folderSort).length;
+  }
+  function favUI() {
+    const box = $('#nb-fav'); box.textContent = ''; box.hidden = !root || !favs.length; if (box.hidden) return;
+    const h = document.createElement('div'); h.className = 'nb-fav-h'; h.setAttribute('role', 'button'); h.tabIndex = 0; h.setAttribute('aria-expanded', favOpen ? 'true' : 'false');
+    h.innerHTML = '<span class="nb-caret">' + ic(favOpen ? 'caret-down' : 'caret-right') + '</span>' + ic('star-fill') + '<span>Favourites</span>'; box.appendChild(h);
+    if (!favOpen) return; const at = cur && cur.node ? key(cur.node) : null;
+    favs.forEach((p, i) => {
+      const r = document.createElement('div'), gone = favGone.has(p);
+      r.className = 'nb-frow' + (gone ? ' is-gone' : '') + (p === at ? ' is-cur' : ''); r.dataset.f = i; r.title = p + (gone ? ' (not found)' : '');
+      r.innerHTML = ic('file-text') + '<span class="nb-lbl"></span><span class="nb-star on" role="button" aria-label="Remove from favourites" title="Remove from favourites">' + ic('star-fill') + '</span>';
+      r.children[1].textContent = p.slice(p.lastIndexOf('/') + 1).replace(/\.html?$/i, ''); box.appendChild(r);
+    });
   }
 
   /* ----- the tree ----- */
   function visible(n) {
     const all = (n.kids || []).filter(k => showHidden || k.name[0] !== '.' || (n === root && KEEP.includes(k.name)));
     const pin = k => n === root && k.kind === 'directory' ? PINNED.indexOf(k.name) : -1;
-    const by = (a, b) => a.kind !== b.kind ? (a.kind === 'directory' ? -1 : 1) : a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+    const by = order(n);
+    if (needsStat(n) && !n.statAt) stat(n).then(() => { if (root && !renaming) render(); });
     return [...all.filter(k => pin(k) < 0).sort(by), ...all.filter(k => pin(k) >= 0).sort((a, b) => pin(a) - pin(b))];
   }
   function row(n, depth, fresh) {
@@ -116,14 +203,17 @@ const NB = (() => {
       inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); commitRename(n, inp.value.trim() + ext, inp); } else if (e.key === 'Escape') { e.preventDefault(); endRename(); } });
       inp.addEventListener('blur', () => { if (renaming === n) { renaming = null; render(); } });
       ['click', 'mousedown', 'dblclick', 'contextmenu'].forEach(t => inp.addEventListener(t, e => e.stopPropagation()));
-    } else { r.lastChild.textContent = label(n); if (!ro && !isProtected(n)) r.draggable = true; }
+    } else {
+      r.lastChild.textContent = label(n); if (!ro && !isProtected(n)) r.draggable = true;
+      if (canFav(n)) { const f = isFav(n), t = f ? 'Remove from favourites' : 'Add to favourites'; r.insertAdjacentHTML('beforeend', '<span class="nb-star' + (f ? ' on' : '') + '" role="button" aria-label="' + t + '" title="' + t + '">' + ic(f ? 'star-fill' : 'star') + '</span>'); }
+    }
     return r;
   }
   function render() {
     const on = !!root; land.hidden = on; tree.hidden = !on; $('#nb-name').textContent = on ? root.name + (ro ? ' (read-only)' : '') : 'Notebook';
-    $$('.nb-top button', panel).forEach(b => { const a = b.dataset.nb; b.hidden = a === 'hide' ? false : a === 'pick' ? !on : !on || (ro && a !== 'hidden' && a !== 'newpage'); });
+    $$('.nb-top button', panel).forEach(b => { const a = b.dataset.nb; b.hidden = a === 'hide' ? false : a === 'pick' ? !on : !on || (ro && a !== 'hidden' && a !== 'newpage' && a !== 'sort'); });
     const hb = $('[data-nb="hidden"]', panel); hb.setAttribute('aria-pressed', showHidden ? 'true' : 'false'); hb.classList.toggle('on', showHidden);
-    tree.textContent = ''; flat = []; statusUI(); recUI();
+    tree.textContent = ''; flat = []; statusUI(); recUI(); favUI();
     if (!on) { landUI(); return; }
     const pend = cur && !cur.node ? cur.dir : null;
     if (pend === root) tree.appendChild(row(null, 0, true));
@@ -147,7 +237,7 @@ const NB = (() => {
       if (cur && cur.dir && !attached(cur.dir)) cur.dir = root;
       if (sel && !attached(sel)) sel = null;
     }
-    render();
+    render(); checkFavs();
   }
 
   /* ----- prompts ----- */
@@ -209,7 +299,7 @@ const NB = (() => {
     sel = n;
     if (isText(n)) text = '<main>' + importText(n.name, text) + '</main>';
     if (!isText(n) && isOwn(text)) { handle = ro ? null : n.handle; load(text, n.name); cur = { dir: n.parent, node: n, mtime, disk: text }; say(''); if (!ro && !inTrash(n)) await checkRecover(n, text, mtime); }
-    else { handle = null; load(text, n.name); cur = { dir: inTrash(n) ? root : n.parent, node: null }; say('Imported ' + n.name + ' as a new page. The original file stays as it is; Save writes a new page named after the title.'); }
+    else { handle = null; load(isText(n) ? text : await withPictures(text), n.name); cur = { dir: inTrash(n) ? root : n.parent, node: null }; say('Imported ' + n.name + ' as a new page. The original file stays as it is; Save writes a new page named after the title.'); }
     render();
   }
   /* Save the open page into the notebook. A page that has no file yet is named after its first H1. */
@@ -231,7 +321,7 @@ const NB = (() => {
         await write(await dir.handle.getFileHandle(name, { create: true }), html);
         await readDir(dir); cur.dir = dir; cur.node = find(dir, name); dir.open = true;
       }
-      handle = cur.node.handle; fname = cur.node.name; sel = cur.node; cur.mtime = (await handle.getFile()).lastModified; cur.disk = html; cur.snap = undefined; rec = null;
+      handle = cur.node.handle; fname = cur.node.name; sel = cur.node; cur.mtime = (await handle.getFile()).lastModified; cur.disk = html; cur.node.meta = { mtime: cur.mtime, size: html.length }; cur.snap = undefined; rec = null;
       afterSave(false); if (!msgEl.classList.contains('bad')) say(''); render();
     } catch (e) { say('Could not save the page: ' + e.message, true); }
   }
@@ -276,6 +366,7 @@ const NB = (() => {
       const rel = pathArr(n), d = await nodeAt(['.trash', ...rel.slice(0, -1)], true); await readDir(d);
       const name = find(d, n.name) ? stamp(n.name) : n.name, from = n.parent;
       await moveEntry(n, d, name); await readDir(from); await readDir(d);
+      if (unpath(rel)) saveSettings();
       if (sel && !attached(sel)) sel = null;
       if (open) { blank(); cur = { dir: attached(from) ? from : root, node: null }; }
       else if (cur && !cur.node && !attached(cur.dir)) cur.dir = attached(from) ? from : root;
@@ -306,6 +397,9 @@ const NB = (() => {
   }
   /* Files the editor does not open can be shown by the browser in a new tab. Files that can carry script are left out. */
   const tabOk = n => n.kind === 'file' && !/\.(html?|xhtml|svg|xml|js|mjs)$/i.test(n.name);
+  /* Kinds of file a browser is known not to show (it would only download them, or open an empty tab): the menu item stays, switched off. */
+  const NO_VIEW = /\.(docx?|docm|dotx?|xlsx?|xlsm|xlsb|xltx?|pptx?|pptm|ppsx?|potx?|od[tspg]|rtf|pages|numbers|key|vsdx?|one|pub|mpp|msg|eml|pst|zip|7z|rar|gz|tgz|bz2|xz|tar|iso|dmg|pkg|exe|msi|app|apk|bin|dll|jar|psd|ai|indd|sketch|fig|drawio|gliffy|epub|mobi|sqlite|db|mdb|accdb|parquet|pbix|twbx?)$/i;
+  const tabItem = n => ['Open in new browser tab', () => openTab(n), NO_VIEW.test(n.name) ? 'The browser cannot show this kind of file. Open it from its folder on this computer.' : ''];
   async function openTab(n) { try { const u = URL.createObjectURL(await n.handle.getFile()); window.open(u, '_blank', 'noopener'); setTimeout(() => URL.revokeObjectURL(u), 60000); } catch (e) { say('Could not open ' + n.name + ': ' + e.message, true); } }
 
   /* ----- history: full copies of pages, kept in .history/<page path>/, one file a copy -----
@@ -427,20 +521,21 @@ const NB = (() => {
   }
 
   /* ----- right-click menu ----- */
-  function menuFor(n) {
+  function menuFor(n, x, y) {
     const m = [], t = trashNode();
     if (!n) return ro ? [] : [['New page', () => ACT.new()], ['New folder', newFolder], null, ['Refresh', refresh]];
-    if (ro) { if (opens(n)) m.push(['Open', () => openPage(n)]); if (tabOk(n)) m.push(['Open in new browser tab', () => openTab(n)]); return m; }
-    if (inTrash(n)) { m.push(['Restore', () => restore(n)]); if (opens(n)) m.push(['Open', () => openPage(n)]); if (tabOk(n)) m.push(['Open in new browser tab', () => openTab(n)]); m.push(null, ['Delete permanently', () => removeForever(n)]); return m; }
+    if (ro) { if (opens(n)) m.push(['Open', () => openPage(n)]); if (tabOk(n)) m.push(tabItem(n)); return m; }
+    if (inTrash(n)) { m.push(['Restore', () => restore(n)]); if (opens(n)) m.push(['Open', () => openPage(n)]); if (tabOk(n)) m.push(tabItem(n)); m.push(null, ['Delete permanently', () => removeForever(n)]); return m; }
     if (n === t) return [['Empty trash', emptyTrash]];
-    if (n.kind === 'directory') { if (!(n.parent === root && (n.name === '.history' || n.name === '.notebook'))) m.push(['New page here', () => { sel = n; ACT.new(); }], ['New folder here', () => { sel = n; newFolder(); }]); }
-    else { if (opens(n)) m.push(['Open', () => openPage(n)]); if (isPage(n) && !within(n, find(root, '.history'))) m.push(['Page history', () => showHistory(n)]); if (tabOk(n)) m.push(['Open in new browser tab', () => openTab(n)]); }
+    if (n.kind === 'directory') { if (!(n.parent === root && (n.name === '.history' || n.name === '.notebook'))) m.push(['New page here', () => { sel = n; ACT.new(); }], ['New folder here', () => { sel = n; newFolder(); }]); m.push(['Sort this folder', () => sortMenu(n, x, y)]); }
+    else { if (opens(n)) m.push(['Open', () => openPage(n)]); if (isPage(n) && !within(n, find(root, '.history'))) m.push(['Page history', () => showHistory(n)]); if (canFav(n)) m.push([isFav(n) ? 'Remove from favourites' : 'Add to favourites', () => toggleFav(n)]); if (tabOk(n)) m.push(tabItem(n)); }
     if (!isProtected(n)) { if (m.length) m.push(null); m.push(['Rename', () => { renaming = n; render(); }], ['Move to trash', () => toTrash(n)]); }
     return m;
   }
-  function showMenu(n, x, y) {
-    const items = menuFor(n); menu.textContent = ''; if (!items.length) return;
-    items.forEach(it => { if (!it) { menu.appendChild(document.createElement('hr')); return; } const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'menuitem'); b.textContent = it[0]; b.addEventListener('click', () => { hideMenu(); it[1](); }); menu.appendChild(b); });
+  function showMenu(n, x, y) { drawMenu(menuFor(n, x, y), x, y); }
+  function drawMenu(items, x, y) {
+    menu.textContent = ''; if (!items.length) return;
+    items.forEach(it => { if (!it) { menu.appendChild(document.createElement('hr')); return; } const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'menuitem'); b.textContent = it[0]; if (it[2]) { b.disabled = true; b.title = it[2]; } b.addEventListener('click', () => { hideMenu(); it[1](); }); menu.appendChild(b); });
     menu.hidden = false; menu.style.left = Math.min(x, innerWidth - menu.offsetWidth - 8) + 'px'; menu.style.top = Math.min(y, innerHeight - menu.offsetHeight - 8) + 'px';
   }
   function hideMenu() { menu.hidden = true; }
@@ -453,7 +548,7 @@ const NB = (() => {
     if (!auto && wasPage) blank();
     cur = handle ? null : { dir: root, node: null };
     if (!ro) { remembered = h; try { await kv('readwrite', s => s.put(h, 'root')); } catch (e) { } }
-    say(''); render(); if (!ro) measure();
+    say(''); render(); if (!ro) measure(); checkFavs();
   }
   async function pick() {
     const switching = !!root; if (switching && !(await leave())) return;
@@ -492,10 +587,14 @@ const NB = (() => {
     $('#nb-tab').addEventListener('click', () => toggle(true));
     panel.addEventListener('click', e => {
       const b = e.target.closest('button[data-nb]'); if (!b) return; const a = b.dataset.nb;
-      if (a === 'hide') toggle(false); else if (a === 'clean') cleanUp(); else if (a === 'recover') { if (rec) restoreSnap(rec.node, rec.snap); } else if (a === 'norecover') { rec = null; recUI(); } else if (a === 'pick') pick(); else if (a === 'reconnect') reconnect(); else if (a === 'newpage') ACT.new(); else if (a === 'newfolder') newFolder(); else if (a === 'refresh') refresh();
+      if (a === 'hide') toggle(false); else if (a === 'clean') cleanUp(); else if (a === 'recover') { if (rec) restoreSnap(rec.node, rec.snap); } else if (a === 'norecover') { rec = null; recUI(); } else if (a === 'pick') pick(); else if (a === 'reconnect') reconnect(); else if (a === 'newpage') ACT.new(); else if (a === 'newfolder') newFolder(); else if (a === 'refresh') refresh(); else if (a === 'sort') { const r = b.getBoundingClientRect(); sortMenu(null, r.left, r.bottom + 2); }
       else if (a === 'hidden') { showHidden = !showHidden; render(); saveSettings().then(() => readDir(root)).then(render, () => { }); }
     });
-    tree.addEventListener('click', e => { if (renaming) return; const n = nodeOf(e); if (n) clickRow(n); else if (e.target === tree) { sel = null; render(); } });
+    const favBox = $('#nb-fav'), favOf = e => { const r = e.target.closest('.nb-frow'); return r ? favs[+r.dataset.f] : null; }, favFlip = () => { favOpen = !favOpen; saveSettings(); render(); };
+    favBox.addEventListener('click', e => { if (e.target.closest('.nb-fav-h')) return favFlip(); const p = favOf(e); if (!p) return; if (e.target.closest('.nb-star')) dropFav(p); else openFav(p); });
+    favBox.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('.nb-fav-h')) { e.preventDefault(); e.stopPropagation(); favFlip(); const h = $('.nb-fav-h', favBox); if (h) h.focus(); } });
+    favBox.addEventListener('contextmenu', e => { e.preventDefault(); const p = favOf(e); if (p) drawMenu([['Open', () => openFav(p)], ['Remove from favourites', () => dropFav(p)]], e.clientX, e.clientY); });
+    tree.addEventListener('click', e => { if (renaming) return; const n = nodeOf(e); if (n && e.target.closest('.nb-star')) { toggleFav(n); return; } if (n) clickRow(n); else if (e.target === tree) { sel = null; render(); } });
     tree.addEventListener('contextmenu', e => { e.preventDefault(); if (renaming) return; const n = nodeOf(e); if (n) { sel = n; render(); } showMenu(n, e.clientX, e.clientY); });
     tree.addEventListener('keydown', e => {
       if (!e.ctrlKey && !e.metaKey) e.stopPropagation();

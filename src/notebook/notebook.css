@@ -34,7 +34,23 @@ html.nb-open #chrome { margin-left: calc(-1 * var(--nbw, 260px)); }
 .nb-row svg { width: 16px; height: 16px; flex: none; }
 .nb-caret { width: 12px; flex: none; display: inline-flex; }
 .nb-caret svg { width: 12px; height: 12px; }
-.nb-lbl { overflow: hidden; text-overflow: ellipsis; }
+.nb-lbl { overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+.nb-star { display: none; flex: none; width: 18px; height: 18px; align-items: center; justify-content: center; border-radius: 3px; color: #8A9BB0; cursor: pointer; }
+.nb-row:hover .nb-star, .nb-star.on { display: inline-flex; }
+.nb-star.on { color: #D99A00; }
+.nb-star:hover { background: #CFDBE8; }
+.nb-row .nb-star svg, .nb-frow .nb-star svg { width: 14px; height: 14px; }
+#nb-fav { flex: none; max-height: 35%; overflow: auto; padding: 2px 0 4px; border-bottom: 1px solid #CFDBE8; }
+.nb-fav-h { display: flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px 0 6px; font-size: 12px; font-weight: 600; color: #3D5A7A; cursor: default; user-select: none; -webkit-user-select: none; outline: none; }
+.nb-fav-h:hover, .nb-fav-h:focus-visible { background: #EAF1F8; }
+.nb-fav-h svg { width: 14px; height: 14px; flex: none; color: #D99A00; }
+.nb-fav-h .nb-caret svg { width: 12px; height: 12px; color: inherit; }
+.nb-frow { display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px 0 22px; cursor: default; white-space: nowrap; user-select: none; -webkit-user-select: none; }
+.nb-frow:hover { background: #EAF1F8; }
+.nb-frow.is-cur .nb-lbl { font-weight: 600; }
+.nb-frow.is-gone { color: #8A9BB0; }
+.nb-frow.is-gone .nb-lbl { text-decoration: line-through; }
+.nb-frow svg { width: 16px; height: 16px; flex: none; }
 .nb-row input { font: inherit; color: #12355B; flex: 1; min-width: 0; height: 20px; border: 1px solid #12355B; border-radius: 2px; padding: 0 4px; background: #fff; }
 #nb-rec { padding: 6px 10px; font-size: 12px; color: #5A3A00; background: #FFF1D1; border-bottom: 1px solid #E0C27A; }
 #nb-rec span { display: block; margin-bottom: 5px; }
@@ -64,6 +80,7 @@ dialog.nb-dlg p[role=status] { color: #12355B; font-size: 13px; min-height: 1.3e
 #nb-menu[hidden] { display: none; }
 #nb-menu button { display: block; width: 100%; text-align: left; border: 0; background: none; font: inherit; color: inherit; padding: 6px 14px; cursor: pointer; }
 #nb-menu button:hover, #nb-menu button:focus-visible { background: #EAF1F8; outline: none; }
+#nb-menu button:disabled { color: #9AA8B8; cursor: default; background: none; }
 #nb-menu hr { border: 0; border-top: 1px solid #CFDBE8; margin: 4px 0; }
 dialog.nb-dlg { width: min(460px, calc(100vw - 48px)); padding: 16px 18px; border: 1.5px solid var(--ink); border-radius: 3px; box-shadow: 4px 6px 0 var(--shadow); background: #fff; color: #1c2b3a; font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif; }
 dialog.nb-dlg::backdrop { background: rgba(18, 53, 91, .35); }

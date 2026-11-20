@@ -93,6 +93,7 @@ document.addEventListener('selectionchange', () => {
 function styleUI() {
   const s = getSelection(); if (!s.rangeCount) return; let n = s.anchorNode; if (n && n.nodeType !== 1) n = n.parentElement;
   if (!n || !doc.contains(n) || n.closest('.fig')) return;
+  mmUI(n);
   const box = $('#s-block'), first = box.options[0], b = n.closest('dt,dd,h1,h2,h3,h4,pre,p,li,td,th');
   let v = '', label = 'Style';
   if (b && doc.contains(b)) {
@@ -395,7 +396,7 @@ doc.addEventListener('drop', async e => {
   if (dragInside) { dragInside = false; return; }
   e.preventDefault(); const dt = e.dataTransfer; if (!dt) return;
   const f = dt.files && dt.files[0];
-  if (f) { if (/\.html?$/i.test(f.name)) { if (!(await gate('open the dropped document'))) return; handle = null; NB.detach(); load(await f.text(), f.name); } return; }
+  if (f) { if (/\.html?$/i.test(f.name)) { if (!(await gate('open the dropped document'))) return; handle = null; NB.detach(); load(await withPictures(await f.text()), f.name); } return; }
   const t = dt.getData('text/plain'); if (!t) return;
   const r = document.caretRangeFromPoint && document.caretRangeFromPoint(e.clientX, e.clientY);
   if (r && doc.contains(r.startContainer)) { const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
@@ -1616,7 +1617,7 @@ doc.addEventListener('click', e => {
 doc.addEventListener('mouseover', e => { const a = e.target.closest && e.target.closest('a[href]'); if (a && doc.contains(a) && !a.hasAttribute('title')) { a.setAttribute('title', a.getAttribute('href') + '  (Ctrl or Cmd + click to open)'); a.dataset.edTitle = '1'; } });
 doc.addEventListener('mouseout', e => { const a = e.target.closest && e.target.closest('a[data-ed-title]'); if (a) { a.removeAttribute('title'); delete a.dataset.edTitle; } });
 doc.addEventListener('pointerdown', e => {
-  const g = e.target.closest('.dg, .fig'); dgSelect(g || null); if (g) { deactivate(); e.preventDefault(); return; }
+  const g = e.target.closest('.dg, .fig') || pictureAt(e.target); dgSelect(g || null); if (g) { deactivate(); e.preventDefault(); return; }
   const b = e.target.closest('.wb-board'); if (!b) { deactivate(); return; }
   if (editing && editing.contains(e.target)) return;
   endEdit(); activate(b);
@@ -1631,7 +1632,7 @@ doc.addEventListener('pointerdown', e => {
   select(it); startDrag(e, it); e.preventDefault();
 });
 doc.addEventListener('dblclick', e => {
-  const g = e.target.closest('.dg, .fig'); if (g) { e.preventDefault(); openDiagram(g); return; } const b = e.target.closest('.wb-board'); if (!b || editing) return; const it = itemAt(e.target, b); if (it && !it.dataset.conn) startEdit(it); });
+  const g = e.target.closest('.dg, .fig') || pictureAt(e.target); if (g) { e.preventDefault(); openDiagram(g); return; } const b = e.target.closest('.wb-board'); if (!b || editing) return; const it = itemAt(e.target, b); if (it && !it.dataset.conn) startEdit(it); });
 function startDrag(e, it) {
   const r = R(it), sx = e.clientX, sy = e.clientY, sc = scale(); let moved = false;
   const mv = ev => {
@@ -1742,8 +1743,8 @@ function cellArrow(c, down) {
    A diagram is stored in the document as <div class="dg" data-drawio="draw.io XML">inline SVG</div>.
    Editing opens the diagram editor (vendor/diagram-editor.html, base64 in #de-src) in an iframe overlay
    and talks to it with the embed messages: de:ready, de:init, de:save, de:cancel, de:dirty. */
-const DE = { frame: null, ready: false, pending: null, target: null, open: false, src: null };
-let dgSel = null;
+const DE = { frame: null, ready: false, pending: null, target: null, open: false, src: null, queue: [], jobs: new Map(), seq: 0 };
+let dgSel = null, mmSel = null;
 function deSource() {
   if (DE.src) return DE.src;
   const bin = atob($('#de-src').textContent.trim()), u = new Uint8Array(bin.length);
@@ -1761,22 +1762,36 @@ function dgTitle(fig) {
 }
 function openDiagram(fig) {
   if (DE.open) return;
+  /* a picture or a Mermaid definition from elsewhere is converted first; if nothing in it is recognised it is left as it is */
+  const conv = fig && !fig.matches('.dg, .fig') ? drawingToDrawio(fig) : null;
+  if (conv && conv.error) { alert(conv.error); return; }
   deactivate(); dgSelect(null);
   DE.target = fig || null; DE.open = true;
   const board = fig && fig.querySelector('.wb-board');
-  const xml = !fig ? '' : board ? boardToDrawio(board) : (fig.getAttribute('data-drawio') || '');
-  const msg = { type: 'de:init', xml, title: dgTitle(fig), mode: 'blueprint' };
-  $('#de-overlay').hidden = false; document.documentElement.classList.add('de-open');
+  const xml = !fig ? '' : conv ? conv.xml : board ? boardToDrawio(board) : (fig.getAttribute('data-drawio') || '');
+  const msg = { type: 'de:init', xml, title: conv ? conv.name : dgTitle(fig), mode: 'blueprint' };
+  $('#de-overlay').classList.remove('de-quiet'); $('#de-overlay').hidden = false; document.documentElement.classList.add('de-open');
   deFrame();
   if (DE.ready) DE.frame.contentWindow.postMessage(msg, '*'); else DE.pending = msg;
 }
+/* Ask the diagram editor for the picture of a diagram without opening it (its de:render message). Gives the answer, or null. */
+function deRender(xml, title) {
+  return new Promise(res => {
+    const id = 'r' + (++DE.seq), msg = { type: 'de:render', xml, title, id }, o = $('#de-overlay'); DE.jobs.set(id, v => { deQuiet(); res(v); });
+    if (o.hidden) { o.classList.add('de-quiet'); o.hidden = false; }   // the diagram editor measures text, so it must be laid out, but it is not shown
+    deFrame();
+    if (DE.ready) DE.frame.contentWindow.postMessage(msg, '*'); else DE.queue.push(msg);
+    setTimeout(() => { const j = DE.jobs.get(id); if (j) { DE.jobs.delete(id); j(null); } }, 20000);
+  });
+}
+function deQuiet() { const o = $('#de-overlay'); if (!DE.jobs.size && o.classList.contains('de-quiet')) { o.classList.remove('de-quiet'); if (!DE.open) o.hidden = true; } }
 function closeDiagram() { DE.open = false; DE.target = null; $('#de-overlay').hidden = true; document.documentElement.classList.remove('de-open'); }
 function dgApply(m) {
   if (typeof m.svg !== 'string' || !/^\s*<svg[\s>]/i.test(m.svg)) { alert('The diagram editor returned no picture; the document was not changed.'); return; }
   const tmp = document.createElement('div'); tmp.innerHTML = m.svg; const svg = tmp.querySelector('svg'); if (!svg) return;
   sanitize(tmp); cardify(tmp);
   let fig = DE.target && doc.contains(DE.target) ? DE.target : null;
-  if (fig && !fig.classList.contains('dg')) { const n = document.createElement('div'); n.className = 'dg'; fig.replaceWith(n); fig = n; } // a page diagram, now converted
+  if (fig && !fig.classList.contains('dg')) { clearTimeout(timer); histSnap(); const n = document.createElement('div'); n.className = 'dg'; fig.replaceWith(n); fig = n; mmSel = null; } // a page diagram, picture or Mermaid definition, now converted
   if (!fig) {
     fig = document.createElement('div'); fig.className = 'dg';
     placeBlock(fig);
@@ -1790,12 +1805,22 @@ function dgApply(m) {
 window.addEventListener('message', e => {
   if (!DE.frame || e.source !== DE.frame.contentWindow) return;
   const m = e.data; if (!m || typeof m !== 'object') return;
-  if (m.type === 'de:ready') { DE.ready = true; if (DE.pending) { DE.frame.contentWindow.postMessage(DE.pending, '*'); DE.pending = null; } }
+  if (m.type === 'de:ready') { DE.ready = true; DE.queue.splice(0).forEach(q => DE.frame.contentWindow.postMessage(q, '*')); if (DE.pending) { DE.frame.contentWindow.postMessage(DE.pending, '*'); DE.pending = null; } }
+  else if (m.type === 'de:rendered') { const j = DE.jobs.get(m.id); if (j) { DE.jobs.delete(m.id); j(m.error ? null : m); } }
   else if (m.type === 'de:save' && DE.open) { dgApply(m); closeDiagram(); }
   else if (m.type === 'de:cancel' && DE.open) closeDiagram();
 });
-function dgSelect(f) { $$('.ed-dsel', doc).forEach(n => n.classList.remove('ed-dsel')); dgSel = f; if (f) f.classList.add('ed-dsel'); $('#gbar').hidden = !f; chromeHeight(); }
-function dgDelete() { if (!dgSel || !confirm('Delete this diagram?')) return; const f = dgSel; dgSelect(null); const cap = f.nextElementSibling; f.remove(); if (cap && cap.classList.contains('cap') && /^Figure\.\s*Caption$/.test(cap.textContent.trim())) cap.remove(); touch(); }
+function dgSelect(f) { $$('.ed-dsel', doc).forEach(n => n.classList.remove('ed-dsel')); dgSel = f; if (f) f.classList.add('ed-dsel'); gbarUI(); }
+/* The bar under the toolbar: for a selected diagram, Edit and Delete; for a selected picture from elsewhere, or with the
+   cursor in a Mermaid definition, the offer to make it a diagram. */
+function gbarUI() {
+  const f = dgSel, pic = !!f && !f.matches('.dg, .fig'), mm = !f && mmSel && doc.contains(mmSel) ? mmSel : null, bar = $('#gbar'), was = bar.hidden;
+  bar.hidden = !(f || mm); $('b', bar).textContent = pic ? 'Picture' : mm ? 'Mermaid definition' : 'Diagram';
+  $('[data-a="dgedit"]').hidden = !f || pic; $('[data-a="dgconv"]').hidden = !(pic || mm); $('[data-a="dgdel"]').hidden = !f; $('[data-a="dgdel"]').textContent = pic ? 'Delete picture' : 'Delete diagram';
+  if (was !== bar.hidden) chromeHeight();
+}
+function mmUI(n) { const b = dgSel ? null : mmBlock(n); if (b !== mmSel) { mmSel = b; gbarUI(); } }
+function dgDelete() { if (!dgSel || !confirm(dgSel.matches('.dg, .fig') ? 'Delete this diagram?' : 'Delete this picture?')) return; const f = dgSel; dgSelect(null); const cap = f.nextElementSibling; f.remove(); if (cap && cap.classList.contains('cap') && /^Figure\.\s*Caption$/.test(cap.textContent.trim())) cap.remove(); touch(); }
 
 /*CONVERT*/
 /* ---------- load and save ---------- */
@@ -1886,6 +1911,7 @@ function load(text, name) {
   $$('section', m).forEach(s => s.replaceWith(...s.childNodes));
   $$('h2', m).forEach(h => { const f = h.firstChild; if (f && f.nodeType === 3) f.nodeValue = f.nodeValue.replace(/^\s*\d+\.\s+/, ''); h.removeAttribute('id'); });
   deactivate(); doc.innerHTML = m.innerHTML.trim(); prep(); histReset(); fname = name || fname; dirty = false; status(); scrollTo(0, 0);
+  if (prepNote) { $('#savedmsg').textContent = prepNote; $('#savedmsg').removeAttribute('title'); $('#savedbar').hidden = false; prepNote = ''; chromeHeight(); }
 }
 function download(html) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([html], { type: 'text/html' })); a.download = fname; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
 const TYPES_HTML = [{ description: 'HTML document', accept: { 'text/html': ['.html', '.htm'] } }];
@@ -1894,7 +1920,7 @@ const TYPES_HTML = [{ description: 'HTML document', accept: { 'text/html': ['.ht
    open, the dialogs start in that document's folder. */
 function pickerOpts(o) { o.id = 'fine-line-documents'; o.types = TYPES_HTML; if (handle) o.startIn = handle; delete o.noStart; return o; }
 /* After a save, a line names the file. A page is told the file's name only, never its folder, so the name is all it can show. */
-function savedLine(name, dl) { $('#savedmsg').textContent = (dl ? 'File saved to the browser\'s downloads folder: ' : 'File saved: ') + name; $('#savedbar').hidden = false; chromeHeight(); }
+function savedLine(name, dl) { $('#savedmsg').title = 'The browser tells the editor the file name only, not the folder it was saved in'; $('#savedmsg').textContent = (dl ? 'File saved to the browser\'s downloads folder: ' : 'File saved: ') + name; $('#savedbar').hidden = false; chromeHeight(); }
 function afterSave(dl) {
   dirty = false; status(); try { localStorage.removeItem(PRODUCT.key + '-draft'); } catch (e) { }
   savedLine(fname, dl);
@@ -1925,13 +1951,34 @@ async function saveClean() {
 async function open() {
   if (!(await gate('open another document'))) return;
   try {
-    if (window.showOpenFilePicker) { const [h] = await showOpenFilePicker(pickerOpts({})); const f = await h.getFile(); handle = h; NB.detach(); load(await f.text(), f.name); return; }
+    if (window.showOpenFilePicker) { const [h] = await showOpenFilePicker(pickerOpts({})); const f = await h.getFile(); handle = h; NB.detach(); load(await withPictures(await f.text()), f.name); return; }
   } catch (e) { if (e.name === 'AbortError') return; }
   $('#file').click();
 }
-$('#file').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; handle = null; NB.detach(); load(await f.text(), f.name); e.target.value = ''; });
+$('#file').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; handle = null; NB.detach(); load(await withPictures(await f.text()), f.name); e.target.value = ''; });
 async function fresh() { if (!(await gate('start a new document'))) return; blank(); NB.newPage(); }
 function blank() { handle = null; fname = 'document.html'; idxDepth = 1; repSet(null); $('#cleanbar').hidden = true; $('#savedbar').hidden = true; setNotes(false); remoteImgs = 0; deactivate(); doc.innerHTML = STARTER; prep(); histReset(); dirty = false; status(); }
+
+/* ---------- emoji ----------
+   The Emoji button opens a small list under it; a click puts that emoji in where the cursor is, in place of any selected
+   text. The list is src/emoji.default.json, built into both programs. A saved page holds each one as its HTML code,
+   like every other character outside plain ASCII. */
+const emojiBox = $('#emoji'), emojiBtn = $('[data-a="emoji"]');
+function emojiShow(on) {
+  if (on && !emojiBox.firstChild) EMOJI.forEach((e, i) => { const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'menuitem'); b.dataset.i = i; b.textContent = e.char; b.title = e.tooltip; b.setAttribute('aria-label', e.tooltip); emojiBox.appendChild(b); });
+  emojiBox.hidden = !on; emojiBtn.classList.toggle('on', on); emojiBtn.setAttribute('aria-expanded', on ? 'true' : 'false');
+  if (on) { const r = emojiBtn.getBoundingClientRect(); emojiBox.style.left = Math.max(8, Math.min(r.left, innerWidth - emojiBox.offsetWidth - 8)) + 'px'; emojiBox.style.top = (r.bottom + 4) + 'px'; }
+}
+function emojiInsert(ch) {
+  restore(); const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode)) return;
+  if (blockOf(s.anchorNode)) codeInsert(ch); else document.execCommand('insertText', false, ch);
+  live(); touch();
+}
+emojiBox.addEventListener('mousedown', e => e.preventDefault());
+emojiBox.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const ch = EMOJI[+b.dataset.i].char; emojiShow(false); clearTimeout(timer); histSnap(); emojiInsert(ch); repSet('Emoji ' + ch, () => emojiInsert(ch)); });
+document.addEventListener('mousedown', e => { if (!emojiBox.hidden && !e.target.closest('#emoji, [data-a="emoji"]')) emojiShow(false); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !emojiBox.hidden) { e.stopPropagation(); emojiShow(false); restore(); } }, true);
+window.addEventListener('resize', () => { if (!emojiBox.hidden) emojiShow(false); });
 
 /* ---------- toolbar wiring ---------- */
 const ACT = {
@@ -1939,7 +1986,7 @@ const ACT = {
   bold: () => cmd('bold'), italic: () => cmd('italic'), ul: () => { if (qaList('ul')) return; const l = listAt(); if (l && l.matches('ul.check')) { l.classList.remove('check'); if (!l.getAttribute('class')) l.removeAttribute('class'); touch(); } else { listCmd('insertUnorderedList'); touch(); } }, ol: () => { if (qaList('ol')) return; listCmd('insertOrderedList'); touch(); }, check: checkList, ldense: listDense, indent: () => { listShift(1); }, outdent: () => { listShift(-1); },
   undo: () => histGo(-1), redo: () => histGo(1),
   code: addCode, clear: clearFormat, paint: () => { if (paint) paintStop(); else paintPick(false); }, note: addNote, margin: toggleNotes, who: () => initials(true), saveclean: saveClean, repeat: repeatLast, nosaved: () => { $('#savedbar').hidden = true; chromeHeight(); }, noclean: () => { $('#cleanbar').hidden = true; chromeHeight(); },
-  inspect: inspect, link: editLink, olstart: editStart, index: () => { idxDepth = idxDepth % 3 + 1; rebuild(); touch(); }, // steps 1, 2, 3 and back to 1
+  inspect: inspect, emoji: () => emojiShow(emojiBox.hidden), link: editLink, olstart: editStart, index: () => { idxDepth = idxDepth % 3 + 1; rebuild(); touch(); }, // steps 1, 2, 3 and back to 1
   tag: () => { // put in by hand: the browser's own insert drops the tag in a list item and adds styles to it elsewhere
     restore(); const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode)) return; const none = !s.toString(), t = s.toString() || 'ID', r = s.getRangeAt(0), blk = x => (x.nodeType === 1 ? x : x.parentElement).closest(TEXT_BLOCK);
     if (blk(r.startContainer) !== blk(r.endContainer) || /[\r\n]/.test(t)) { document.execCommand('insertHTML', false, '<span class="id">' + esc(t) + '</span>&nbsp;'); touch(); return; }
@@ -1949,13 +1996,13 @@ const ACT = {
     s.removeAllRanges(); s.addRange(c); lastRange = c.cloneRange(); touch();
   },
   table: addTable, stage: addStage, mr: () => tableOp('mr'), md: () => tableOp('md'), split: () => tableOp('split'), qa: addQa, 'r+': () => tableOp('r+'), ra: () => tableOp('ra'), cl: () => tableOp('cl'), 'r-': () => tableOp('r-'), 'c+': () => tableOp('c+'), 'c-': () => tableOp('c-'), dense: () => tableOp('dense'), hr: () => tableOp('hr'), sr: () => tableOp('sr'), hc: () => tableOp('hc'), sc: () => tableOp('sc'),
-  diagram: () => openDiagram(null), dgedit: () => dgSel && openDiagram(dgSel), dgdel: dgDelete, help: () => { const h = $('#help'); if (h.open) h.close(); else { helpInfo(); h.showModal(); } },
+  diagram: () => openDiagram(null), dgedit: () => dgSel && openDiagram(dgSel), dgconv: () => { const t = dgSel || mmSel; if (t) openDiagram(t); }, dgdel: dgDelete, help: () => { const h = $('#help'); if (h.open) h.close(); else { helpInfo(); h.showModal(); } },
   connect: () => setMode(mode === 'connect' ? null : 'connect'), del: remove, dup: duplicate, deldiagram: deleteDiagram,
   restore: () => { try { const d = localStorage.getItem(PRODUCT.key + '-draft'); if (d) { const t = new DOMParser().parseFromString('<main>' + d + '</main>', 'text/html'); sanitize(t.querySelector('main')); cardify(t.querySelector('main')); doc.innerHTML = t.querySelector('main').innerHTML; prep(); histReset(); dirty = true; status(); } } catch (e) { } $('#draft').hidden = true; chromeHeight(); },
   dismiss: () => { try { localStorage.removeItem(PRODUCT.key + '-draft'); } catch (e) { } $('#draft').hidden = true; chromeHeight(); },
 };
 $('#chrome').addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
-$('#chrome').addEventListener('click', e => { const b = e.target.closest('button[data-a]'); if (!b) return; const a = b.dataset.a; if (!board && !['undo', 'redo', 'help', 'inspect', 'new', 'open', 'save', 'saveas', 'who', 'saveclean', 'noclean', 'nosaved', 'margin', 'paint', 'repeat', 'nbwarnx'].includes(a)) { clearTimeout(timer); histSnap(); } if (cellSel && (a === 'bold' || a === 'italic' || a === 'clear')) cellFormat(a); else if (ACT[a]) { ACT[a](); if (!board) repNote(a); } else if (ADD[a] && board) ADD[a](); });
+$('#chrome').addEventListener('click', e => { const b = e.target.closest('button[data-a]'); if (!b) return; const a = b.dataset.a; if (!board && !['undo', 'redo', 'help', 'inspect', 'new', 'open', 'save', 'saveas', 'who', 'saveclean', 'noclean', 'nosaved', 'margin', 'paint', 'repeat', 'nbwarnx', 'emoji'].includes(a)) { clearTimeout(timer); histSnap(); } if (cellSel && (a === 'bold' || a === 'italic' || a === 'clear')) cellFormat(a); else if (ACT[a]) { ACT[a](); if (!board) repNote(a); } else if (ADD[a] && board) ADD[a](); });
 $('#help').addEventListener('click', e => { if (e.target === e.currentTarget || e.target.closest('[data-a="helpclose"]')) e.currentTarget.close(); });
 $('#s-block').addEventListener('change', e => { const v = e.target.value; if (v) { const label = e.target.selectedOptions[0].textContent; clearTimeout(timer); histSnap(); setBlock(v); repSet(label, () => setBlock(v)); } styleUI(); });
 $('#s-fmt').addEventListener('change', e => { const v = e.target.value; e.target.value = ''; if (v && FMT[v]) { clearTimeout(timer); histSnap(); restore(); const want = !fmtOn(v); setFmt(v, want); repSet(FMT[v][0] + (want ? '' : ' off'), () => setFmt(v, want)); } styleUI(); });
@@ -1986,5 +2033,5 @@ doc.innerHTML = STARTER; prep(); histReset(); status(); whoUI(); chromeHeight();
 try { const d = localStorage.getItem(PRODUCT.key + '-draft'); if (d && d !== clean().innerHTML) $('#draft').hidden = false; } catch (e) { }
 chromeHeight();
 NB.init();
-window.FLE = { load, build, NB, ADD, activate, connect, select, newDiagram, DE, boardToDrawio, get board() { return board; } };
+window.FLE = { load, build, NB, ADD, activate, connect, select, newDiagram, DE, boardToDrawio, svgToDrawio, mermaidToDrawio, withPictures, unbundle, get board() { return board; } };
 })();

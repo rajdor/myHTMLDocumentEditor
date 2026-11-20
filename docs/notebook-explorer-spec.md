@@ -27,8 +27,8 @@ Special folders are created on first use. They stay reachable when hidden files 
 - All files are listed. Pages the editor can open are normal; all others are greyed.
 - Hidden (dot) files are shown, with a show or hide option.
 - Each row has a tooltip with its path within the notebook.
-- Favourites are listed at the top.
-- Sort by name, modified date, size or type. One setting for the whole notebook, with an optional override per folder.
+- Favourites are pages, not folders. They are listed in a block at the top, which can be folded away. A star on each page row adds or removes it. A favourite follows its page when it is renamed or moved in the editor and is dropped when the page goes to the trash. One whose page has gone outside the editor stays listed, greyed.
+- Sort by name, modified date, size or type, ascending or descending, from a button at the top of the panel. Folders always come first. One setting for the whole notebook, with an optional override per folder from the folder's right-click menu. Setting the notebook sort clears every folder override.
 - A refresh button. The tree also rescans when the window regains focus.
 - A landing screen explains the folder pick. The folder is remembered and reconfirmed with one click per session. A clear screen is shown when access is refused.
 

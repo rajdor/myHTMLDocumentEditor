@@ -62,7 +62,7 @@ function nodePath(n) { const p = []; while (n && n !== doc) { const par = n.pare
 function fromPath(p) { let n = doc; for (const i of p) { n = n.childNodes[i]; if (!n) return null; } return n; }
 function selState() { const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode)) return null; const r = s.getRangeAt(0), p = nodePath(r.startContainer); return p ? { p, o: r.startOffset } : null; }
 function histSnap() {
-  rebuild(); const h = doc.innerHTML.replace(/ ?\bed-(dsel|cell)\b/g, '').replace(/ class=""/g, ''); if (hpos >= 0 && hist[hpos].h === h) { hist[hpos].sel = selState() || hist[hpos].sel; return; }
+  rebuild(); const h = doc.innerHTML.replace(/ ?\bed-(dsel|cell)\b/g, '').replace(/ data-ed-ct(="")?/g, '').replace(/ class=""/g, ''); if (hpos >= 0 && hist[hpos].h === h) { hist[hpos].sel = selState() || hist[hpos].sel; return; }
   hist = hist.slice(0, hpos + 1); hist.push({ h, sel: selState() }); if (hist.length > 80) hist.shift(); hpos = hist.length - 1;
 }
 function histReset() { hist = []; hpos = -1; histSnap(); }
@@ -93,7 +93,7 @@ document.addEventListener('selectionchange', () => {
 function styleUI() {
   const s = getSelection(); if (!s.rangeCount) return; let n = s.anchorNode; if (n && n.nodeType !== 1) n = n.parentElement;
   if (!n || !doc.contains(n) || n.closest('.fig')) return;
-  mmUI(n);
+  mmUI(n); if (showBlocks) ctSelect(ctAt(n));
   const box = $('#s-block'), first = box.options[0], b = n.closest('dt,dd,h1,h2,h3,h4,pre,p,li,td,th');
   let v = '', label = 'Style';
   if (b && doc.contains(b)) {
@@ -491,6 +491,7 @@ const REP = {
   ldense: () => { const l = listTop(), w = !!(l && l.classList.contains('dense')); return [w ? 'Compact list' : 'Compact list off', () => { restore(); const t = listTop(); if (t && t.classList.contains('dense') !== w) listDense(); }]; },
   indent: () => ['Indent', () => listShift(1)], outdent: () => ['Outdent', () => listShift(-1)],
   clear: () => ['Clear format', clearFormat],
+  ctunwrap: () => ['Unwrap container', () => { live(); const c = lastRange ? ctAt(lastRange.startContainer) : null; if (c) ctUnwrap(c); }],
   note: () => ['Note', addNote], code: () => ['Insert code block', addCode], qa: () => { const w = !!qaItem(lastRange); return [w ? 'Q&A question' : 'Q&A off', () => { live(); if (!!qaItem(lastRange) !== w) addQa(); }]; },
   tag: () => ['ID tag', () => { restore(); let n = getSelection().anchorNode; if (n && n.nodeType !== 1) n = n.parentElement; if (n && n.closest('span.id')) return; ACT.tag(); }],
   ...Object.fromEntries([['hr', 'Header row'], ['sr', 'Sub header row'], ['hc', 'Header column'], ['sc', 'Sub header column']].map(([a, name]) => [a, () => { live(); const c = cell(), w = !!(c && tHeaderState(c)[a]); return [w ? name : name + ' off', () => { if (!inTable()) return; if (!!tHeaderState(cell())[a] !== w) tableOp(a); }]; }])),
@@ -863,7 +864,7 @@ function clipClean(box) {
   $$('.note-body', box).forEach(n => n.replaceWith(...n.childNodes));
   $$('.note', box).forEach(n => n.replaceWith(...n.childNodes));
   $$('[class]', box).forEach(n => { n.classList.remove('ed-sel', 'ed-selc', 'ed-active', 'ed-from', 'ed-connect', 'ed-dsel', 'ed-cell', 'note-date', 'note-who'); if (!n.getAttribute('class')) n.removeAttribute('class'); });
-  $$('[contenteditable]', box).forEach(n => n.removeAttribute('contenteditable'));
+  $$('[contenteditable]', box).forEach(n => { n.removeAttribute('contenteditable'); }); $$('[data-ed-ct]', box).forEach(n => n.removeAttribute('data-ed-ct'));
   $$('.dg, .fig', box).forEach(n => n.removeAttribute('title'));
   $$('a[data-ed-title]', box).forEach(a => { a.removeAttribute('title'); a.removeAttribute('data-ed-title'); });
   $$('[id]', box).forEach(n => { if (!n.closest('.fig,.dg,svg')) n.removeAttribute('id'); });
@@ -1822,6 +1823,57 @@ function gbarUI() {
 function mmUI(n) { const b = dgSel ? null : mmBlock(n); if (b !== mmSel) { mmSel = b; gbarUI(); } }
 function dgDelete() { if (!dgSel || !confirm(dgSel.matches('.dg, .fig') ? 'Delete this diagram?' : 'Delete this picture?')) return; const f = dgSel; dgSelect(null); const cap = f.nextElementSibling; f.remove(); if (cap && cap.classList.contains('cap') && /^Figure\.\s*Caption$/.test(cap.textContent.trim())) cap.remove(); touch(); }
 
+/* ---------- show blocks ----------
+   A view for pages from elsewhere. Their layout containers (div and the like) come in without the style sheet that set
+   them out, so what was in columns or cards can sit oddly in the one column the editor has. Show blocks outlines every
+   block and labels each container with its tag and class. With it on, the bar under the toolbar works on the container
+   the cursor is in, or the one clicked: Unwrap keeps what is in it and takes the container away, Delete takes both, and
+   Delete empty containers clears every container that has nothing in it. The view is not part of the document: it is
+   not saved, and the mark on the chosen container (data-ed-ct) is taken out of saves, copies and the history. */
+const CT_TAGS = 'div,section,article,aside,header,footer,main,figure,figcaption,blockquote,address,center,details,summary,fieldset,hgroup';
+const CT_OWN = '.dg,.fig,.box,.note,.note-body,.note-log,.note-entries,.tw,.ed-handle';   // the editor's own blocks are not containers
+let showBlocks = false, ctSel = null;
+function isCt(e) { return !!e && e.nodeType === 1 && e !== doc && doc.contains(e) && e.matches(CT_TAGS) && !e.matches(CT_OWN) && !e.closest('.dg,.fig,svg,.note-log'); }
+function ctAt(n) { if (n && n.nodeType !== 1) n = n.parentElement; while (n && n !== doc && !isCt(n)) n = n.parentElement; return n && n !== doc ? n : null; }
+function ctEmpties() { const all = $$(CT_TAGS, doc).filter(c => isCt(c) && !hasContent(c)); return all.filter(c => !all.includes(ctAt(c.parentNode))); }   // the outermost of each nest
+function ctName(c) { const k = (c.getAttribute('class') || '').trim().split(/\s+/).filter(Boolean); return c.tagName.toLowerCase() + (k.length ? '.' + k.join('.') : ''); }
+function ctSelect(c) { $$('[data-ed-ct]', doc).forEach(n => { if (n !== c) n.removeAttribute('data-ed-ct'); }); ctSel = c && showBlocks && isCt(c) ? c : null; if (ctSel && !ctSel.hasAttribute('data-ed-ct')) ctSel.setAttribute('data-ed-ct', ''); ctUI(); }
+function ctUI() {
+  const bar = $('#cbar'), was = bar.hidden; bar.hidden = !showBlocks;
+  if (showBlocks) {
+    const n = ctEmpties().length, total = $$(CT_TAGS, doc).filter(isCt).length;
+    $('#ctname').textContent = ctSel ? ctName(ctSel) + (hasContent(ctSel) ? '' : ' (empty)') : total ? 'Click in a container to choose it. ' + total + ' in this document.' : 'No containers in this document.';
+    $('[data-a="ctunwrap"]').disabled = !ctSel; $('[data-a="ctdel"]').disabled = !ctSel;
+    const e = $('[data-a="ctempty"]'); e.disabled = !n; e.textContent = 'Delete empty containers (' + n + ')';
+  }
+  if (was !== bar.hidden) chromeHeight();
+}
+function blocksSet(on) {
+  showBlocks = !!on; doc.classList.toggle('ed-blocks', showBlocks); const b = $('[data-a="blocks"]'); b.classList.toggle('on', showBlocks); b.setAttribute('aria-pressed', String(showBlocks));
+  ctSelect(showBlocks && lastRange && doc.contains(lastRange.startContainer) ? ctAt(lastRange.startContainer) : null);
+}
+function caretIn(n) { if (!n || !doc.contains(n)) return; const r = document.createRange(); r.selectNodeContents(n); r.collapse(true); const s = getSelection(); s.removeAllRanges(); s.addRange(r); lastRange = r.cloneRange(); }
+/* Unwrap: what is in the container takes its place. Blocks stay as they are; loose words and other inline content
+   become paragraphs, so nothing is left as bare text in the page. Inside a table cell or a list item, which hold lines
+   and not paragraphs, the content stays inline and a line break keeps it apart from what follows. */
+function ctUnwrap(c) {
+  if (!isCt(c)) return; const par = c.parentNode, blocky = par === doc || isCt(par) || holds(par), isBlk = n => n.nodeType === 1 && n.matches(BLOCKS + ',' + CT_TAGS + ',hr');
+  const kids = [...c.childNodes].filter(n => n.nodeType !== 8), out = []; let run = null;
+  if (blocky) { for (const k of kids) { if (isBlk(k)) { run = null; out.push(k); } else if (!run && k.nodeType === 3 && !k.data.trim()) continue; else { if (!run) { run = document.createElement('p'); out.push(run); } run.appendChild(k); } } }
+  else { out.push(...kids); const last = kids[kids.length - 1], nx = c.nextSibling; if (hasContent(c) && nx && !(last && isBlk(last)) && !(nx.nodeType === 1 && isBlk(nx)) && nx.nodeName !== 'BR') out.push(document.createElement('br')); }
+  const keep = out.filter(n => !(n.nodeName === 'P' && !n.attributes.length && !hasContent(n) && blocky && !kids.includes(n)));
+  c.replaceWith(...keep); if (!doc.firstChild) doc.innerHTML = '<p><br></p>';
+  const at = keep.find(n => n.nodeType === 1 || (n.nodeType === 3 && n.data.trim())) || par; caretIn(doc.contains(at) ? at : doc.firstChild);
+  ctSelect(ctAt(doc.contains(at) ? at : par)); touch(); styleUI();
+}
+function ctDelete(c) {
+  if (!isCt(c) || (hasContent(c) && !confirm('Delete this container and everything in it?'))) return;
+  const nx = c.nextElementSibling || c.previousElementSibling || c.parentNode; c.remove(); if (!doc.firstChild) doc.innerHTML = '<p><br></p>';
+  const at = doc.contains(nx) && nx !== doc ? nx : doc.firstChild; caretIn(at); ctSelect(ctAt(at)); touch(); styleUI();
+}
+function ctDeleteEmpties() { const e = ctEmpties(); if (!e.length) return; e.forEach(c => c.remove()); if (!doc.firstChild) doc.innerHTML = '<p><br></p>'; if (!lastRange || !doc.contains(lastRange.startContainer)) caretIn(doc.firstChild); ctSelect(lastRange ? ctAt(lastRange.startContainer) : null); touch(); styleUI(); }
+doc.addEventListener('click', e => { if (showBlocks && !board) { const c = ctAt(e.target); if (c !== ctSel) ctSelect(c); } });
+
 /*CONVERT*/
 /* ---------- load and save ---------- */
 function clean() {
@@ -1829,6 +1881,7 @@ function clean() {
   $$('.ed-handle', c).forEach(n => n.remove());
   $$('.ed-sel,.ed-selc,.ed-active,.ed-from,.ed-connect,.ed-cell', c).forEach(n => n.classList.remove('ed-sel', 'ed-selc', 'ed-active', 'ed-from', 'ed-connect', 'ed-cell'));
   $$('[contenteditable]', c).forEach(n => n.removeAttribute('contenteditable'));
+  $$('[data-ed-ct]', c).forEach(n => n.removeAttribute('data-ed-ct'));
   $$('.fig', c).forEach(f => { f.style.height = ''; f.style.maxWidth = ''; if (f.firstElementChild) f.firstElementChild.style.transform = ''; if (!f.getAttribute('style')) f.removeAttribute('style'); });
   $$('.dg, .fig', c).forEach(n => { n.classList.remove('ed-dsel'); n.removeAttribute('title'); });
   $$('.note-log[open]', c).forEach(d => d.removeAttribute('open'));
@@ -1866,11 +1919,11 @@ function build(opts) {
   const nav = indexHtml(c, idxDepth);
   return '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<meta name="generator" content="fine-line-editor">\n<title>' + asciiHtml(esc(h1 ? h1.textContent.trim() : 'Document')) + '</title>\n<style>' + docCss() + '</style>\n</head>\n<body>\n<div class="page">\n<nav aria-label="Index" data-depth="' + idxDepth + '"><b>Index</b><ol>' + asciiHtml(nav) + '</ol></nav>\n<main' + (showNotes && !(opts && opts.noNotes) ? ' class="notes-on"' : '') + '>\n' + asciiHtml(c.innerHTML) + '\n</main>\n</div>\n' + ($('.fig', c) ? '<script>' + FIT_JS + '<\/script>\n' : '') + '</body>\n</html>\n';
 }
-function prepView() { dgSel = null; $('#gbar').hidden = true; $$('.dg, .fig', doc).forEach(f => f.classList.remove('ed-dsel')); fit(); chromeHeight(); }
+function prepView() { dgSel = null; ctSelect(null); $('#gbar').hidden = true; $$('.dg, .fig', doc).forEach(f => f.classList.remove('ed-dsel')); fit(); chromeHeight(); }
 function prep() {
   inspectClose(); cellSel = null; doc.classList.remove('ed-cells'); $$('.ed-cell', doc).forEach(x => x.classList.remove('ed-cell'));
   checkFix(doc); migrateGrids(doc);
-  dgSelect(null); $$('.dg, .fig', doc).forEach(f => { f.setAttribute('contenteditable', 'false'); f.setAttribute('title', 'Double-click to edit'); });
+  dgSelect(null); ctSelect(null); $$('.dg, .fig', doc).forEach(f => { f.setAttribute('contenteditable', 'false'); f.setAttribute('title', 'Double-click to edit'); });
   $$('.wb-board', doc).forEach(b => { if (!b.parentNode.classList.contains('fig')) { const f = el('<div class="fig"></div>'); b.replaceWith(f); f.appendChild(b); } });
   $$('.fig', doc).forEach(f => f.setAttribute('contenteditable', 'false'));
   $$('.wb-board > *', doc).forEach(e => { if (!e.id && !e.dataset.conn) e.id = uid(); });
@@ -1986,6 +2039,7 @@ const ACT = {
   bold: () => cmd('bold'), italic: () => cmd('italic'), ul: () => { if (qaList('ul')) return; const l = listAt(); if (l && l.matches('ul.check')) { l.classList.remove('check'); if (!l.getAttribute('class')) l.removeAttribute('class'); touch(); } else { listCmd('insertUnorderedList'); touch(); } }, ol: () => { if (qaList('ol')) return; listCmd('insertOrderedList'); touch(); }, check: checkList, ldense: listDense, indent: () => { listShift(1); }, outdent: () => { listShift(-1); },
   undo: () => histGo(-1), redo: () => histGo(1),
   code: addCode, clear: clearFormat, paint: () => { if (paint) paintStop(); else paintPick(false); }, note: addNote, margin: toggleNotes, who: () => initials(true), saveclean: saveClean, repeat: repeatLast, nosaved: () => { $('#savedbar').hidden = true; chromeHeight(); }, noclean: () => { $('#cleanbar').hidden = true; chromeHeight(); },
+  blocks: () => blocksSet(!showBlocks), ctunwrap: () => ctUnwrap(ctSel), ctdel: () => ctDelete(ctSel), ctempty: ctDeleteEmpties,
   inspect: inspect, emoji: () => emojiShow(emojiBox.hidden), link: editLink, olstart: editStart, index: () => { idxDepth = idxDepth % 3 + 1; rebuild(); touch(); }, // steps 1, 2, 3 and back to 1
   tag: () => { // put in by hand: the browser's own insert drops the tag in a list item and adds styles to it elsewhere
     restore(); const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode)) return; const none = !s.toString(), t = s.toString() || 'ID', r = s.getRangeAt(0), blk = x => (x.nodeType === 1 ? x : x.parentElement).closest(TEXT_BLOCK);
@@ -2002,7 +2056,7 @@ const ACT = {
   dismiss: () => { try { localStorage.removeItem(PRODUCT.key + '-draft'); } catch (e) { } $('#draft').hidden = true; chromeHeight(); },
 };
 $('#chrome').addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
-$('#chrome').addEventListener('click', e => { const b = e.target.closest('button[data-a]'); if (!b) return; const a = b.dataset.a; if (!board && !['undo', 'redo', 'help', 'inspect', 'new', 'open', 'save', 'saveas', 'who', 'saveclean', 'noclean', 'nosaved', 'margin', 'paint', 'repeat', 'nbwarnx', 'emoji'].includes(a)) { clearTimeout(timer); histSnap(); } if (cellSel && (a === 'bold' || a === 'italic' || a === 'clear')) cellFormat(a); else if (ACT[a]) { ACT[a](); if (!board) repNote(a); } else if (ADD[a] && board) ADD[a](); });
+$('#chrome').addEventListener('click', e => { const b = e.target.closest('button[data-a]'); if (!b) return; const a = b.dataset.a; if (!board && !['undo', 'redo', 'help', 'inspect', 'new', 'open', 'save', 'saveas', 'who', 'saveclean', 'noclean', 'nosaved', 'margin', 'paint', 'repeat', 'nbwarnx', 'emoji', 'blocks'].includes(a)) { clearTimeout(timer); histSnap(); } if (cellSel && (a === 'bold' || a === 'italic' || a === 'clear')) cellFormat(a); else if (ACT[a]) { ACT[a](); if (!board) repNote(a); } else if (ADD[a] && board) ADD[a](); });
 $('#help').addEventListener('click', e => { if (e.target === e.currentTarget || e.target.closest('[data-a="helpclose"]')) e.currentTarget.close(); });
 $('#s-block').addEventListener('change', e => { const v = e.target.value; if (v) { const label = e.target.selectedOptions[0].textContent; clearTimeout(timer); histSnap(); setBlock(v); repSet(label, () => setBlock(v)); } styleUI(); });
 $('#s-fmt').addEventListener('change', e => { const v = e.target.value; e.target.value = ''; if (v && FMT[v]) { clearTimeout(timer); histSnap(); restore(); const want = !fmtOn(v); setFmt(v, want); repSet(FMT[v][0] + (want ? '' : ' off'), () => setFmt(v, want)); } styleUI(); });

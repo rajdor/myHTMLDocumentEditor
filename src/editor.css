@@ -60,10 +60,10 @@ html.de-open, html.de-open body { overflow: hidden; }
 .fig .wb-board > * { cursor: pointer !important; }
 .dg:hover, .fig:hover { outline: 1px dashed #B8C2CE; outline-offset: 4px; }
 .ed-dsel { outline: 2px solid #1F5FA8; outline-offset: 4px; }
-#chrome #tbar { gap: 6px 4px; padding-left: 8px; padding-right: 8px; }
-#tbar .grp { gap: 2px; padding-right: 4px; border-right: 1px solid #CFDBE8; }
+#chrome #tbar { gap: 6px 3px; padding-left: 8px; padding-right: 8px; }
+#tbar .grp { gap: 2px; padding-right: 3px; border-right: 1px solid #CFDBE8; }
 #tbar .grp:has(+ #status) { border-right: 0; padding-right: 0; }
-#tbar .tops { display: flex; gap: 2px; margin-left: 4px; }
+#tbar .tops { display: flex; gap: 1px; margin-left: 3px; }
 #tbar .tops[hidden] { display: none; }
 #s-boxtype { width: 62px; }
 #chrome button.ic.lv em { position: absolute; right: -1px; bottom: 2px; font: 600 9px/1 system-ui, sans-serif; font-style: normal; color: #fff; background: #12355B; border-radius: 6px; padding: 1px 3px; }
@@ -124,3 +124,29 @@ html.de-open, html.de-open body { overflow: hidden; }
 :is(#linkdlg,#numdlg) button.go { background: var(--ink); color: #fff; border-color: var(--ink); }
 /* the diagram editor at work for a picture, laid out but not shown */
 #de-overlay.de-quiet { visibility: hidden; pointer-events: none; }
+
+/* Show blocks: a view of the blocks in the page and of the containers a page from elsewhere came with. */
+#cbar { background: #FDF6EC; border-top: 1px solid #E9D3B0; }
+#cbar #ctname { font: 12px/1.3 ui-monospace, Menlo, Consolas, monospace; color: #7A4A0A; margin-right: 6px; max-width: 46%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#chrome .row button:disabled { opacity: .4; cursor: default; }
+#doc.ed-blocks :is(p,h1,h2,h3,h4,ul,ol,dl,pre,table) { outline: 1px dotted #B8C2CE; outline-offset: 1px; }
+#doc.ed-blocks :is(div,section,article,aside,header,footer,main,figure,figcaption,blockquote,address,center,details,summary,fieldset,hgroup):not(.dg,.fig,.box,.note,.note-body,.note-log,.note-entries,.tw,.ed-handle):not(:is(.dg,.fig,svg,.note-log) *) { outline: 1px dashed #B45309; outline-offset: -1px; position: relative; padding: 20px 6px 6px; margin-top: 4px; margin-bottom: 4px; min-height: 32px; }
+#doc.ed-blocks :is(div,section,article,aside,header,footer,main,figure,figcaption,blockquote,address,center,details,summary,fieldset,hgroup):not(.dg,.fig,.box,.note,.note-body,.note-log,.note-entries,.tw,.ed-handle):not(:is(.dg,.fig,svg,.note-log) *)::before { content: var(--ct, 'container') ' ' attr(class); position: absolute; left: 0; top: 0; max-width: 100%; box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 10px/15px ui-monospace, Menlo, Consolas, monospace; letter-spacing: 0; text-transform: none; color: #fff; background: #B45309; padding: 0 6px; border-radius: 0 0 4px 0; pointer-events: none; user-select: none; }
+#doc.ed-blocks div { --ct: 'div'; }
+#doc.ed-blocks section { --ct: 'section'; }
+#doc.ed-blocks article { --ct: 'article'; }
+#doc.ed-blocks aside { --ct: 'aside'; }
+#doc.ed-blocks header { --ct: 'header'; }
+#doc.ed-blocks footer { --ct: 'footer'; }
+#doc.ed-blocks main { --ct: 'main'; }
+#doc.ed-blocks figure { --ct: 'figure'; }
+#doc.ed-blocks figcaption { --ct: 'figcaption'; }
+#doc.ed-blocks blockquote { --ct: 'blockquote'; }
+#doc.ed-blocks address { --ct: 'address'; }
+#doc.ed-blocks center { --ct: 'center'; }
+#doc.ed-blocks details { --ct: 'details'; }
+#doc.ed-blocks summary { --ct: 'summary'; }
+#doc.ed-blocks fieldset { --ct: 'fieldset'; }
+#doc.ed-blocks hgroup { --ct: 'hgroup'; }
+#doc.ed-blocks [data-ed-ct][data-ed-ct][data-ed-ct] { outline: 2px solid #1F5FA8; background-color: rgba(31, 95, 168, .06); }
+#doc.ed-blocks [data-ed-ct][data-ed-ct][data-ed-ct]::before { background: #1F5FA8; }

@@ -6,7 +6,7 @@ import { ROOT, check, same } from './harness.mjs';
 
 const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 const editor = read('fine-line-editor.html'), notebook = read('fine-line-notebook.html');
-const NB_ONLY = { 'the explorer panel': 'id="nb"', 'the explorer tab': 'id="nb-tab"', 'the explorer styles': '#nb-tree', 'the explorer code': 'showDirectoryPicker', 'the Markdown converter': 'marked v', 'the Notebook help card': '<span>Notebook</span>' };
+const NB_ONLY = { 'the explorer panel': 'id="nb"', 'the explorer tab': 'id="nb-tab"', 'the explorer styles': '#nb-tree', 'the explorer code': 'showDirectoryPicker', 'the Markdown converter': 'marked v', 'the Notebook help card': '<span>Notebook</span>', 'the text editor': 'id="cm-src"', 'CodeMirror': 'CodeMirror ', 'the Markdown writer': 'TurndownService', 'the Markdown profile': 'not available in a Markdown file' };
 
 for (const [what, mark] of Object.entries(NB_ONLY)) {
   check('the editor does not contain ' + what, !editor.includes(mark));

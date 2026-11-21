@@ -276,6 +276,16 @@ function notesUI() {
 }
 function toggleNotes() { setNotes(!showNotes); fit(); dirty = true; status(); }
 function addCode() { const pre = mk('pre'); insertBlock(pre); caret(pre); styleUI(); }
+/* Divider: a horizontal rule where the cursor is, like the other inserts. Typing carries on in the block after it, or in a new
+   empty paragraph when what follows is not one to type in. In a Markdown file it is saved as ---. */
+function addDivider() {
+  const b = curBlock(), was = b ? b.nextElementSibling : null, hr = document.createElement('hr'); placeBlock(hr);
+  let nx = hr.nextElementSibling;
+  /* the cursor's own block, or the second half of it, follows the line: carry on there; otherwise an empty paragraph, made if need be */
+  const own = nx && nx !== was && nx.matches('p,h2,h3,h4'), empty = nx && nx.matches('p') && !nx.className && !hasContent(nx);
+  if (!own && !empty) { nx = mk('p'); hr.after(nx); }
+  caret(nx); touch(); styleUI();
+}
 const INLINE = 'b,strong,i,em,u,s,strike,del,ins,span,a,font,code,kbd,samp,tt,var,mark,small,big,sub,sup';
 /* Clear format. With the cursor only, or when a block is wholly selected, the block loses its inline formatting and
    becomes a plain paragraph (list items and cells stay what they are). With part of a block selected, only the selected
@@ -492,7 +502,7 @@ const REP = {
   indent: () => ['Indent', () => listShift(1)], outdent: () => ['Outdent', () => listShift(-1)],
   clear: () => ['Clear format', clearFormat],
   ctunwrap: () => ['Unwrap container', () => { live(); const c = lastRange ? ctAt(lastRange.startContainer) : null; if (c) ctUnwrap(c); }],
-  note: () => ['Note', addNote], code: () => ['Insert code block', addCode], qa: () => { const w = !!qaItem(lastRange); return [w ? 'Q&A question' : 'Q&A off', () => { live(); if (!!qaItem(lastRange) !== w) addQa(); }]; },
+  note: () => ['Note', addNote], code: () => ['Insert code block', addCode], divider: () => ['Divider', () => { restore(); addDivider(); }], qa: () => { const w = !!qaItem(lastRange); return [w ? 'Q&A question' : 'Q&A off', () => { live(); if (!!qaItem(lastRange) !== w) addQa(); }]; },
   tag: () => ['ID tag', () => { restore(); let n = getSelection().anchorNode; if (n && n.nodeType !== 1) n = n.parentElement; if (n && n.closest('span.id')) return; ACT.tag(); }],
   ...Object.fromEntries([['hr', 'Header row'], ['sr', 'Sub header row'], ['hc', 'Header column'], ['sc', 'Sub header column']].map(([a, name]) => [a, () => { live(); const c = cell(), w = !!(c && tHeaderState(c)[a]); return [w ? name : name + ' off', () => { if (!inTable()) return; if (!!tHeaderState(cell())[a] !== w) tableOp(a); }]; }])),
   dense: () => { live(); const c = cell(), w = !!(c && c.closest('table').classList.contains('dense')); return [w ? 'Compact table' : 'Compact table off', () => { if (!inTable()) return; if (cell().closest('table').classList.contains('dense') !== w) tableOp('dense'); }]; }
@@ -856,8 +866,8 @@ doc.addEventListener('click', e => {
    reduced to the structure this editor has (headings, paragraphs, lists, tables, bold, italics, links, code) and takes
    the document's style. Everything pasted goes through the same cleaning as Open. Code blocks take plain text. */
 const CLIP_INLINE = /^(B|STRONG|I|EM|U|S|SUB|SUP|A|CODE|SPAN|MARK)$/, CLIP_WRAP = /^(UL|OL|DL|TABLE|THEAD|TBODY|TFOOT|TR)$/;
-const BLOCKS = 'p,h1,h2,h3,h4,ul,ol,dl,pre,table,div,details';
-const hasContent = n => !!(n.textContent.replace(/[\s ​]+/g, '') || (n.querySelector && n.querySelector('img,svg,.dg,.fig,table')));
+const BLOCKS = 'p,h1,h2,h3,h4,ul,ol,dl,pre,table,div,details,hr';
+const hasContent = n => !!(n.textContent.replace(/[\s ​]+/g, '') || n.nodeName === 'HR' || (n.querySelector && n.querySelector('img,svg,.dg,.fig,table,hr')));
 function clipClean(box) {
   $$('.ed-handle', box).forEach(n => n.remove());
   $$('.note-log', box).forEach(n => n.remove());
@@ -895,7 +905,7 @@ function onCopy(e, cut) {
 document.addEventListener('copy', e => onCopy(e, false));
 document.addEventListener('cut', e => onCopy(e, true));
 const SAFE_HREF = /^\s*(https?:|mailto:|tel:|#)/i;
-const KEEP = { P: [], BR: [], B: [], STRONG: [], I: [], EM: [], SUB: [], SUP: [], S: [], A: ['href'], CODE: [], PRE: [], H2: [], H3: [], H4: [], UL: [], OL: ['start'], LI: [], TABLE: [], THEAD: [], TBODY: [], TFOOT: [], TR: [], TH: ['colspan', 'rowspan'], TD: ['colspan', 'rowspan'], IMG: ['src', 'alt', 'width', 'height'] };
+const KEEP = { P: [], BR: [], HR: [], B: [], STRONG: [], I: [], EM: [], SUB: [], SUP: [], S: [], A: ['href'], CODE: [], PRE: [], H2: [], H3: [], H4: [], UL: [], OL: ['start'], LI: [], TABLE: [], THEAD: [], TBODY: [], TFOOT: [], TR: [], TH: ['colspan', 'rowspan'], TD: ['colspan', 'rowspan'], IMG: ['src', 'alt', 'width', 'height'] };
 const BOXY = /^(DIV|SECTION|ARTICLE|HEADER|FOOTER|MAIN|ASIDE|FIGURE|FIGCAPTION|BLOCKQUOTE|ADDRESS|CENTER|NAV|DT|DD|DETAILS|SUMMARY)$/;
 function rename(e, tag) { const n = document.createElement(tag); n.append(...e.childNodes); e.replaceWith(n); return n; }
 /* Bold from another program counts only where it is emphasis. A header cell, heading, Q&A question or box label has its
@@ -908,7 +918,7 @@ function unbold(root, all) {
 }
 /* HTML from another program: keep the structure, drop its styling. */
 function foreign(box) {
-  $$('style,title,svg,math,head,xml,colgroup,col,caption,hr,noscript,template,canvas,map,area', box).forEach(n => n.remove());
+  $$('style,title,svg,math,head,xml,colgroup,col,caption,noscript,template,canvas,map,area', box).forEach(n => n.remove());
   $$('*', box).reverse().forEach(e => {
     if (!e.parentNode || e.closest('a.link-card')) return;
     const st = (e.getAttribute('style') || '').replace(/\s+/g, '').toLowerCase();
@@ -1658,6 +1668,7 @@ function startResize(e) {
 document.addEventListener('keydown', e => {
   const k = e.key, ctrl = e.ctrlKey || e.metaKey;
   if (DE.open) return;
+  if (NB.textOn && NB.textOn()) { if (ctrl && k.toLowerCase() === 's') { e.preventDefault(); save(e.shiftKey); } else if (ctrl && k.toLowerCase() === 'o') { e.preventDefault(); open(); } return; }   // the text editor has the keys; only Save and Open are the program's
   if (ctrl && !e.altKey && !board && !e.target.closest('#chrome') && (k.toLowerCase() === 'z' || k.toLowerCase() === 'y')) { e.preventDefault(); histGo(k.toLowerCase() === 'y' || e.shiftKey ? 1 : -1); return; }
   if (dgSel && !ctrl && !e.target.closest('#chrome')) { if (k === 'Delete' || k === 'Backspace') { e.preventDefault(); dgDelete(); return; } if (k === 'Enter') { e.preventDefault(); openDiagram(dgSel); return; } if (k === 'Escape') { dgSelect(null); return; } }
   if (ctrl && k.toLowerCase() === 's') { e.preventDefault(); save(e.shiftKey); return; }
@@ -1955,14 +1966,14 @@ function cardify(root) {
   $$('style', root).forEach(e => { const v = e.textContent, w = noUrl(v); if (w !== v) { e.textContent = w; n++; } });
   return n;
 }
-function load(text, name) {
+function load(text, name, opt) {
   const d = new DOMParser().parseFromString(text, 'text/html'), m = d.querySelector('main') || d.body;
   const nv = d.querySelector('nav[data-depth]'); idxDepth = nv ? Math.min(3, Math.max(1, parseInt(nv.dataset.depth, 10) || 1)) : 1; setNotes(m.matches('main.notes-on'));
   $$('script,nav,link,meta', m).forEach(n => n.remove());
   $$('style,title', m).filter(n => !n.closest('svg')).forEach(n => n.remove());
   sanitize(m); remoteImgs = cardify(m); upgradeNotes(m); repSet(null); $('#cleanbar').hidden = true; $('#savedbar').hidden = true;
   $$('section', m).forEach(s => s.replaceWith(...s.childNodes));
-  $$('h2', m).forEach(h => { const f = h.firstChild; if (f && f.nodeType === 3) f.nodeValue = f.nodeValue.replace(/^\s*\d+\.\s+/, ''); h.removeAttribute('id'); });
+  $$('h2', m).forEach(h => { const f = h.firstChild; if (f && f.nodeType === 3 && !(opt && opt.asTyped)) f.nodeValue = f.nodeValue.replace(/^\s*\d+\.\s+/, ''); h.removeAttribute('id'); });   // a page numbers its H2s itself; a Markdown file keeps a number that was typed
   deactivate(); doc.innerHTML = m.innerHTML.trim(); prep(); histReset(); fname = name || fname; dirty = false; status(); scrollTo(0, 0);
   if (prepNote) { $('#savedmsg').textContent = prepNote; $('#savedmsg').removeAttribute('title'); $('#savedbar').hidden = false; prepNote = ''; chromeHeight(); }
 }
@@ -1982,7 +1993,7 @@ function afterSave(dl) {
 /* In a notebook, New, Open and switching pages offer Save, Discard or Cancel; outside one they ask as before. */
 async function gate(what) { return NB.on() ? NB.leave() : keepGoing(what); }
 async function save(as) {
-  if (!as && NB.page()) return NB.savePage();
+  if (NB.page() && (!as || NB.foreign())) return NB.savePage(as);   // a notebook page; or a Markdown or text file, which is saved as itself even by Save as
   let dl = false; deactivate(); const html = build();
   try {
     if (window.showSaveFilePicker) {
@@ -2038,7 +2049,7 @@ const ACT = {
   new: fresh, open: open, nbwarnx: () => NB.warnOff(), save: () => save(false), saveas: () => save(true),
   bold: () => cmd('bold'), italic: () => cmd('italic'), ul: () => { if (qaList('ul')) return; const l = listAt(); if (l && l.matches('ul.check')) { l.classList.remove('check'); if (!l.getAttribute('class')) l.removeAttribute('class'); touch(); } else { listCmd('insertUnorderedList'); touch(); } }, ol: () => { if (qaList('ol')) return; listCmd('insertOrderedList'); touch(); }, check: checkList, ldense: listDense, indent: () => { listShift(1); }, outdent: () => { listShift(-1); },
   undo: () => histGo(-1), redo: () => histGo(1),
-  code: addCode, clear: clearFormat, paint: () => { if (paint) paintStop(); else paintPick(false); }, note: addNote, margin: toggleNotes, who: () => initials(true), saveclean: saveClean, repeat: repeatLast, nosaved: () => { $('#savedbar').hidden = true; chromeHeight(); }, noclean: () => { $('#cleanbar').hidden = true; chromeHeight(); },
+  code: addCode, divider: addDivider, clear: clearFormat, paint: () => { if (paint) paintStop(); else paintPick(false); }, note: addNote, margin: toggleNotes, who: () => initials(true), saveclean: saveClean, repeat: repeatLast, nosaved: () => { $('#savedbar').hidden = true; chromeHeight(); }, noclean: () => { $('#cleanbar').hidden = true; chromeHeight(); },
   blocks: () => blocksSet(!showBlocks), ctunwrap: () => ctUnwrap(ctSel), ctdel: () => ctDelete(ctSel), ctempty: ctDeleteEmpties,
   inspect: inspect, emoji: () => emojiShow(emojiBox.hidden), link: editLink, olstart: editStart, index: () => { idxDepth = idxDepth % 3 + 1; rebuild(); touch(); }, // steps 1, 2, 3 and back to 1
   tag: () => { // put in by hand: the browser's own insert drops the tag in a list item and adds styles to it elsewhere

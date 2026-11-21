@@ -37,6 +37,7 @@ Everything outside `src/notebook/` is shared, so a change to the editor reaches 
 - Fonts: Instrument Sans for body text, JetBrains Mono for code blocks and ID tags, Architects Daughter for the title and headings. All three are embedded in the editor. A saved document always carries the body and heading fonts, and carries the italic font and the code font only when it uses them, which roughly halves a page that uses neither. Nothing is downloaded and a document looks the same on any computer.
 - Index: built from the headings, showing 1, 2 or 3 levels (H2 to H4). The setting is saved with the document; the default is 1.
 - Notebook (`fine-line-notebook.html` only): an explorer panel, opened from the tab at the left edge, turns a folder on disk into a notebook, with folders as sections and files as pages. Open, create, rename, move and delete pages from the tree; deleted items go to a `.trash` folder in the notebook and can be restored. Markdown and plain text files open as an import (Markdown is converted by marked) and save as a new HTML page beside the original. Chrome and Edge save straight into the folder; other browsers get a read-only tree and Save downloads. History: a full copy of a page goes into `.history/<page path>/` each time a save replaces an earlier version, and every 5 minutes while the page has unsaved changes; nothing is written when nothing changed. Page history restores a copy, and unsaved work is offered back when the page is next opened. A status line shows the size of history and trash and opens a clean-up dialog. `.notebook/settings.json` can set `historyMinutes` (default 5), `historyNoteMB` (50) and `historyWarnMB` (100). See `docs/notebook-explorer-spec.md` for the full design and what is still to be built. Sort the notebook by name, modified date, size or type, with a folder's own sort where wanted, and star pages as favourites, listed at the top of the explorer.
+- Other kinds of file in a notebook (`fine-line-notebook.html` only): the notebook picks an editor by the file's name and every file is saved as what it is. Markdown (`.md`) opens in the WYSIWYG editor, shown plain and not in the page style, and is saved back as Markdown, with the toolbar commands for things Markdown cannot hold switched off; a Source button switches to the Markdown source and back. Plain text, data and code files (JSON, XML, CSS, JavaScript, TypeScript, Python, SQL, YAML, shell, PowerShell, batch, TOML, ini and plain text) open in a text editor with colouring by extension, line numbers, find and replace, and are saved in the encoding and with the line endings they had. Both have history and the unsaved-changes prompt, like pages.
 - Files: Save writes one self-contained HTML document that opens in any browser and re-opens here. A saved document holds only plain ASCII bytes: any other character (a dash, an arrow, an accented letter) is written as its HTML code, so the page looks the same but cannot be garbled by a program that reads the file with the wrong encoding. After a save, a line names the file saved; a dot on the Save button means there are unsaved changes. New and Open ask first when there are unsaved changes.
 - Older formats: documents made with grids open as tables, and a diagram drawn directly on the page converts to a diagram-editor diagram when you double-click it.
 - Toolbar: Phosphor icons grouped as File, History, Text, Lists, Insert, Notes, Index and Table, with the initials button and Help at the far right; hover for a description. Insert table and Insert fancy table are always shown; the row, column, header, merge and compact buttons appear to their right only while the cursor is in a table.
@@ -65,7 +66,12 @@ The SVG is what readers see: it scales, prints and keeps its text searchable. Th
 | `src/app.js` | Shared editor behaviour |
 | `src/convert-drawings.js` | Converts pictures (sketch-style and plain SVG) and Mermaid flowchart definitions from other pages to draw.io for the diagram editor, and keeps the look of SVG pictures when a page from elsewhere is opened |
 | `src/convert.js` | Converts diagrams drawn directly on the page (the older format) to draw.io for the diagram editor |
-| `src/notebook/notebook.js` | Notebook only: the explorer (folder tree, page files, trash, import) |
+| `src/notebook/notebook.js` | Notebook only: the explorer (folder tree, files, trash, history, import) and the choice of editor for each kind of file |
+| `src/editors/text.js` | Notebook only: the text editor for plain text, data and code files (CodeMirror 6), with the handling of encodings and line endings |
+| `src/editors/markdown.js` | Notebook only: Markdown files in the WYSIWYG editor: reading (marked), writing (Turndown) and the Markdown profile of the toolbar |
+| `src/editors/codemirror-entry.mjs` | What the text editor uses from CodeMirror, and the batch-file language |
+| `vendor/codemirror.js` | CodeMirror 6 as one script, built by `build-codemirror.js`; carried inside the notebook and started the first time a text file is opened |
+| `build-codemirror.js` | Builds `vendor/codemirror.js`; run only after changing `src/editors/codemirror-entry.mjs` or updating CodeMirror |
 | `src/notebook/notebook.html` | Notebook only: the explorer's markup, in named parts |
 | `src/notebook/notebook.css` | Notebook only: the explorer's styles |
 | `src/notebook/none.js` | Editor only: the few notebook questions the shared code asks, all answered no |
@@ -76,7 +82,7 @@ The SVG is what readers see: it scales, prints and keeps its text searchable. Th
 | `vendor/diagram-editor.html` | The built diagram editor from myDiagramer, embedded at build time |
 | `docs/notebook-explorer-spec.md` | Specification for the notebook explorer |
 | `spike/folder-spike.html` | Throwaway page used to confirm folder access from a `file://` page |
-| `build.js` | Builds `fine-line-editor.html` and `fine-line-notebook.html` |
+| `build.js` | Builds `fine-line-editor.html` and `fine-line-notebook.html`; each program's `editors` list says which editors in `src/editors/` it carries |
 | `test/` | Regression tests: `t*.mjs` are shared and run against both programs, `nb*.mjs` run against the notebook only; `test/files/legacy-document.html` is a small document in the older format used by t4 and t7; `test/mockfs.mjs` is an in-memory folder for the notebook tests |
 | `CHANGELOG.md` | What changed in each version |
 
@@ -134,9 +140,13 @@ Tests use puppeteer-core with a local Chrome or Edge (or `CHROME_PATH`). `npm te
 | t40-convert-drawings | Pictures and Mermaid from other pages: a plain SVG picture keeps its page's colours and converts to shapes with attached lines, a sketch-style picture converts in the Sketch style, a Mermaid flowchart is parsed and laid out, Cancel changes nothing, anything not recognised says so and stays |
 | t41-box-diagrams | Diagrams drawn with HTML boxes: each discrete diagram in a page becomes a diagram on opening, labels, colours, corners, dashes, ellipses and one-sided borders are read, prose, tables and cards of running text are left alone, and a bundled page is unpacked without running its scripts |
 | t42-show-blocks | Show blocks: outlines and labels, the bar and its counts, choosing a container by cursor or click, Unwrap in the page, in a table cell and for words alone, Delete with and without asking, Delete empty containers, undo, nothing saved or copied, one toolbar row |
+| t43-paste-drawio | Paste from draw.io XML in the built-in diagram editor: the Edit menu command, shapes and lines from clipboard text with a code fence, Done places the diagram, the box to paste into when the clipboard cannot be read |
+| t44-divider | Divider: at the end, start and middle of a paragraph, typing after it, its look, Repeat, undo, Delete, saved and reopened, pasted from another program, from a table cell; in the notebook, saved as --- in a Markdown file |
 | nb1-notebook | Notebook explorer on an in-memory folder (`test/mockfs.mjs`): the tab and panel, landing, tree order, hidden files and settings, opening pages, the Save, Discard, Cancel prompt, first save named from the H1, name clashes, rename, new folder, move by drag, trash and restore, changes made outside the editor, import of other HTML, Markdown and plain text, copy where the browser cannot move, read-only mode, the notice for browsers without folder access |
 | nb2-history | Notebook history: no copy when nothing changed, copies of unsaved work, the replaced version kept on save, no duplicates, Page history and Restore, recovery of unsaved work, history following rename and move, status line and thresholds, clean-up of history and trash, none of it in read-only mode |
 | nb3-sort-favourites | Notebook sort and favourites: the four sorts and both directions, a folder's own sort, the notebook sort clearing it, favourite pages by star and by menu, the block above the tree, favourites following rename and move, greyed when the page has gone, all kept in the settings |
+| nb4-text-editor | The text editor: which files open, CodeMirror started only on first use and allowed by the security policy, a language for each extension, batch files, editing and saving in place with line endings kept, Ctrl+S, undo and redo, the unsaved prompt, wrap and find, byte order marks, UTF-16, read-only for files that are not text, mixed line endings, very large files, history and restore, changes on disk, rename, trash, Markdown as text, back to the page editor |
+| nb5-markdown | Markdown files: 20 kinds of content come back exactly as they were, other ways of writing are saved in one style, the Markdown profile of the toolbar, the plain look, the Source button (the file as on disk while unchanged, changes carried both ways, saving from the source), editing with the toolbar, tables and checklists, what cannot be kept is named before saving, the unsaved prompt, pages again, byte order mark and CRLF, files that are not UTF-8, history and restore, Save as |
 
 ## Updating the diagram editor
 
@@ -152,6 +162,9 @@ The editor is built with these open-source components. Their copyright notices a
 | [Instrument Sans](https://github.com/Instrument/instrument-sans) | Body text | SIL Open Font License 1.1 |
 | [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) | Code blocks and ID tags | SIL Open Font License 1.1 |
 | Architects Daughter, Kimberly Geswein | Title and headings | SIL Open Font License 1.1 |
+| [marked](https://marked.js.org) | Reading Markdown files in the notebook | MIT |
+| [Turndown](https://github.com/mixmark-io/turndown) | Writing Markdown files in the notebook | MIT |
+| [CodeMirror 6](https://codemirror.net) | The notebook's text editor | MIT |
 | [Rough.js](https://roughjs.com) | Hand-drawn rendering in the diagram editor | MIT |
 | [mxGraph](https://github.com/jgraph/mxgraph) line routing (ported) | Line routing in the diagram editor | Apache License 2.0 |
 

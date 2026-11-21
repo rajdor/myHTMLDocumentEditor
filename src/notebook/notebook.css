@@ -95,3 +95,58 @@ dialog.nb-dlg button:hover { background: #EAF1F8; }
 dialog.nb-dlg button[value=save], dialog.nb-dlg button[value=rename] { background: #12355B; border-color: #12355B; color: #fff; }
 #nbwarn { background: #FFF1D1; border-top: 1px solid #8A5300; }
 @media print { #nb, #nb-menu, #nb-tab { display: none !important; } html.nb-open body { padding-left: 0; } }
+
+/* editors for other kinds of file: the text editor fills the page area; a bar under the toolbar names the file */
+#xbar { background: #F6F9FC; border-top: 1px solid #CFDBE8; }
+#xbar #x-name { font-weight: 600; margin-left: 2px; }
+#xbar #x-info { color: #5A6B7D; margin-left: 8px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#xbar button[hidden], #xbar .sep[hidden] { display: none; }
+#tx { position: fixed; z-index: 30; left: 0; right: 0; top: var(--ch, 0px); bottom: 0; background: #fff; box-sizing: border-box; }
+#tx[hidden] { display: none; }
+html.nb-open #tx { left: var(--nbw, 260px); }
+html:not(.nb-open) #tx { padding-left: 26px; }
+#tx .cm-editor { height: 100%; }
+html.tx-mode .page { display: none; }
+html.tx-mode #tbar .grp:not([aria-label="File"]):not([aria-label="History"]), html.tx-mode #tbar [data-a="repeat"], html.tx-mode #tbar [data-a="who"], html.tx-mode #gbar, html.tx-mode #cbar, html.tx-mode #cleanbar { display: none; }
+/* Markdown files are shown plain, with nothing of the Fine Line look: the document styles (doc.css) are undone inside the
+   page for a Markdown file and a neutral reading style is used, in the system fonts. Only the editor's own working marks
+   (cell selection, the caret, the find bar) stay. Nothing here is saved; a Markdown file has no styles of its own. */
+html.md-mode .page { display: block; max-width: 860px; margin: 0 auto; padding: 32px 40px 96px; }
+html.md-mode .page > nav { display: none; }
+:where(html.md-mode) #doc, :where(html.md-mode) #doc :where(*), :where(html.md-mode) #doc :where(*)::before, :where(html.md-mode) #doc :where(*)::after { all: revert; }
+html.md-mode #doc { display: block; min-height: 60vh; outline: none; font: 16px/1.6 system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #1F2328; background: #fff; overflow-wrap: break-word; }
+html.md-mode #doc > :first-child { margin-top: 0; }
+html.md-mode #doc :is(h1, h2, h3, h4) { font-weight: 600; line-height: 1.25; margin: 24px 0 16px; color: #1F2328; }
+html.md-mode #doc h1 { font-size: 2em; padding-bottom: .3em; border-bottom: 1px solid #D1D9E0; }
+html.md-mode #doc h2 { font-size: 1.5em; padding-bottom: .3em; border-bottom: 1px solid #D1D9E0; }
+html.md-mode #doc h3 { font-size: 1.25em; }
+html.md-mode #doc h4 { font-size: 1em; }
+html.md-mode #doc h4[data-md-h="5"] { font-size: .875em; }
+html.md-mode #doc h4[data-md-h="6"] { font-size: .85em; color: #59636E; }
+html.md-mode #doc :is(p, ul, ol, blockquote, pre, .tw) { margin: 0 0 16px; }
+html.md-mode #doc :is(ul, ol) { padding-left: 2em; }
+html.md-mode #doc li + li { margin-top: .25em; }
+html.md-mode #doc li > :is(ul, ol) { margin: .25em 0 0; }
+html.md-mode #doc ul.check { list-style: none; padding-left: 1.6em; }
+html.md-mode #doc ul.check > li > input[type="checkbox"] { margin: 0 .45em .2em -1.45em; vertical-align: middle; }
+html.md-mode #doc a { color: #0969DA; text-decoration: underline; text-underline-offset: .2em; }
+html.md-mode #doc :is(code, kbd) { font: .875em/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace; }
+html.md-mode #doc :not(pre) > code { padding: .2em .4em; background: #EFF1F3; border-radius: 6px; }
+html.md-mode #doc kbd { padding: .1em .4em; border: 1px solid #D1D9E0; border-bottom-width: 2px; border-radius: 6px; background: #F6F8FA; }
+html.md-mode #doc pre { font: .875em/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace; padding: 16px; background: #F6F8FA; border-radius: 6px; overflow: auto; white-space: pre; tab-size: 4; }
+html.md-mode #doc blockquote { margin-left: 0; margin-right: 0; padding: 0 1em; color: #59636E; border-left: .25em solid #D1D9E0; }
+html.md-mode #doc blockquote > :last-child { margin-bottom: 0; }
+html.md-mode #doc hr { height: .25em; margin: 24px 0; padding: 0; border: 0; background: #D1D9E0; }
+html.md-mode #doc .tw { display: block; overflow-x: auto; }
+html.md-mode #doc table { border-collapse: collapse; border-spacing: 0; }
+html.md-mode #doc :is(th, td) { padding: 6px 13px; border: 1px solid #D1D9E0; vertical-align: top; text-align: left; }
+html.md-mode #doc th { font-weight: 600; background: #F6F8FA; }
+html.md-mode #doc :is(b, strong) { font-weight: 600; }
+html.md-mode #doc mark { background: #FFF8C5; }
+html.md-mode #doc img { max-width: 100%; }
+html.md-mode #doc a.link-card { display: inline; }
+html.md-mode #doc a.link-card b { font-weight: 400; }
+html.md-mode #doc a.link-card span::before { content: " ("; } html.md-mode #doc a.link-card span::after { content: ")"; }
+html.md-mode #doc a.link-card span { color: #59636E; font-size: .9em; text-decoration: none; }
+#chrome select:disabled { opacity: .4; }
+@media print { #tx { position: static; } }

@@ -67,7 +67,7 @@ html.de-open, html.de-open body { overflow: hidden; }
 #tbar .tops[hidden] { display: none; }
 #s-boxtype { width: 62px; }
 #chrome button.ic.lv em { position: absolute; right: -1px; bottom: 2px; font: 600 9px/1 system-ui, sans-serif; font-style: normal; color: #fff; background: #12355B; border-radius: 6px; padding: 1px 3px; }
-#chrome button.ic { width: 24px; padding: 0; display: inline-flex; align-items: center; justify-content: center; position: relative; border-color: transparent; background: none; }
+#chrome button.ic { width: 23px; padding: 0; display: inline-flex; align-items: center; justify-content: center; position: relative; border-color: transparent; background: none; }
 #chrome button.ic:hover { background: #EAF1F8; border-color: #CFDBE8; }
 #chrome button.ic.on { background: #12355B; color: #fff; }
 #chrome button.ic svg { width: 18px; height: 18px; }

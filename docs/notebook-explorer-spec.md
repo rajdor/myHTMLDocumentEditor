@@ -51,8 +51,28 @@ If the current page has unsaved changes, a prompt offers: Save and switch, Disca
 |---|---|
 | Page made by the editor | Opens for editing |
 | Other HTML | Best-effort import through the existing cleaning |
-| Markdown, plain text | Import; saved as a new HTML page, original untouched |
+| Markdown (`.md`, `.markdown`) | Opens in the WYSIWYG editor with the Markdown profile; saved back as Markdown, in place. Right-click offers Open as text |
+| Plain text, data and code (JSON, XML, CSS, JavaScript, TypeScript, Python, SQL, YAML, shell, PowerShell, batch, TOML, ini, plain text) | Opens in the text editor; saved in place, in its own encoding and with its own line endings |
 | Anything else | Greyed; right-click offers Open in new browser tab |
+
+## Editors
+
+The notebook is the host: it lists the files, chooses the editor by the file's name, and does the reading, writing, history, trash and prompts for every kind of file. An editor is a module in `src/editors/`, and `build.js` names the editors each program carries. The document editor on its own carries none and opens Fine Line pages only.
+
+| Editor | Files | Saved as |
+|---|---|---|
+| Page | Pages made by the editor (`.html`) | A Fine Line page |
+| Markdown | `.md`, `.markdown` | Markdown. The page editor with a profile: commands for things Markdown cannot hold are switched off |
+| Text | Plain text, data and code | The same file: same encoding (UTF-8, with or without a byte order mark, or UTF-16), same line endings |
+
+- A Markdown file is shown plain, in the system fonts, with none of the page look. The Source button switches it between the formatted view and its source in the text editor, carrying unsaved changes; unchanged, the source is the file as it is on disk.
+- The tree shows every file by its full name, extension included.
+- A Markdown file keeps its front matter, bullet and emphasis characters, code languages and heading levels 5 and 6. Line wrapping inside a paragraph, reference-style links and HTML written in the file are not kept; the file is otherwise rewritten in one style.
+- If a Markdown file holds something Markdown cannot keep (a pasted box or diagram, HTML in the file), this is named before the save, once for each time the file is opened.
+- A file that is not UTF-8 or UTF-16 text is shown read-only by the text editor.
+- The text editor is CodeMirror 6. It is carried inside the notebook as text and started the first time a text file is opened.
+- History, the unsaved-changes prompt, rename, move and trash work for every kind of file the notebook edits. A history copy keeps the extension of its file.
+- New pages are Fine Line pages. New Markdown and text files are made outside the notebook.
 
 ## Tree operations
 

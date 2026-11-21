@@ -1,7 +1,10 @@
 // Builds two self-contained programs from one source, src/ and vendor/:
 //   fine-line-editor.html    the document editor on its own
-//   fine-line-notebook.html  the same editor with the notebook explorer (src/notebook/) and Markdown import
-// Everything outside src/notebook/ is shared, so a change there reaches both. Notebook code reaches the notebook only.
+//   fine-line-notebook.html  the same editor with the notebook explorer (src/notebook/) and the editors for other kinds of file (src/editors/)
+// Everything outside src/notebook/ and src/editors/ is shared, so a change there reaches both. Notebook code reaches the notebook only.
+// An editor is a module in src/editors/; a program carries the ones named in its `editors` list, in that order.
+//   text      plain text, data and code files, edited with CodeMirror 6 (vendor/codemirror.js, built by build-codemirror.js)
+//   markdown  Markdown files in the WYSIWYG editor, saved back as Markdown (marked to read, Turndown to write)
 //   node build.js
 // vendor/diagram-editor.html is the built diagram editor (myDiagramer). Copy in a new build of it to update.
 const fs = require('fs');
@@ -10,8 +13,8 @@ const path = require('path');
 const pkg = require('./package.json');
 // title: the browser tab. label: the name beside the version in Help. key: prefix of the program's own browser storage.
 const PRODUCTS = [
-  { id: 'editor', file: 'fine-line-editor.html', title: 'Document editor', label: 'Editor', key: 'fle', notebook: false },
-  { id: 'notebook', file: 'fine-line-notebook.html', title: 'Fine Line notebook', label: 'Fine Line notebook', key: 'fln', notebook: true },
+  { id: 'editor', file: 'fine-line-editor.html', title: 'Document editor', label: 'Editor', key: 'fle', notebook: false, editors: [] },
+  { id: 'notebook', file: 'fine-line-notebook.html', title: 'Fine Line notebook', label: 'Fine Line notebook', key: 'fln', notebook: true, editors: ['text', 'markdown'] },
 ];
 const src = (f) => fs.readFileSync(path.join(__dirname, 'src', f), 'utf8');
 
@@ -26,14 +29,18 @@ const emojiJs = JSON.stringify(emoji).replace(/[^\x00-\x7F]/g, c => '\\u' + c.ch
 const markedJs = fs.readFileSync(path.join(__dirname, 'node_modules/marked/lib/marked.umd.js'), 'utf8').replace(/\/\/# sourceMappingURL=.*\s*$/, '');
 // Notebook-only markup, in named parts; each goes where src/index.html has {{nb:name}}, followed by the white space that sat there.
 const nbParts = Object.fromEntries(src('notebook/notebook.html').split(/<!--part:([a-z]+)-->\n/).slice(1).reduce((a, x, k, all) => (k % 2 ? a : [...a, [x, all[k + 1].replace(/\n$/, '')]]), []));
-const NB_AFTER = { warn: '\n', panel: '\n', help: '\n  ' };
+const NB_AFTER = { warn: '\n', panel: '\n', help: '\n  ', code: '\n' };
+// Turndown (Markdown writing, notebook only) is included whole like marked; it defines the global `TurndownService`.
+const turndownJs = fs.readFileSync(path.join(__dirname, 'node_modules/turndown/lib/turndown.browser.umd.js'), 'utf8');
+// CodeMirror goes in as text and is started by the text editor the first time it is needed. Written so that nothing in it can end the element that holds it.
+const codeMirror = fs.readFileSync(path.join(__dirname, 'vendor', 'codemirror.js'), 'utf8').replace(/<\/script/gi, '<\\/script').replace(/<!--/g, '<\\!--');
 
 const ICON_DIR = path.join(__dirname, 'node_modules/@phosphor-icons/core/assets/regular');
 const icon = (n, fill) => fs.readFileSync(path.join(ICON_DIR, fill ? '../fill' : '', n + (fill ? '-fill' : '') + '.svg'), 'utf8').replace(/\s*xmlns="[^"]*"/, '').replace('<svg', '<svg aria-hidden="true"').trim();
 
 function build(PRODUCT) {
-const app = "'use strict';\nconst VERSION = " + JSON.stringify(pkg.version) + ", PRODUCT = " + JSON.stringify({ id: PRODUCT.id, label: PRODUCT.label, key: PRODUCT.key }) + ", EMOJI = " + emojiJs + ";\n" + (PRODUCT.notebook ? markedJs + "\n" : '')
-  + src('app.js').replace('/*CONVERT*/', () => src('convert.js') + '\n' + src('convert-drawings.js')).replace('/*NOTEBOOK*/', () => src(PRODUCT.notebook ? 'notebook/notebook.js' : 'notebook/none.js'));
+const app = "'use strict';\nconst VERSION = " + JSON.stringify(pkg.version) + ", PRODUCT = " + JSON.stringify({ id: PRODUCT.id, label: PRODUCT.label, key: PRODUCT.key }) + ", EMOJI = " + emojiJs + ";\n" + (PRODUCT.notebook ? markedJs + "\n" + turndownJs + "\n" : '')
+  + src('app.js').replace('/*CONVERT*/', () => src('convert.js') + '\n' + src('convert-drawings.js')).replace('/*NOTEBOOK*/', () => PRODUCT.notebook ? PRODUCT.editors.map(e => src('editors/' + e + '.js')).join('\n') + '\n' + src('notebook/notebook.js') : src('notebook/none.js'));
 let html = src('index.html')
   .replace('{{product}}', PRODUCT.title)
   .replace(/\{\{nb:([a-z]+)\}\}/g, (m, n) => { if (!(n in nbParts)) throw new Error('No notebook part named ' + n); return PRODUCT.notebook ? nbParts[n] + NB_AFTER[n] : ''; })
@@ -42,6 +49,7 @@ let html = src('index.html')
   .replace('/*DOC_CSS*/', () => src('doc.css').replace('/*FONT_B64*/', fontB64).replace(/\/\*FONTFILE:([@\w./-]+)\*\//g, (m, f) => fs.readFileSync(path.join(__dirname, 'node_modules', f)).toString('base64')).replace(/\/\*ICONURL:([a-z0-9-]+)\*\//g, (m, n) => 'url("data:image/svg+xml,' + encodeURIComponent(icon(n).replace(' aria-hidden="true"', ' xmlns="http://www.w3.org/2000/svg"')) + '")'))
   .replace('/*ED_CSS*/', () => src('editor.css') + (PRODUCT.notebook ? src('notebook/notebook.css') : ''))
   .replace('/*DIAGRAM_EDITOR_B64*/', () => diagramEditor.toString('base64'))
+  .replace('/*CODEMIRROR*/', () => codeMirror)
   .replace('/*ICONS*/', () => JSON.stringify(icons))
   .replace('/*APP*/', () => app.replace(/<\/script/gi, '<\\/script'));
 
@@ -49,7 +57,7 @@ let html = src('index.html')
 // so a script, event handler or javascript: link that gets into an opened document is blocked by the browser.
 const sha = (t) => "'sha256-" + crypto.createHash('sha256').update(t, 'utf8').digest('base64') + "'";
 const scripts = (h) => [...h.matchAll(/<script(\s[^>]*)?>([\s\S]*?)<\/script>/gi)].filter(m => !/type\s*=\s*["']?text\/plain/i.test(m[1] || '')).map(m => m[2]);
-const allowed = [...scripts(html), ...scripts(diagramEditor.toString('utf8'))].map(sha);
+const allowed = [...scripts(html), ...scripts(diagramEditor.toString('utf8')), ...(PRODUCT.notebook ? [codeMirror] : [])].map(sha);
 const csp = "default-src 'none'; script-src " + allowed.join(' ') + "; style-src 'unsafe-inline' data:; img-src data: blob:; font-src data:; connect-src data: blob:; frame-src 'self' blob: data:; child-src 'self' blob: data:; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'";
 html = html.replace('/*CSP*/', csp);
 if (scripts(html).length !== 2) throw new Error('Expected two runnable scripts in ' + PRODUCT.file + ' (icons and app)');

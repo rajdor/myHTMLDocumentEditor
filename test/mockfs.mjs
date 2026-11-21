@@ -7,8 +7,8 @@ export function installMockFs() {
   const err = (m, n) => new DOMException(m, n);
   class F {
     constructor(name, text, parent, noMove) { this.kind = 'file'; this.name = name; this.text = text; this.parent = parent; this.mtime = tick(); if (!noMove) this.move = this._move; }
-    async getFile() { return new File([this.text], this.name, { lastModified: this.mtime }); }
-    async createWritable() { const f = this; let buf = ''; return { async write(d) { buf = typeof d === 'string' ? d : await d.text(); }, async close() { f.text = buf; f.mtime = tick(); } }; }
+    async getFile() { return new File([this.bytes || this.text], this.name, { lastModified: this.mtime }); }   // bytes: set when something other than a string was written, so that encodings can be tested
+    async createWritable() { const f = this; let buf = '', raw = null; return { async write(d) { if (typeof d === 'string') { buf = d; raw = null; } else { raw = new Uint8Array(await new Blob([d]).arrayBuffer()); buf = new TextDecoder('utf-8').decode(raw); } }, async close() { f.text = buf; f.bytes = raw; f.mtime = tick(); } }; }
     async _move(a, b) { const dest = b === undefined ? this.parent : a, name = b === undefined ? a : b; this.parent.kids.delete(this.name); this.name = name; this.parent = dest; dest.kids.set(name, this); }
   }
   class D {
@@ -27,8 +27,10 @@ export function installMockFs() {
     make: (spec, name, o) => fill(new D(name || 'Notebook', null, !!(o && o.noMove)), spec),
     paths: root => walk(root, '', []).sort(),
     text: (root, path) => { const f = at(root, path); return f ? f.text : null; },
+    bytes: (root, path) => { const f = at(root, path); return f ? [...(f.bytes || new TextEncoder().encode(f.text))] : null; },
+    putBytes: (root, path, arr) => { window.MFS.put(root, path, ''); const f = at(root, path); f.bytes = new Uint8Array(arr); f.text = new TextDecoder('utf-8').decode(f.bytes); },
     age: (root, path, ms) => { at(root, path).mtime = ms; },
-    put: (root, path, text) => { const p = path.split('/'), n = p.pop(); let d = root; for (const s of p) { if (!d.kids.get(s)) d.kids.set(s, new D(s, d, d.noMove)); d = d.kids.get(s); } const f = d.kids.get(n) || new F(n, '', d, d.noMove); f.text = text; f.mtime = tick(); d.kids.set(n, f); },
+    put: (root, path, text) => { const p = path.split('/'), n = p.pop(); let d = root; for (const s of p) { if (!d.kids.get(s)) d.kids.set(s, new D(s, d, d.noMove)); d = d.kids.get(s); } const f = d.kids.get(n) || new F(n, '', d, d.noMove); f.text = text; f.bytes = null; f.mtime = tick(); d.kids.set(n, f); },
     drop: (root, path) => { const p = path.split('/'), n = p.pop(); at(root, p.join('/')).kids.delete(n); },
   };
 }

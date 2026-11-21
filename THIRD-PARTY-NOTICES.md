@@ -8,7 +8,9 @@ The two Fine Line programs, the document editor and the notebook, include the co
 | Instrument Sans | Body text | Embedded in `fine-line-editor.html` and `fine-line-notebook.html` and in saved documents | SIL Open Font License 1.1 |
 | JetBrains Mono | Code blocks and ID tags | Embedded in `fine-line-editor.html` and `fine-line-notebook.html` and in saved documents | SIL Open Font License 1.1 |
 | Architects Daughter | Title and headings | Embedded in `fine-line-editor.html` and `fine-line-notebook.html` and in saved documents | SIL Open Font License 1.1 |
-| marked 18.2.1 | Converting Markdown files when they are imported into a notebook | Built into `fine-line-notebook.html` only | MIT; includes the Markdown notice (BSD 3-Clause) |
+| marked 18.2.1 | Reading Markdown files in the notebook | Built into `fine-line-notebook.html` only | MIT; includes the Markdown notice (BSD 3-Clause) |
+| Turndown 7.2.5 | Writing Markdown files in the notebook | Built into `fine-line-notebook.html` only | MIT |
+| CodeMirror 6 (codemirror 6.0.2, with its @codemirror, @lezer, style-mod, w3c-keyname, crelt and find-cluster-break packages) | The notebook's text editor for plain text, data and code files | `vendor/codemirror.js`, built into `fine-line-notebook.html` only | MIT |
 | Rough.js 4.6.6 | Hand-drawn rendering in the diagram editor | Inside `vendor/diagram-editor.html`, built into `fine-line-editor.html` and `fine-line-notebook.html` | MIT |
 | mxGraph 4.2.2, orthogonal line routing (port of mxEdgeStyle) | Line routing in the diagram editor | Inside `vendor/diagram-editor.html`, built into `fine-line-editor.html` and `fine-line-notebook.html` | Apache License 2.0 |
 
@@ -83,6 +85,64 @@ Redistribution and use in source and binary forms, with or without modification,
 * Neither the name “Markdown” nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
 
 This software is provided by the copyright holders and contributors “as is” and any express or implied warranties, including, but not limited to, the implied warranties of merchantability and fitness for a particular purpose are disclaimed. In no event shall the copyright owner or contributors be liable for any direct, indirect, incidental, special, exemplary, or consequential damages (including, but not limited to, procurement of substitute goods or services; loss of use, data, or profits; or business interruption) however caused and on any theory of liability, whether in contract, strict liability, or tort (including negligence or otherwise) arising in any way out of the use of this software, even if advised of the possibility of such damage.
+```
+
+## Turndown
+
+Source: https://github.com/mixmark-io/turndown
+
+```text
+MIT License
+
+Copyright (c) 2017 Dom Christie
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+## CodeMirror
+
+Source: https://codemirror.net and https://github.com/codemirror, https://github.com/lezer-parser
+
+The packages built into `vendor/codemirror.js` are `@codemirror/state`, `view`, `language`, `commands`, `search`, `autocomplete`, `legacy-modes`, `lang-json`, `lang-xml`, `lang-css`, `lang-javascript`, `lang-python`, `lang-sql`, `lang-yaml`, `lang-markdown` and `lang-html`; `@lezer/common`, `lr`, `highlight` and the grammars for those languages; `style-mod`, `w3c-keyname`, `crelt` and `@marijn/find-cluster-break`. All are under the MIT licence, by Marijn Haverbeke and others (`@lezer/json` also names Arun Srinivasan).
+
+```text
+MIT License
+
+Copyright (C) 2018-2021 by Marijn Haverbeke <marijn@haverbeke.berlin> and others
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
 ```
 
 ## Rough.js

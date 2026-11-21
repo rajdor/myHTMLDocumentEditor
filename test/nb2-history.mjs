@@ -70,7 +70,7 @@ check('each later save keeps the version before it', (await hist()).length === 4
 /* ----- Page history and Restore ----- */
 check('a page offers Page history on right-click', await menu('Work/Alpha.html', 'Page history'));
 const list = await pg.evaluate(() => ({ open: document.querySelector('#nb-hist').open, title: document.querySelector('#nb-hist-h').textContent, rows: [...document.querySelectorAll('#nb-hist-list .nb-li')].map(r => [...r.querySelectorAll('span')].map(s => s.textContent)) }));
-check('the dialog lists the copies, newest first, with kind and size', list.open && list.title === 'History: Alpha' && list.rows.length === 4 && list.rows.every(r => /^(Saved version|Unsaved changes)$/.test(r[1]) && /KB$/.test(r[2])), list);
+check('the dialog lists the copies, newest first, with kind and size', list.open && list.title === 'History: Alpha.html' && list.rows.length === 4 && list.rows.every(r => /^(Saved version|Unsaved changes)$/.test(r[1]) && /KB$/.test(r[2])), list);
 same('saved versions and unsaved work are told apart', list.rows.map(r => r[1]).sort(), ['Saved version', 'Saved version', 'Unsaved changes', 'Unsaved changes']);
 const before = await text('Work/Alpha.html');
 await pg.evaluate(() => { const rows = [...document.querySelectorAll('#nb-hist-list .nb-li')]; rows[rows.length - 1].querySelector('button').click(); }); await sleep(400);

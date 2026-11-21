@@ -4001,7 +4001,7 @@ const COMMANDS = {
   undo: () => undo(), redo: () => redo(),
   copy: () => copySel(), cut: () => cutSel(), paste: () => pasteClip(), duplicate: () => { const keep = S.clipboard; copySel(true); pasteClip(true); S.clipboard = keep; },
   delete: () => deleteSel(), selectAll: () => setSel(topUnits(page().cells.filter(c => !isHiddenByLayer(page(), c, S.map) && (!c.isEdgeLabel && !isGroup(c) || isGroup(c)))).filter(c => !c.isEdgeLabel).map(c => selectionUnitTop(c).id).filter((v, i, a) => a.indexOf(v) === i)),
-  copyXml: () => copyAsXml(),
+  copyXml: () => copyAsXml(), pasteXml: () => { pasteXml(); },
   zoomIn: () => setZoom(S.zoom * 1.2), zoomOut: () => setZoom(S.zoom / 1.2), zoom100: () => setZoom(1), fit: () => fitView(),
   toggleClean: () => { S.clean = !S.clean; S.hover = null; S.hoverPoint = null; if (S.clean) { if (S.editing) finishEdit(); toast('Screenshot mode: press Esc or Ctrl+Shift+E to return'); } requestRender(); updateToolbar(); },
   canvasBg: () => canvasBgDialog(),
@@ -4054,7 +4054,7 @@ function menuDefs() {
       { t: 'Undo', c: 'undo', sc: 'Ctrl+Z', dis: !S.undo.length }, { t: 'Redo', c: 'redo', sc: 'Ctrl+Y', dis: !S.redo.length }, '-',
       { t: 'Cut', c: 'cut', sc: 'Ctrl+X', dis: !has }, { t: 'Copy', c: 'copy', sc: 'Ctrl+C', dis: !has }, { t: 'Paste', c: 'paste', sc: 'Ctrl+V', dis: !S.clipboard },
       { t: 'Duplicate', c: 'duplicate', sc: 'Ctrl+D', dis: !has }, { t: 'Delete', c: 'delete', sc: 'Del', dis: !has }, '-',
-      { t: 'Select all', c: 'selectAll', sc: 'Ctrl+A' }, { t: 'Copy selection as draw.io XML', c: 'copyXml', dis: !has }
+      { t: 'Select all', c: 'selectAll', sc: 'Ctrl+A' }, { t: 'Copy selection as draw.io XML', c: 'copyXml', dis: !has }, { t: 'Paste from draw.io XML (clipboard)', c: 'pasteXml' }
     ],
     View: [
       { t: 'Zoom in', c: 'zoomIn', sc: 'Ctrl++' }, { t: 'Zoom out', c: 'zoomOut', sc: 'Ctrl+-' }, { t: 'Actual size', c: 'zoom100', sc: 'Ctrl+0' }, { t: 'Fit diagram', c: 'fit', sc: 'Ctrl+Shift+H' }, '-',
@@ -4118,7 +4118,7 @@ function contextMenu(ev) {
     { t: 'Bring to front', c: 'toFront' }, { t: 'Send to back', c: 'toBack' }, { t: 'Lock / unlock', c: 'lock' });
   if (topUnits(selCells()).length > 1) items.push({ t: 'Group', c: 'group' });
   if (selCells().some(isGroup)) items.push({ t: 'Ungroup', c: 'ungroup' });
-  if (!S.sel.length) items.push({ t: 'Paste', c: 'paste', dis: !S.clipboard }, { t: 'Select all', c: 'selectAll' }, '-', { t: 'Fit diagram', c: 'fit' }, { t: 'Auto arrange shapes…', c: 'arrangeShapes' });
+  if (!S.sel.length) items.push({ t: 'Paste', c: 'paste', dis: !S.clipboard }, { t: 'Paste from draw.io XML (clipboard)', c: 'pasteXml' }, { t: 'Select all', c: 'selectAll' }, '-', { t: 'Fit diagram', c: 'fit' }, { t: 'Auto arrange shapes…', c: 'arrangeShapes' });
   showPopup(items, ev.clientX, ev.clientY);
 }
 
@@ -4563,6 +4563,51 @@ function copyAsXml() {
   const xml = cellsToXml(collectForCopy(selCells()));
   if (navigator.clipboard) navigator.clipboard.writeText(xml).then(() => toast('Copied as draw.io XML. Paste it into draw.io with Ctrl+V.'), () => textDialog('draw.io XML', xml));
   else textDialog('draw.io XML', xml);
+}
+/* Paste from draw.io XML: shapes written as draw.io XML somewhere else (draw.io's own Copy, the text of a file, an
+   answer from an AI assistant) are added to the page. The text comes from the clipboard when the browser lets the page
+   read it; when it does not, or what is there is not draw.io XML, a box opens to paste into. Accepted: a whole file
+   (<mxfile>, compressed pages included), one <mxGraphModel>, a bare <root>, or a run of <mxCell> elements. A Markdown
+   code fence and any words around the XML are ignored. Everything on the first page that has shapes is added and
+   selected, through the same reading and cleaning as Open. */
+function drawioXmlFrom(text) {
+  let t = String(text || '').replace(/^﻿/, '');
+  const fence = t.match(/```[a-zA-Z]*[ \t]*\r?\n([\s\S]*?)```/); if (fence && /<mx|<root/i.test(fence[1])) t = fence[1];
+  const cut = (open, close) => { const a = t.search(new RegExp(open + '[\\s>]')), b = t.lastIndexOf(close); return a >= 0 && b > a ? t.slice(a, b + close.length) : null; };
+  const whole = cut('<mxfile', '</mxfile>') || cut('<mxGraphModel', '</mxGraphModel>'); if (whole) return whole;
+  let cells = null; const root = cut('<root', '</root>');
+  if (root) cells = root.replace(/^<root[^>]*>/, '').replace(/<\/root>$/, '');
+  else { const a = t.search(/<(mxCell|UserObject|object)[\s>]/), b = Math.max(t.lastIndexOf('</mxCell>') + 9, t.lastIndexOf('</UserObject>') + 13, t.lastIndexOf('</object>') + 9, t.lastIndexOf('/>') + 2); if (a >= 0 && b > a) cells = t.slice(a, b); }
+  if (cells === null) return null;
+  if (!/<mxCell[^>]*\sid="0"/.test(cells)) cells = '<mxCell id="0"/>' + (/<mxCell[^>]*\sid="1"/.test(cells) ? '' : '<mxCell id="1" parent="0"/>') + cells;
+  return '<mxGraphModel><root>' + cells + '</root></mxGraphModel>';
+}
+async function pasteXmlText(text) { // adds the shapes; answers '' when it did, or the reason it could not
+  const xml = drawioXmlFrom(text); if (!xml) return 'No draw.io XML was found in the text.';
+  let doc; try { doc = await parseDrawio(xml); } catch (e) { return e.message; }
+  const full = doc.pages.filter(p => p.cells.length), src = full[0]; if (!src) return 'The draw.io XML holds no shapes.';
+  const empty = !page().cells.length, keep = S.clipboard;
+  S.clipboard = { cells: src.cells.map(deep), n: -1 }; // n: -1, so the shapes land where the XML put them when that place is in view
+  try { pasteClip(); } finally { S.clipboard = keep; }
+  if (empty) fitView();
+  const n = src.cells.filter(c => !c.e && !c.isEdgeLabel).length, l = src.cells.filter(c => c.e).length;
+  toast('Pasted ' + n + (n === 1 ? ' shape' : ' shapes') + (l ? ' and ' + l + (l === 1 ? ' line' : ' lines') : '') + (full.length > 1 ? ' from the first page of ' + full.length : ''));
+  return '';
+}
+async function pasteXml() {
+  let text = '';
+  try { if (navigator.clipboard && navigator.clipboard.readText) text = await navigator.clipboard.readText(); } catch (e) { text = ''; }
+  const why = text.trim() ? await pasteXmlText(text) : 'The browser did not let the editor read the clipboard, or the clipboard is empty.';
+  if (why) pasteXmlDialog(drawioXmlFrom(text) ? text : '', why);
+}
+function pasteXmlDialog(text, why) {
+  const box = document.createElement('div'), msg = document.createElement('p'), ta = document.createElement('textarea'), err = document.createElement('p');
+  msg.textContent = 'Paste the draw.io XML here (Ctrl+V), then press Add to diagram.';
+  ta.value = text || ''; ta.id = 'pasteXmlText'; ta.spellcheck = false; ta.style.width = '640px'; ta.style.maxWidth = '80vw'; ta.style.height = '260px'; ta.style.fontFamily = 'ui-monospace, Menlo, Consolas, monospace'; ta.style.fontSize = '12px';
+  err.id = 'pasteXmlWhy'; err.textContent = why || ''; err.style.color = '#B23C0B'; err.style.minHeight = '1.3em';
+  box.append(msg, ta, err);
+  const m = modal('Paste from draw.io XML', box, [{ t: 'Cancel' }, { t: 'Add to diagram', primary: true, fn: () => { pasteXmlText(ta.value).then(w => { if (w) { err.textContent = w; ta.focus(); } else closeModal(m.back); }); return false; } }]);
+  setTimeout(() => ta.focus(), 0);
 }
 function alignSel(how) {
   const units = topUnits(selCells()).filter(c => !c.isEdgeLabel && !c.e && !isLocked(c)); if (units.length < 2) return;
@@ -5918,7 +5963,7 @@ function prefixSvgIds(svg, p) {
 }
 COMMANDS.embedDone = embedDone;
 COMMANDS.embedCancel = embedCancel;
-Object.assign(window.DiagramEditor, { embedDone, embedCancel, prefixSvgIds, EMBED });
+Object.assign(window.DiagramEditor, { embedDone, embedCancel, prefixSvgIds, EMBED, pasteXml, pasteXmlText, drawioXmlFrom });
 
 })();
 </script>

@@ -67,6 +67,6 @@ check('and lists outside a Q&A work as before', await pg.evaluate(() => { const 
 // saved
 await load(pg, DOC); await lineCaret('first'); await click(pg, 'check'); await sleep(100);
 const out = await pg.evaluate(() => FLE.build());
-check('the saved file keeps the list inside the answer', /<dd[^>]*>Intro<br><ul class="check"><li><input type="checkbox">first<\/li><\/ul>second<br>Outro<\/dd>/.test(out.replace(/\s*\n\s*/g, '')), out.slice(out.indexOf('<dl'), out.indexOf('</dl>') + 5));
+check('the saved file keeps the list inside the answer', /<dd[^>]*>Intro<br><ul class="check"><li><input type="checkbox" aria-label="first">first<\/li><\/ul>second<br>Outro<\/dd>/.test(out.replace(/\s*\n\s*/g, '')), out.slice(out.indexOf('<dl'), out.indexOf('</dl>') + 5));
 same('no page errors', errors, []);
 await b.close();

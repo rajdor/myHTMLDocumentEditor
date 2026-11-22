@@ -43,7 +43,7 @@ let s = await state(), i = await info();
 check('the first text file starts it, with no script refused', await q(() => typeof FLCM === 'object' && !!document.querySelector('#tx .cm-editor')) && errors.length === 0, errors);
 same('a JSON file opens in the text editor as itself', [s.cur.kind, s.cur.node, i.type, i.enc, i.eol, i.ro], ['text', 'data.json', 'JSON', 'UTF-8', 'CRLF', '']);
 check('the page area steps aside and the toolbar keeps only File and History', await q(() => getComputedStyle(document.querySelector('.page')).display === 'none' && !document.querySelector('#tx').hidden && [...document.querySelectorAll('#tbar .grp')].filter(g => g.offsetParent).map(g => g.getAttribute('aria-label')).join() === 'File,History'));
-same('a bar under the toolbar names the kind, the file, its encoding and its line endings', await q(() => [document.querySelector('#xbar').hidden, document.querySelector('#x-kind').textContent, document.querySelector('#x-name').textContent, document.querySelector('#x-info').textContent]), [false, 'JSON', 'data.json', 'UTF-8 | CRLF']);
+same('a bar under the toolbar names the kind, the file, its encoding, line endings and indentation', await q(() => [document.querySelector('#xbar').hidden, document.querySelector('#x-kind').textContent, document.querySelector('#x-name').textContent, document.querySelector('#x-info').textContent]), [false, 'JSON', 'data.json', 'UTF-8 | CRLF | 2 spaces']);
 check('the text is coloured', await colours() >= 3, await colours());
 same('the text shown is the file, line for line', await q(() => FLE.NB.TXT.content()), '{\n  "name": "x",\n  "n": 12,\n  "ok": true\n}\n');
 

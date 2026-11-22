@@ -37,8 +37,9 @@ await load(pg, DOC); await pickAll('#a'); await click(pg, 'bold'); await sleep(5
 same('Bold is remembered', (await btn())[1].split(': ')[1].split(' (')[0], 'Bold');
 await pickAll('#b'); await altQ(); same('repeat makes a partly bold selection all bold', await html('#b'), '<b>Bravo bold text</b>');
 await pickAll('#b'); await altQ(); same('repeating on bold text leaves it bold', await html('#b'), '<b>Bravo bold text</b>');
-await pickAll('#c'); await K.down('Control'); await K.press('i'); await K.up('Control'); await sleep(80);
-same('Ctrl+I counts as the Italic command', (await btn())[1].split(': ')[1].split(' (')[0], 'Italic');
+const MOD = process.platform === 'darwin' ? 'Meta' : 'Control';   // the shortcut key: Cmd on a Mac, where Ctrl+I is not Italic
+await pickAll('#c'); await K.down(MOD); await K.press('i'); await K.up(MOD); await sleep(80);
+same('Ctrl+I (Cmd+I on a Mac) counts as the Italic command', (await btn())[1].split(': ')[1].split(' (')[0], 'Italic');
 await pickAll('#d'); await altQ(); same('and repeats', await html('#d'), '<i>Delta</i>');
 
 // lists, clear format, ID tag

@@ -32,10 +32,10 @@ check('a second click clears the tick', !(await html('#doc ul.check')).includes(
 await pg.mouse.click(...await boxAt(1)); await sleep(500);
 // saved with the document, with no script, and back again on open
 const saved = await pg.evaluate(() => FLE.build());
-check('the saved document carries the tick', saved.includes('<li>' + BOX + 'First</li><li>' + ON + 'Second</li>'), saved.slice(saved.indexOf('<ul class="check"'), saved.indexOf('<ul class="check"') + 200));
+check('the saved document carries the tick, and each box is named by its item for screen readers', saved.includes('<li><input type="checkbox" aria-label="First">First</li><li><input type="checkbox" checked="" aria-label="Second">Second</li>'), saved.slice(saved.indexOf('<ul class="check"'), saved.indexOf('<ul class="check"') + 200));
 check('the saved document has no script', !/<script/i.test(saved));
 await load(pg, saved);
-same('a saved checklist opens unchanged', await html('#doc ul.check'), '<li>' + BOX + 'First</li><li>' + ON + 'Second</li>');
+same('a saved checklist opens unchanged, without the names, which are made again at each save', await html('#doc ul.check'), '<li>' + BOX + 'First</li><li>' + ON + 'Second</li>');
 // the saved file on its own, scripts switched off: boxes sit in the bullet's place and can be ticked
 const out = path.join(ROOT, 'test', 'out', 'checklist-saved.html'); fs.writeFileSync(out, saved);
 const p2 = await b.newPage(); await p2.setJavaScriptEnabled(false); await p2.goto(pathToFileURL(out).href);

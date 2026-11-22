@@ -112,8 +112,9 @@ html.tx-mode #tbar .grp:not([aria-label="File"]):not([aria-label="History"]), ht
    page for a Markdown file and a neutral reading style is used, in the system fonts. Only the editor's own working marks
    (cell selection, the caret, the find bar) stay. Nothing here is saved; a Markdown file has no styles of its own. */
 html.md-mode .page { display: block; max-width: 860px; margin: 0 auto; padding: 32px 40px 96px; }
+@media print { html.md-mode .page { max-width: none; padding: 0; } html.md-mode #xbar { display: none; } }
 html.md-mode .page > nav { display: none; }
-:where(html.md-mode) #doc, :where(html.md-mode) #doc :where(*), :where(html.md-mode) #doc :where(*)::before, :where(html.md-mode) #doc :where(*)::after { all: revert; }
+:where(html.md-mode) #doc, :where(html.md-mode) #doc :where(:not(.dg, .fig, .dg *, .fig *)), :where(html.md-mode) #doc :where(:not(.dg, .fig, .dg *, .fig *))::before, :where(html.md-mode) #doc :where(:not(.dg, .fig, .dg *, .fig *))::after { all: revert; }   /* a diagram pasted in keeps its own look */
 html.md-mode #doc { display: block; min-height: 60vh; outline: none; font: 16px/1.6 system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #1F2328; background: #fff; overflow-wrap: break-word; }
 html.md-mode #doc > :first-child { margin-top: 0; }
 html.md-mode #doc :is(h1, h2, h3, h4) { font-weight: 600; line-height: 1.25; margin: 24px 0 16px; color: #1F2328; }
@@ -149,4 +150,13 @@ html.md-mode #doc a.link-card b { font-weight: 400; }
 html.md-mode #doc a.link-card span::before { content: " ("; } html.md-mode #doc a.link-card span::after { content: ")"; }
 html.md-mode #doc a.link-card span { color: #59636E; font-size: .9em; text-decoration: none; }
 #chrome select:disabled { opacity: .4; }
-@media print { #tx { position: static; } }
+/* printing a text file: the whole file, laid out by the text editor in #tx-print just before printing */
+#tx-print { display: none; }
+@media print {
+  html.tx-mode #tx, html.tx-mode .page, html.tx-mode #xbar { display: none !important; }
+  html.tx-mode #tx-print { display: block; font: 9.5pt/1.45 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace; color: #1c2b3a; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  #tx-print .txp-h { font: 600 9pt/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif; color: #3D5A7A; border-bottom: 1px solid #CFDBE8; padding-bottom: 4px; margin-bottom: 8px; }
+  #tx-print .txp-b { counter-reset: ln; }
+  #tx-print .txp-l { counter-increment: ln; position: relative; padding-left: 4.2em; white-space: pre-wrap; overflow-wrap: anywhere; tab-size: var(--tab, 4); break-inside: avoid; }
+  #tx-print .txp-l::before { content: counter(ln); position: absolute; left: 0; width: 3.4em; text-align: right; color: #8A96A3; }
+}

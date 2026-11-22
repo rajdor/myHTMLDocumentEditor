@@ -62,7 +62,7 @@ await doc('<p id="a"><br></p>'); await caretIn(pg, '#a'); await click(pg, 'tag')
 same('in an empty paragraph the tag is all there is', await html(), '<p><span class="id">ID</span>&nbsp;</p>');
 await doc('<ul><li id="a">alpha REQ7 omega</li></ul>');
 { const q = await pg.evaluate(() => { const t = document.querySelector('#a').firstChild, r = document.createRange(); r.setStart(t, 7); r.setEnd(t, 9); const q = r.getBoundingClientRect(); return [q.x + q.width / 2, q.y + q.height / 2]; }); await pg.mouse.click(q[0], q[1], { count: 2 }); await sleep(80); await click(pg, 'tag'); await sleep(60); }
-same('a word picked with a double-click becomes the tag', await html(), '<ul><li>alpha <span class="id">REQ7</span>&nbsp; omega</li></ul>');
+same('a word picked with a double-click becomes the tag', await html(), '<ul><li>alpha <span class="id">REQ7</span> omega</li></ul>');
 
 // joining blocks
 await doc('<ul><li>one</li><li id="b">' + TAG + ' two</li></ul>'); await caretIn(pg, '#b', false); await K.press('Backspace'); await sleep(80);

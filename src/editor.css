@@ -60,20 +60,20 @@ html.de-open, html.de-open body { overflow: hidden; }
 .fig .wb-board > * { cursor: pointer !important; }
 .dg:hover, .fig:hover { outline: 1px dashed #B8C2CE; outline-offset: 4px; }
 .ed-dsel { outline: 2px solid #1F5FA8; outline-offset: 4px; }
-#chrome #tbar { gap: 6px 3px; padding-left: 8px; padding-right: 8px; }
+#chrome #tbar { gap: 6px 3px; padding-left: 4px; padding-right: 4px; }
 #tbar .grp { gap: 2px; padding-right: 3px; border-right: 1px solid #CFDBE8; }
 #tbar .grp:has(+ #status) { border-right: 0; padding-right: 0; }
 #tbar .tops { display: flex; gap: 1px; margin-left: 3px; }
 #tbar .tops[hidden] { display: none; }
 #s-boxtype { width: 62px; }
 #chrome button.ic.lv em { position: absolute; right: -1px; bottom: 2px; font: 600 9px/1 system-ui, sans-serif; font-style: normal; color: #fff; background: #12355B; border-radius: 6px; padding: 1px 3px; }
-#chrome button.ic { width: 23px; padding: 0; display: inline-flex; align-items: center; justify-content: center; position: relative; border-color: transparent; background: none; }
+#chrome button.ic { width: 22px; padding: 0; display: inline-flex; align-items: center; justify-content: center; position: relative; border-color: transparent; background: none; }
 #chrome button.ic:hover { background: #EAF1F8; border-color: #CFDBE8; }
 #chrome button.ic.on { background: #12355B; color: #fff; }
 #chrome button.ic svg { width: 18px; height: 18px; }
 #chrome button.ic.rot svg { transform: rotate(-90deg); }
 #chrome button.ic.minus::after { content: ''; position: absolute; right: 3px; bottom: 4px; width: 8px; height: 2px; border-radius: 1px; background: #B23C0B; box-shadow: 0 0 0 1.5px #fff; }
-#chrome button.ic.t.dim, #chrome button.ic.dim { opacity: .35; }
+#chrome button.ic.t.dim, #chrome button.ic.dim, #chrome select.dim { opacity: .35; }
 #s-block { width: 100px; }
 #chrome button.ic.flip svg { transform: scaleX(-1); }
 #chrome button.ic.has::after { content: ''; position: absolute; right: 3px; top: 3px; width: 7px; height: 7px; border-radius: 50%; background: #F2B705; box-shadow: 0 0 0 1.5px #fff; }

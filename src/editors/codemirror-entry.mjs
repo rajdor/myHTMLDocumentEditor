@@ -4,8 +4,8 @@ import { EditorState, Compartment } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, highlightSpecialChars, drawSelection, rectangularSelection } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab, undo, redo, undoDepth, redoDepth } from '@codemirror/commands';
 import { search, searchKeymap, highlightSelectionMatches, openSearchPanel } from '@codemirror/search';
-import { syntaxHighlighting, HighlightStyle, indentOnInput, bracketMatching, foldGutter, foldKeymap, indentUnit, StreamLanguage } from '@codemirror/language';
-import { tags } from '@lezer/highlight';
+import { syntaxHighlighting, HighlightStyle, indentOnInput, bracketMatching, foldGutter, foldKeymap, indentUnit, StreamLanguage, ensureSyntaxTree } from '@codemirror/language';
+import { tags, highlightTree } from '@lezer/highlight';
 import { json } from '@codemirror/lang-json';
 import { xml } from '@codemirror/lang-xml';
 import { css } from '@codemirror/lang-css';
@@ -53,4 +53,4 @@ const LANGS = {
 };
 export { EditorState, Compartment, EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, highlightSpecialChars, drawSelection, rectangularSelection,
   defaultKeymap, history, historyKeymap, indentWithTab, undo, redo, undoDepth, redoDepth, search, searchKeymap, highlightSelectionMatches, openSearchPanel,
-  syntaxHighlighting, HighlightStyle, indentOnInput, bracketMatching, foldGutter, foldKeymap, indentUnit, tags, LANGS };
+  syntaxHighlighting, HighlightStyle, indentOnInput, bracketMatching, foldGutter, foldKeymap, indentUnit, tags, LANGS, ensureSyntaxTree, highlightTree };

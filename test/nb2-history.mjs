@@ -46,7 +46,7 @@ await setH1('Alpha one');
 check('a changed page writes a copy of the unsaved work', await snap() === true);
 let h = await hist('Work/Alpha.html/');
 check('the copy is in .history under the page path, named by date and time and marked unsaved', h.length === 1 && /^\.history\/Work\/Alpha\.html\/\d{4}-\d\d-\d\d \d\d\.\d\d\.\d\d unsaved\.html$/.test(h[0]), h);
-check('the copy is a complete page holding the unsaved work', /<meta name="generator" content="fine-line-editor">/.test(await text(h[0])) && /<h1>Alpha one<\/h1>/.test(await text(h[0])));
+check('the copy is a complete page holding the unsaved work', /<meta name="generator" content="fine-line-editor \d+\.\d+\.\d+">/.test(await text(h[0])) && /<h1>Alpha one<\/h1>/.test(await text(h[0])));
 check('the file itself is untouched', /<h1>Alpha<\/h1>/.test(await text('Work/Alpha.html')));
 check('no second copy while nothing more has changed', await snap() === false && (await hist()).length === 1);
 await setH1('Alpha two');

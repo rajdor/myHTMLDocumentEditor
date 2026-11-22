@@ -93,7 +93,7 @@ check('a new page belongs to the chosen folder and has no file yet', s.cur.dir =
 await setH1('Gamma: plan / v2');
 await save();
 check('first save names the file from the H1, without characters a file name cannot have', (await paths()).includes('Work/Gamma plan v2.html') && (await state()).cur.node === 'Work/Gamma plan v2.html', await paths());
-check('the saved page is a complete editor document', /<meta name="generator" content="fine-line-editor">/.test(await text('Work/Gamma plan v2.html')));
+check('the saved page is a complete editor document', /<meta name="generator" content="fine-line-editor \d+\.\d+\.\d+">/.test(await text('Work/Gamma plan v2.html')));
 await setH1('Gamma renamed in the text');
 await save();
 check('later saves keep the file name', (await paths()).includes('Work/Gamma plan v2.html') && !(await paths()).some(p => /renamed in the text/.test(p)) && /Gamma renamed in the text/.test(await text('Work/Gamma plan v2.html')));

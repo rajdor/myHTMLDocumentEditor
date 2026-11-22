@@ -52,8 +52,7 @@ await K.down(mod); await K.press('z'); await K.up(mod); await sleep(150);
 check('undo brings the heading back', await pg.evaluate(() => !!document.querySelector('#c h4')));
 await inspectAt('#bi'); await act('Bold', 'Remove'); await sleep(120);
 same('Remove takes off just that one format', await pg.evaluate(() => document.querySelector('#p').innerHTML.slice(0, 36)), 'Plain bold <i id="bi">both</i> and <');
-await inspectAt('#st'); await act('Pasted styling', 'Remove'); await sleep(120);
-check('removing pasted styling leaves the text', await pg.evaluate(() => document.querySelector('#p').textContent.includes('styled') && !document.querySelector('#p [style]')));
+check('any change also clears styling left by the browser or by a paste, and leaves the text', await pg.evaluate(() => document.querySelector('#p').textContent.includes('styled') && !document.querySelector('#p [style]') && !document.querySelector('#st')));
 // a selected word
 await load(pg, DOC); await pg.evaluate(() => { const p = document.querySelector('#p'), r = document.createRange(); r.setStart(p.firstChild, p.firstChild.length); r.setEnd(document.querySelector('#b').firstChild, 4); const g = getSelection(); g.removeAllRanges(); g.addRange(r); document.getElementById('doc').focus(); }); await sleep(60);
 await click(pg, 'inspect'); await sleep(80);

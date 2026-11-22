@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="fine-line-editor">
+<meta name="generator" content="fine-line-editor 1.0.0">
 <title>Refilling the pick and mix wall</title>
 <style>body { margin: 0; }
 :root {
@@ -198,13 +199,13 @@ nav { position: sticky; top: 24px; align-self: start; max-height: calc(100vh - 4
 nav b { display: block; font: 400 22px/1.2 var(--font); color: var(--ink); margin-bottom: 10px; }
 nav ol { list-style: none; margin: 0; padding: 0; counter-reset: n; }
 nav li { counter-increment: n; }
-nav a { display: block; padding: 4px 0; color: var(--ink-soft); text-decoration: none; }
+nav a { display: block; box-sizing: border-box; min-height: 24px; padding: 4px 0; color: var(--ink-soft); text-decoration: none; }   /* 24px: a target size that can be clicked or tapped (WCAG 2.5.8) */
 nav a::before { content: counter(n) ". "; color: #8a9bb0; }
 nav li.u { counter-increment: none; }
 nav li.u > a::before { content: none; }
 nav a:hover { color: var(--redline); }
 nav ol ol { padding-left: 14px; margin: 0 0 4px; }
-nav ol ol a { font-size: 13px; padding: 2px 0; }
+nav ol ol a { font-size: 13px; padding: 3px 0; }
 nav ol ol a::before { content: none; }
 main { min-width: 0; }
 h1 { font: 400 40px/1.15 var(--font); color: var(--ink); margin: 0 0 4px; }
@@ -215,10 +216,15 @@ h4 { font-size: 14px; font-weight: 600; color: var(--ink-soft); margin: 20px 0 6
 .h2sub { color: var(--ink-soft); margin: -4px 0 18px; }
 pre { font: 13px/1.5 var(--mono); font-variant-ligatures: none; color: var(--ink); background: #f6f9fc; border: 1px solid var(--dots); border-radius: 3px; padding: 10px 12px; margin: 10px 0 16px; max-width: 900px; overflow-x: auto; white-space: pre; tab-size: 4; }
 p { margin: 8px 0; max-width: 900px; }
+hr { height: 0; margin: 24px 0; border: 0; border-top: 1.5px solid var(--dots); max-width: 900px; }
+/* bold is one set weight: the browser's own rule is relative (bolder than the text around it), which gives 900 in a header cell or heading */
+main b, main strong { font-weight: 700; }
 .bluf { font-size: 17px; border-left: 4px solid var(--ink); padding: 4px 0 4px 16px; }
 .cap { font-size: 13px; color: var(--ink-soft); margin: 6px 0 16px; max-width: none; }
 ul, ol { margin: 8px 0; padding-left: 22px; max-width: 900px; }
 td ul { margin: 0; padding-left: 16px; }
+/* Compact list: less space between its lines. */
+ul.dense, ol.dense { line-height: 1.25; }
 /* Boxes for the reader: note, information, tip, warning, critical. A box holds whole blocks, which keep their own styles; its first line is the label. */
 .box { --c: var(--neutral); --f: var(--neutral-fill); --i: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M88%2C96a8%2C8%2C0%2C0%2C1%2C8-8h64a8%2C8%2C0%2C0%2C1%2C0%2C16H96A8%2C8%2C0%2C0%2C1%2C88%2C96Zm8%2C40h64a8%2C8%2C0%2C0%2C0%2C0-16H96a8%2C8%2C0%2C0%2C0%2C0%2C16Zm32%2C16H96a8%2C8%2C0%2C0%2C0%2C0%2C16h32a8%2C8%2C0%2C0%2C0%2C0-16ZM224%2C48V156.69A15.86%2C15.86%2C0%2C0%2C1%2C219.31%2C168L168%2C219.31A15.86%2C15.86%2C0%2C0%2C1%2C156.69%2C224H48a16%2C16%2C0%2C0%2C1-16-16V48A16%2C16%2C0%2C0%2C1%2C48%2C32H208A16%2C16%2C0%2C0%2C1%2C224%2C48ZM48%2C208H152V160a8%2C8%2C0%2C0%2C1%2C8-8h48V48H48Zm120-40v28.7L196.69%2C168Z%22%2F%3E%3C%2Fsvg%3E"); background: var(--f); background: color-mix(in srgb, var(--f) 39%, #fff); border-left: 3px solid var(--c); border-radius: 0 3px 3px 0; padding: 8px 14px 10px; margin: 12px 0 16px; max-width: 900px; print-color-adjust: exact; -webkit-print-color-adjust: exact; break-inside: avoid; }
 /* The Information colours belong to the box alone; they are not taken from the theme's colours above. */
@@ -230,10 +236,11 @@ td ul { margin: 0; padding-left: 16px; }
 .box > :last-child { margin-bottom: 0; }
 .box > p.box-h + * { margin-top: 0; }
 .box > p.box-h { position: relative; min-height: 22px; padding-left: 24px; margin: 0 0 2px; font-weight: 600; color: var(--c); }
-.box > p.box-h::before { content: ""; position: absolute; left: 0; top: 2px; width: 18px; height: 18px; background: var(--c); -webkit-mask: var(--i) center / contain no-repeat; mask: var(--i) center / contain no-repeat; }
+.box > p.box-h::before { content: ""; position: absolute; left: 0; top: 2px; width: 18px; height: 18px; background: var(--c); -webkit-mask: var(--i) center / contain no-repeat; mask-image: var(--i); mask-position: center; mask-size: contain; mask-repeat: no-repeat; }
 /* Checklist: a real checkbox starts each item, so the boxes can be ticked with no script. */
 ul.check { list-style: none; }
 ul.check > li { position: relative; }
+@media screen { :is(ul,ol):not(.dense, .dense *, td *, th *) > li { min-height: 24px; } }   /* items at least 24px apart, so a checklist's boxes can be clicked or tapped (WCAG 2.5.8); other lists keep the same spacing. A compact list is closer by choice; paper is as before */
 ul.check > li > input[type="checkbox"] { position: absolute; left: -20px; top: .3em; width: 14px; height: 14px; margin: 0; accent-color: var(--ink); print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 td ul.check > li > input[type="checkbox"] { left: -16px; width: 12px; height: 12px; }
 .tw { overflow-x: auto; margin: 10px 0 18px; }
@@ -241,10 +248,15 @@ table { border-collapse: collapse; width: 100%; font-size: 14px; }
 table.dense { font-size: 12.5px; line-height: 1.4; }
 th { text-align: left; font-weight: 600; color: var(--ink); background: var(--fill); border: 1px solid var(--dots); padding: 6px 8px; vertical-align: bottom; }
 td { border: 1px solid var(--dots); padding: 6px 8px; vertical-align: top; }
+/* Column widths set by dragging a border: the table is laid out to them exactly. */
+table.cw { table-layout: fixed; }
+table.cw th, table.cw td { overflow-wrap: anywhere; }
 /* Sub headers, and header cells down the side: set from the table buttons for a whole row or column. */
 th.sub { background: #f6f9fc; color: var(--ink-soft); }
 th[scope="row"] { vertical-align: top; }
 tr.grp td { background: #f6f9fc; font-weight: 600; color: var(--ink-soft); font-size: 13px; padding: 4px 8px; }
+:not(pre) > code { font: .9em var(--mono); font-variant-ligatures: none; background: #f6f9fc; border-radius: 3px; padding: 1px 4px; }
+s { text-decoration: line-through; }
 .id { display: inline-block; font: 600 11px/1.5 var(--mono); font-variant-ligatures: none; color: var(--ink); background: var(--fill); border-radius: 3px; padding: 0 4px; margin-right: 2px; white-space: nowrap; }
 .src { color: #6b7d92; font-size: .92em; }
 table.matrix { table-layout: fixed; min-width: 980px; }
@@ -295,6 +307,7 @@ dl.qa { margin: 8px 0 16px; max-width: 900px; }
 dl.qa dt { position: relative; padding-left: 32px; margin-top: 14px; font-weight: 600; color: var(--ink); }
 dl.qa dt:first-child { margin-top: 0; }
 dl.qa dd { position: relative; margin: 4px 0 0; padding-left: 32px; }
+dl.qa dd > ul, dl.qa dd > ol { margin: 4px 0; }
 dl.qa dt::before, dl.qa dd::before { position: absolute; left: 0; top: 1px; font: 600 11px/1.6 var(--mono); border-radius: 3px; padding: 0 5px; }
 dl.qa dt::before { content: "Q"; color: var(--ink); background: var(--fill); }
 dl.qa dd::before { content: "A"; color: var(--ink-soft); background: #f6f9fc; }
@@ -303,7 +316,7 @@ dl.qa dd::before { content: "A"; color: var(--ink-soft); background: #f6f9fc; }
 
 /* Links use the browser's own style: the surrounding font, standard blue (purple once visited) and an underline. */
 a.link-card { display: inline-flex; align-items: center; gap: 4px 10px; flex-wrap: wrap; max-width: 100%; margin: 6px 0; padding: 8px 12px 8px 40px; position: relative; border: 1.5px solid var(--ink); border-radius: 3px; background: var(--fill); box-shadow: 2px 3px 0 var(--shadow); color: var(--ink); text-decoration: none; font-size: 14px; line-height: 1.35; vertical-align: middle; }
-a.link-card::before { content: ""; position: absolute; left: 12px; top: 50%; width: 20px; height: 20px; margin-top: -10px; background: var(--ink); -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M165.66%2C90.34a8%2C8%2C0%2C0%2C1%2C0%2C11.32l-64%2C64a8%2C8%2C0%2C0%2C1-11.32-11.32l64-64A8%2C8%2C0%2C0%2C1%2C165.66%2C90.34ZM215.6%2C40.4a56%2C56%2C0%2C0%2C0-79.2%2C0L106.34%2C70.45a8%2C8%2C0%2C0%2C0%2C11.32%2C11.32l30.06-30a40%2C40%2C0%2C0%2C1%2C56.57%2C56.56l-30.07%2C30.06a8%2C8%2C0%2C0%2C0%2C11.31%2C11.32L215.6%2C119.6a56%2C56%2C0%2C0%2C0%2C0-79.2ZM138.34%2C174.22l-30.06%2C30.06a40%2C40%2C0%2C1%2C1-56.56-56.57l30.05-30.05a8%2C8%2C0%2C0%2C0-11.32-11.32L40.4%2C136.4a56%2C56%2C0%2C0%2C0%2C79.2%2C79.2l30.06-30.07a8%2C8%2C0%2C0%2C0-11.32-11.31Z%22%2F%3E%3C%2Fsvg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M165.66%2C90.34a8%2C8%2C0%2C0%2C1%2C0%2C11.32l-64%2C64a8%2C8%2C0%2C0%2C1-11.32-11.32l64-64A8%2C8%2C0%2C0%2C1%2C165.66%2C90.34ZM215.6%2C40.4a56%2C56%2C0%2C0%2C0-79.2%2C0L106.34%2C70.45a8%2C8%2C0%2C0%2C0%2C11.32%2C11.32l30.06-30a40%2C40%2C0%2C0%2C1%2C56.57%2C56.56l-30.07%2C30.06a8%2C8%2C0%2C0%2C0%2C11.31%2C11.32L215.6%2C119.6a56%2C56%2C0%2C0%2C0%2C0-79.2ZM138.34%2C174.22l-30.06%2C30.06a40%2C40%2C0%2C1%2C1-56.56-56.57l30.05-30.05a8%2C8%2C0%2C0%2C0-11.32-11.32L40.4%2C136.4a56%2C56%2C0%2C0%2C0%2C79.2%2C79.2l30.06-30.07a8%2C8%2C0%2C0%2C0-11.32-11.31Z%22%2F%3E%3C%2Fsvg%3E") center / contain no-repeat; }
+a.link-card::before { content: ""; position: absolute; left: 12px; top: 50%; width: 20px; height: 20px; margin-top: -10px; background: var(--ink); -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M165.66%2C90.34a8%2C8%2C0%2C0%2C1%2C0%2C11.32l-64%2C64a8%2C8%2C0%2C0%2C1-11.32-11.32l64-64A8%2C8%2C0%2C0%2C1%2C165.66%2C90.34ZM215.6%2C40.4a56%2C56%2C0%2C0%2C0-79.2%2C0L106.34%2C70.45a8%2C8%2C0%2C0%2C0%2C11.32%2C11.32l30.06-30a40%2C40%2C0%2C0%2C1%2C56.57%2C56.56l-30.07%2C30.06a8%2C8%2C0%2C0%2C0%2C11.31%2C11.32L215.6%2C119.6a56%2C56%2C0%2C0%2C0%2C0-79.2ZM138.34%2C174.22l-30.06%2C30.06a40%2C40%2C0%2C1%2C1-56.56-56.57l30.05-30.05a8%2C8%2C0%2C0%2C0-11.32-11.32L40.4%2C136.4a56%2C56%2C0%2C0%2C0%2C79.2%2C79.2l30.06-30.07a8%2C8%2C0%2C0%2C0-11.32-11.31Z%22%2F%3E%3C%2Fsvg%3E") center / contain no-repeat; mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M165.66%2C90.34a8%2C8%2C0%2C0%2C1%2C0%2C11.32l-64%2C64a8%2C8%2C0%2C0%2C1-11.32-11.32l64-64A8%2C8%2C0%2C0%2C1%2C165.66%2C90.34ZM215.6%2C40.4a56%2C56%2C0%2C0%2C0-79.2%2C0L106.34%2C70.45a8%2C8%2C0%2C0%2C0%2C11.32%2C11.32l30.06-30a40%2C40%2C0%2C0%2C1%2C56.57%2C56.56l-30.07%2C30.06a8%2C8%2C0%2C0%2C0%2C11.31%2C11.32L215.6%2C119.6a56%2C56%2C0%2C0%2C0%2C0-79.2ZM138.34%2C174.22l-30.06%2C30.06a40%2C40%2C0%2C1%2C1-56.56-56.57l30.05-30.05a8%2C8%2C0%2C0%2C0-11.32-11.32L40.4%2C136.4a56%2C56%2C0%2C0%2C0%2C79.2%2C79.2l30.06-30.07a8%2C8%2C0%2C0%2C0-11.32-11.31Z%22%2F%3E%3C%2Fsvg%3E"); mask-position: center; mask-size: contain; mask-repeat: no-repeat; }
 a.link-card[data-kind="image"]::before { -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M216%2C40H40A16%2C16%2C0%2C0%2C0%2C24%2C56V200a16%2C16%2C0%2C0%2C0%2C16%2C16H216a16%2C16%2C0%2C0%2C0%2C16-16V56A16%2C16%2C0%2C0%2C0%2C216%2C40Zm0%2C16V158.75l-26.07-26.06a16%2C16%2C0%2C0%2C0-22.63%2C0l-20%2C20-44-44a16%2C16%2C0%2C0%2C0-22.62%2C0L40%2C149.37V56ZM40%2C172l52-52%2C80%2C80H40Zm176%2C28H194.63l-36-36%2C20-20L216%2C181.38V200ZM144%2C100a12%2C12%2C0%2C1%2C1%2C12%2C12A12%2C12%2C0%2C0%2C1%2C144%2C100Z%22%2F%3E%3C%2Fsvg%3E"); mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M216%2C40H40A16%2C16%2C0%2C0%2C0%2C24%2C56V200a16%2C16%2C0%2C0%2C0%2C16%2C16H216a16%2C16%2C0%2C0%2C0%2C16-16V56A16%2C16%2C0%2C0%2C0%2C216%2C40Zm0%2C16V158.75l-26.07-26.06a16%2C16%2C0%2C0%2C0-22.63%2C0l-20%2C20-44-44a16%2C16%2C0%2C0%2C0-22.62%2C0L40%2C149.37V56ZM40%2C172l52-52%2C80%2C80H40Zm176%2C28H194.63l-36-36%2C20-20L216%2C181.38V200ZM144%2C100a12%2C12%2C0%2C1%2C1%2C12%2C12A12%2C12%2C0%2C0%2C1%2C144%2C100Z%22%2F%3E%3C%2Fsvg%3E"); }
 a.link-card[data-kind="video"]::before { -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M164.44%2C105.34l-48-32A8%2C8%2C0%2C0%2C0%2C104%2C80v64a8%2C8%2C0%2C0%2C0%2C12.44%2C6.66l48-32a8%2C8%2C0%2C0%2C0%2C0-13.32ZM120%2C129.05V95l25.58%2C17ZM216%2C40H40A16%2C16%2C0%2C0%2C0%2C24%2C56V168a16%2C16%2C0%2C0%2C0%2C16%2C16H216a16%2C16%2C0%2C0%2C0%2C16-16V56A16%2C16%2C0%2C0%2C0%2C216%2C40Zm0%2C128H40V56H216V168Zm16%2C40a8%2C8%2C0%2C0%2C1-8%2C8H32a8%2C8%2C0%2C0%2C1%2C0-16H224A8%2C8%2C0%2C0%2C1%2C232%2C208Z%22%2F%3E%3C%2Fsvg%3E"); mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M164.44%2C105.34l-48-32A8%2C8%2C0%2C0%2C0%2C104%2C80v64a8%2C8%2C0%2C0%2C0%2C12.44%2C6.66l48-32a8%2C8%2C0%2C0%2C0%2C0-13.32ZM120%2C129.05V95l25.58%2C17ZM216%2C40H40A16%2C16%2C0%2C0%2C0%2C24%2C56V168a16%2C16%2C0%2C0%2C0%2C16%2C16H216a16%2C16%2C0%2C0%2C0%2C16-16V56A16%2C16%2C0%2C0%2C0%2C216%2C40Zm0%2C128H40V56H216V168Zm16%2C40a8%2C8%2C0%2C0%2C1-8%2C8H32a8%2C8%2C0%2C0%2C1%2C0-16H224A8%2C8%2C0%2C0%2C1%2C232%2C208Z%22%2F%3E%3C%2Fsvg%3E"); }
 a.link-card[data-kind="audio"]::before { -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M155.51%2C24.81a8%2C8%2C0%2C0%2C0-8.42.88L77.25%2C80H32A16%2C16%2C0%2C0%2C0%2C16%2C96v64a16%2C16%2C0%2C0%2C0%2C16%2C16H77.25l69.84%2C54.31A8%2C8%2C0%2C0%2C0%2C160%2C224V32A8%2C8%2C0%2C0%2C0%2C155.51%2C24.81ZM32%2C96H72v64H32ZM144%2C207.64%2C88%2C164.09V91.91l56-43.55Zm54-106.08a40%2C40%2C0%2C0%2C1%2C0%2C52.88%2C8%2C8%2C0%2C0%2C1-12-10.58%2C24%2C24%2C0%2C0%2C0%2C0-31.72%2C8%2C8%2C0%2C0%2C1%2C12-10.58ZM248%2C128a79.9%2C79.9%2C0%2C0%2C1-20.37%2C53.34%2C8%2C8%2C0%2C0%2C1-11.92-10.67%2C64%2C64%2C0%2C0%2C0%2C0-85.33%2C8%2C8%2C0%2C1%2C1%2C11.92-10.67A79.83%2C79.83%2C0%2C0%2C1%2C248%2C128Z%22%2F%3E%3C%2Fsvg%3E"); mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M155.51%2C24.81a8%2C8%2C0%2C0%2C0-8.42.88L77.25%2C80H32A16%2C16%2C0%2C0%2C0%2C16%2C96v64a16%2C16%2C0%2C0%2C0%2C16%2C16H77.25l69.84%2C54.31A8%2C8%2C0%2C0%2C0%2C160%2C224V32A8%2C8%2C0%2C0%2C0%2C155.51%2C24.81ZM32%2C96H72v64H32ZM144%2C207.64%2C88%2C164.09V91.91l56-43.55Zm54-106.08a40%2C40%2C0%2C0%2C1%2C0%2C52.88%2C8%2C8%2C0%2C0%2C1-12-10.58%2C24%2C24%2C0%2C0%2C0%2C0-31.72%2C8%2C8%2C0%2C0%2C1%2C12-10.58ZM248%2C128a79.9%2C79.9%2C0%2C0%2C1-20.37%2C53.34%2C8%2C8%2C0%2C0%2C1-11.92-10.67%2C64%2C64%2C0%2C0%2C0%2C0-85.33%2C8%2C8%2C0%2C1%2C1%2C11.92-10.67A79.83%2C79.83%2C0%2C0%2C1%2C248%2C128Z%22%2F%3E%3C%2Fsvg%3E"); }
@@ -322,7 +335,7 @@ main:not(.notes-on) .note::after, main:not(.notes-on) .note-log { display: none;
 .note-log { position: absolute; top: 0; left: calc(100% + 30px); width: calc(var(--margin) - 44px); z-index: 5; }
 .note-log > summary { list-style: none; cursor: pointer; width: 26px; height: 26px; border-radius: 3px; background: var(--note-fill); border: 1.5px solid var(--note-bar); position: relative; }
 .note-log > summary::-webkit-details-marker { display: none; }
-.note-log > summary::before { content: ""; position: absolute; inset: 3px; background: var(--note-ink); -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M88%2C96a8%2C8%2C0%2C0%2C1%2C8-8h64a8%2C8%2C0%2C0%2C1%2C0%2C16H96A8%2C8%2C0%2C0%2C1%2C88%2C96Zm8%2C40h64a8%2C8%2C0%2C0%2C0%2C0-16H96a8%2C8%2C0%2C0%2C0%2C0%2C16Zm32%2C16H96a8%2C8%2C0%2C0%2C0%2C0%2C16h32a8%2C8%2C0%2C0%2C0%2C0-16ZM224%2C48V156.69A15.86%2C15.86%2C0%2C0%2C1%2C219.31%2C168L168%2C219.31A15.86%2C15.86%2C0%2C0%2C1%2C156.69%2C224H48a16%2C16%2C0%2C0%2C1-16-16V48A16%2C16%2C0%2C0%2C1%2C48%2C32H208A16%2C16%2C0%2C0%2C1%2C224%2C48ZM48%2C208H152V160a8%2C8%2C0%2C0%2C1%2C8-8h48V48H48Zm120-40v28.7L196.69%2C168Z%22%2F%3E%3C%2Fsvg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M88%2C96a8%2C8%2C0%2C0%2C1%2C8-8h64a8%2C8%2C0%2C0%2C1%2C0%2C16H96A8%2C8%2C0%2C0%2C1%2C88%2C96Zm8%2C40h64a8%2C8%2C0%2C0%2C0%2C0-16H96a8%2C8%2C0%2C0%2C0%2C0%2C16Zm32%2C16H96a8%2C8%2C0%2C0%2C0%2C0%2C16h32a8%2C8%2C0%2C0%2C0%2C0-16ZM224%2C48V156.69A15.86%2C15.86%2C0%2C0%2C1%2C219.31%2C168L168%2C219.31A15.86%2C15.86%2C0%2C0%2C1%2C156.69%2C224H48a16%2C16%2C0%2C0%2C1-16-16V48A16%2C16%2C0%2C0%2C1%2C48%2C32H208A16%2C16%2C0%2C0%2C1%2C224%2C48ZM48%2C208H152V160a8%2C8%2C0%2C0%2C1%2C8-8h48V48H48Zm120-40v28.7L196.69%2C168Z%22%2F%3E%3C%2Fsvg%3E") center / contain no-repeat; }
+.note-log > summary::before { content: ""; position: absolute; inset: 3px; background: var(--note-ink); -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M88%2C96a8%2C8%2C0%2C0%2C1%2C8-8h64a8%2C8%2C0%2C0%2C1%2C0%2C16H96A8%2C8%2C0%2C0%2C1%2C88%2C96Zm8%2C40h64a8%2C8%2C0%2C0%2C0%2C0-16H96a8%2C8%2C0%2C0%2C0%2C0%2C16Zm32%2C16H96a8%2C8%2C0%2C0%2C0%2C0%2C16h32a8%2C8%2C0%2C0%2C0%2C0-16ZM224%2C48V156.69A15.86%2C15.86%2C0%2C0%2C1%2C219.31%2C168L168%2C219.31A15.86%2C15.86%2C0%2C0%2C1%2C156.69%2C224H48a16%2C16%2C0%2C0%2C1-16-16V48A16%2C16%2C0%2C0%2C1%2C48%2C32H208A16%2C16%2C0%2C0%2C1%2C224%2C48ZM48%2C208H152V160a8%2C8%2C0%2C0%2C1%2C8-8h48V48H48Zm120-40v28.7L196.69%2C168Z%22%2F%3E%3C%2Fsvg%3E") center / contain no-repeat; mask-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%20fill%3D%22currentColor%22%3E%3Cpath%20d%3D%22M88%2C96a8%2C8%2C0%2C0%2C1%2C8-8h64a8%2C8%2C0%2C0%2C1%2C0%2C16H96A8%2C8%2C0%2C0%2C1%2C88%2C96Zm8%2C40h64a8%2C8%2C0%2C0%2C0%2C0-16H96a8%2C8%2C0%2C0%2C0%2C0%2C16Zm32%2C16H96a8%2C8%2C0%2C0%2C0%2C0%2C16h32a8%2C8%2C0%2C0%2C0%2C0-16ZM224%2C48V156.69A15.86%2C15.86%2C0%2C0%2C1%2C219.31%2C168L168%2C219.31A15.86%2C15.86%2C0%2C0%2C1%2C156.69%2C224H48a16%2C16%2C0%2C0%2C1-16-16V48A16%2C16%2C0%2C0%2C1%2C48%2C32H208A16%2C16%2C0%2C0%2C1%2C224%2C48ZM48%2C208H152V160a8%2C8%2C0%2C0%2C1%2C8-8h48V48H48Zm120-40v28.7L196.69%2C168Z%22%2F%3E%3C%2Fsvg%3E"); mask-position: center; mask-size: contain; mask-repeat: no-repeat; }
 .note-log[open] > summary { background: var(--note-bar); }
 .note-entries { margin-top: 6px; background: var(--note-fill); border: 1px solid #EAD97A; border-left: 4px solid var(--note-bar); border-radius: 3px; padding: 8px 10px; box-shadow: 2px 3px 0 var(--shadow); font-size: 13px; line-height: 1.45; color: var(--note-ink); }
 .note-entries p { margin: 0 0 4px; max-width: none; }
@@ -351,7 +364,7 @@ main:not(.notes-on) .note::after, main:not(.notes-on) .note-log { display: none;
 <div class="box box-info" role="note"><p class="box-h">Information</p><p>The steps are the same on every shift and for every delivery, large or small.</p></div>
 <h2 id="roles-and-responsibilities">Roles and responsibilities</h2>
 <p class="h2sub">Who does each step, who checks it and who owns it.</p>
-<div class="tw"><table class="lop"><thead><tr><th><br></th><th>Shop assistant</th><th>Shift lead</th><th>Shop manager</th></tr></thead><tbody>
+<div class="tw" role="region" tabindex="0" aria-label="Table: Roles and responsibilities"><table class="lop"><thead><tr><td><br></td><th>Shop assistant</th><th>Shift lead</th><th>Shop manager</th></tr></thead><tbody>
 <tr><th scope="row">Receive</th><td>Checks the delivery against the order</td><td>Signs the docket</td><td rowspan="4">Owns the procedure and the allergen matrix</td></tr>
 <tr><th scope="row">Check allergens</th><td>Reads the supplier label</td><td>Confirms the match with the matrix</td></tr>
 <tr><th scope="row">Rotate and refill</th><td>Rotates stock and tops up the bin</td><td>Spot checks one bin in five</td></tr>
@@ -359,7 +372,7 @@ main:not(.notes-on) .note::after, main:not(.notes-on) .note-log { display: none;
 <tr><th scope="row">Review</th><td colspan="3">All three review this procedure together every six months, or after any allergen incident.</td></tr>
 </tbody></table></div>
 <h2 id="definitions">Definitions</h2>
-<div class="tw"><table class="dense"><thead><tr><th>Term</th><th>Our definition</th><th>Industry reference and definition</th></tr></thead><tbody>
+<div class="tw" role="region" tabindex="0" aria-label="Table: Definitions"><table class="dense"><thead><tr><th>Term</th><th>Our definition</th><th>Industry reference and definition</th></tr></thead><tbody>
 <tr><td>Allergen</td><td>A substance in food that can cause an allergic reaction in some people.</td><td><b><a href="https://www.fao.org/fao-who-codexalimentarius/codex-texts/codes-of-practice/" target="_blank" rel="noopener noreferrer">Codex CXC 80-2020, Code of Practice on Food Allergen Management for Food Business Operators, section 2.3</a></b><br>A substance that is normally harmless but can trigger an immune response in some people; in food, a protein that causes a reaction in people who are sensitised to it.</td></tr>
 <tr><td>Allergen cross-contact</td><td>An allergen getting into a food that is not meant to contain it.</td><td><b><a href="https://www.fao.org/fao-who-codexalimentarius/codex-texts/codes-of-practice/" target="_blank" rel="noopener noreferrer">Codex CXC 80-2020, Code of Practice on Food Allergen Management for Food Business Operators, section 2.3</a></b><br>An allergenic food or ingredient that is unintentionally incorporated into another food that is not intended to contain it.</td></tr>
 <tr><td>Allergen profile</td><td>The full list of allergens in a product.</td><td><b><a href="https://www.fao.org/fao-who-codexalimentarius/codex-texts/codes-of-practice/" target="_blank" rel="noopener noreferrer">Codex CXC 80-2020, Code of Practice on Food Allergen Management for Food Business Operators, section 2.3</a></b><br>All the allergens present in a food, whether added on purpose or present unintentionally, including the case where there are none.</td></tr>
@@ -371,7 +384,7 @@ main:not(.notes-on) .note::after, main:not(.notes-on) .note-log { display: none;
 <h3 id="equipment">Equipment</h3>
 <ul><li>A clean scoop and tongs for <b>each</b> bin you will refill</li><li>Food safe gloves</li><li>The allergen matrix and the refill log</li><li>The label printer, loaded with bin labels</li></ul>
 <h3 id="checks">Checks</h3>
-<ul class="check"><li><input type="checkbox"><span class="id">CHK-01</span> Hands washed and gloves on</li><li><input type="checkbox"><span class="id">CHK-02</span> Scoops and tongs are visibly clean and dry</li><li><input type="checkbox"><span class="id">CHK-03</span> The quarantine shelf in the back room is empty and labelled</li></ul>
+<ul class="check"><li><input type="checkbox" aria-label="CHK-01 Hands washed and gloves on"><span class="id">CHK-01</span> Hands washed and gloves on</li><li><input type="checkbox" aria-label="CHK-02 Scoops and tongs are visibly clean and dry"><span class="id">CHK-02</span> Scoops and tongs are visibly clean and dry</li><li><input type="checkbox" aria-label="CHK-03 The quarantine shelf in the back room is empty and labelled"><span class="id">CHK-03</span> The quarantine shelf in the back room is empty and labelled</li></ul>
 <h2 id="procedure">Procedure</h2>
 <p class="h2sub">Four steps, always in this order.</p>
 <div class="dg" data-drawio="&lt;mxfile host=&quot;Diagram Editor&quot; agent=&quot;Diagram Editor 1.1.0&quot; version=&quot;24.0.0&quot; type=&quot;device&quot;&gt;
@@ -404,7 +417,7 @@ main:not(.notes-on) .note::after, main:not(.notes-on) .note-log { display: none;
 <h3 id="step-1-receive">Step 1: Receive</h3>
 <ol><li><span class="id">R-01</span> Check each box against the order: product, quantity and best before date.</li><li><span class="id">R-02</span> Refuse any box that is damaged, open or past its date.</li><li><span class="id">R-03</span> Ask the shift lead to sign the delivery docket.</li></ol>
 <h3 id="step-2-check-allergens">Step 2: Check allergens</h3>
-<div class="note"><div class="note-body"><ol><li><span class="id">C-01</span> Read the allergen statement on the supplier label.</li><li><span class="id">C-02</span> Find the product in the allergen matrix and compare its <a href="#definitions">allergen profile</a> with the label.</li><li><span class="id">C-03</span> Ask the shift lead to confirm the match before the box leaves the back room.</li></ol></div><details class="note-log"><summary></summary><div class="note-entries"><p class="note-date"><b>2026.11.16</b></p><p><b class="note-who">AB</b> Should C-03 need a second signature when the supplier has changed the recipe?</p></div></details></div>
+<div class="note"><div class="note-body"><ol><li><span class="id">C-01</span> Read the allergen statement on the supplier label.</li><li><span class="id">C-02</span> Find the product in the allergen matrix and compare its <a href="#definitions">allergen profile</a> with the label.</li><li><span class="id">C-03</span> Ask the shift lead to confirm the match before the box leaves the back room.</li></ol></div><details class="note-log"><summary title="Note" aria-label="Note"></summary><div class="note-entries"><p class="note-date"><b>2026.11.16</b></p><p><b class="note-who">AB</b> Should C-03 need a second signature when the supplier has changed the recipe?</p></div></details></div>
 <h4 id="if-the-label-and-the-matrix-disagree">If the label and the matrix disagree</h4>
 <p>Stop. Put the box on the quarantine shelf, tell the shop manager, and do not refill the bin until the matrix has been updated.</p>
 <div class="box box-critical" role="note"><p class="box-h">Critical</p><p>A wrong allergen label can seriously harm a customer. If you are not sure, treat the box as a mismatch:</p><ul><li>stop the refill;</li><li>quarantine the box;</li><li>tell the shop manager.</li></ul></div>
@@ -420,21 +433,21 @@ main:not(.notes-on) .note::after, main:not(.notes-on) .note-log { display: none;
 <pre>BIN:        A2<br>PRODUCT:    Milk chocolate buttons<br>CONTAINS:   Milk, Soy<br>BEST BEFORE: 2027-03-31<br>REFILLED:   2026-11-16 09:40 AB</pre>
 <h2 id="bin-map-and-allergen-matrix">Bin map and allergen matrix</h2>
 <p class="h2sub">One row per bin. The matrix is the record the allergen check compares against.</p>
-<div class="note"><div class="note-body"><div class="tw"><table><thead><tr><th scope="col">Row</th><th scope="col">Bin</th><th scope="col">Product</th><th scope="col">Allergens on the supplier label</th><th scope="col">Zone</th></tr></thead><tbody>
+<div class="note"><div class="note-body"><div class="tw" role="region" tabindex="0" aria-label="Table: Bin map and allergen matrix"><table><thead><tr><th scope="col">Row</th><th scope="col">Bin</th><th scope="col">Product</th><th scope="col">Allergens on the supplier label</th><th scope="col">Zone</th></tr></thead><tbody>
 <tr><th rowspan="2" scope="row">Top</th><th class="sub" scope="row">A1</th><td>Fruit jellies</td><td>None declared</td><td rowspan="2">Nut free</td></tr>
 <tr><th class="sub" scope="row">A2</th><td>Milk chocolate buttons</td><td>Milk, Soy</td></tr>
 <tr><th rowspan="2" scope="row">Middle</th><th class="sub" scope="row">B1</th><td>Peanut brittle pieces</td><td>Peanuts</td><td rowspan="2">Contains nuts</td></tr>
 <tr><th class="sub" scope="row">B2</th><td>Hazelnut pralines</td><td>Tree nuts, Milk</td></tr>
-</tbody></table></div></div><details class="note-log"><summary></summary><div class="note-entries"><p class="note-date"><b>2026.11.16</b></p><p><b class="note-who">CD</b> Bin B1 and B2 share a scoop rack. Move the rack or add a second one.</p></div></details></div>
+</tbody></table></div></div><details class="note-log"><summary title="Note" aria-label="Note"></summary><div class="note-entries"><p class="note-date"><b>2026.11.16</b></p><p><b class="note-who">CD</b> Bin B1 and B2 share a scoop rack. Move the rack or add a second one.</p></div></details></div>
 <p class="cap">Table 1. An extract of the matrix. The full matrix is kept behind the counter.</p>
 <h2 id="common-questions">Common questions</h2>
 <dl class="qa"><dt>A customer asks whether a sweet contains nuts. What do I say?</dt><dd>Read the bin label to them and offer to show the supplier label. Never answer from memory.</dd><dt>A scoop was put back in the wrong bin. What now?</dt><dd>Treat it as allergen cross-contact. Remove both scoops for washing and tell the shift lead, who decides whether the bin must be emptied.</dd><dt>The label printer is not working.</dt><dd>Write the label by hand in the same format, and note it in the refill log.</dd></dl>
 <h2 id="records-and-references">Records and references</h2>
-<div class="tw"><table><thead><tr><th>Record</th><th>Kept by</th><th>Kept for</th></tr></thead><tbody><tr><td>Delivery docket</td><td>Shift lead</td><td>12 months</td></tr><tr><td>Refill log</td><td>Shift lead</td><td>12 months</td></tr><tr><td>Allergen matrix</td><td>Shop manager</td><td>Current version, plus the last two</td></tr></tbody></table></div>
+<div class="tw" role="region" tabindex="0" aria-label="Table: Records and references"><table><thead><tr><th>Record</th><th>Kept by</th><th>Kept for</th></tr></thead><tbody><tr><td>Delivery docket</td><td>Shift lead</td><td>12 months</td></tr><tr><td>Refill log</td><td>Shift lead</td><td>12 months</td></tr><tr><td>Allergen matrix</td><td>Shop manager</td><td>Current version, plus the last two</td></tr></tbody></table></div>
 <p>This procedure draws on:</p>
 <ul><li><a href="https://doi.org/10.4060/cc6125en" target="_blank" rel="noopener noreferrer">Codex Alimentarius, General Principles of Food Hygiene (CXC 1-1969)</a></li><li><a href="https://www.fao.org/fao-who-codexalimentarius/codex-texts/codes-of-practice/" target="_blank" rel="noopener noreferrer">Codex Alimentarius, Code of Practice on Food Allergen Management for Food Business Operators (CXC 80-2020), in the list of Codex codes of practice</a></li></ul>
 <h2 id="revision-history">Revision history</h2>
-<div class="tw"><table><thead><tr><th>Version</th><th>Date</th><th>Change</th><th>Approved by</th></tr></thead><tbody><tr><td>1.0</td><td>2026-11-16</td><td>First issue</td><td>Shop manager</td></tr></tbody></table></div>
+<div class="tw" role="region" tabindex="0" aria-label="Table: Revision history"><table><thead><tr><th>Version</th><th>Date</th><th>Change</th><th>Approved by</th></tr></thead><tbody><tr><td>1.0</td><td>2026-11-16</td><td>First issue</td><td>Shop manager</td></tr></tbody></table></div>
 </main>
 </div>
 </body>

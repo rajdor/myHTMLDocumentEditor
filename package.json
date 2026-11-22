@@ -34,12 +34,22 @@
     "turndown": "7.2.5"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@phosphor-icons/core": "^2.1.1",
     "@sparticuz/chromium": "^138.0.0",
+    "axe-core": "^4.14.1",
     "esbuild": "0.28.2",
-    "puppeteer-core": "^25.16.0"
+    "eslint": "^10.15.0",
+    "globals": "^17.14.0",
+    "micromark": "^4.0.3",
+    "micromark-extension-gfm": "^3.0.0",
+    "puppeteer-core": "^25.16.0",
+    "vnu-jar": "^26.11.20"
   },
   "engines": {
     "node": ">=22.12"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
   }
 }

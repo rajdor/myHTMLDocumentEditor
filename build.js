@@ -39,7 +39,9 @@ const ICON_DIR = path.join(__dirname, 'node_modules/@phosphor-icons/core/assets/
 const icon = (n, fill) => fs.readFileSync(path.join(ICON_DIR, fill ? '../fill' : '', n + (fill ? '-fill' : '') + '.svg'), 'utf8').replace(/\s*xmlns="[^"]*"/, '').replace('<svg', '<svg aria-hidden="true"').trim();
 
 function build(PRODUCT) {
-const app = "'use strict';\nconst VERSION = " + JSON.stringify(pkg.version) + ", PRODUCT = " + JSON.stringify({ id: PRODUCT.id, label: PRODUCT.label, key: PRODUCT.key }) + ", EMOJI = " + emojiJs + ";\n" + (PRODUCT.notebook ? markedJs + "\n" + turndownJs + "\n" : '')
+// the one script a saved page may hold (it fits diagrams to the page width), allowed by its hash in the saved page's security policy
+const fitJs = JSON.parse(src('app.js').match(/^const FIT_JS = ("(?:[^"\\]|\\.)*");/m)[1]), fitHash = "'sha256-" + crypto.createHash('sha256').update(fitJs, 'utf8').digest('base64') + "'";
+const app = "'use strict';\nconst VERSION = " + JSON.stringify(pkg.version) + ", FIT_HASH = " + JSON.stringify(fitHash) + ", PRODUCT = " + JSON.stringify({ id: PRODUCT.id, label: PRODUCT.label, key: PRODUCT.key }) + ", EMOJI = " + emojiJs + ";\n" + (PRODUCT.notebook ? markedJs + "\n" + turndownJs + "\n" : '')
   + src('app.js').replace('/*CONVERT*/', () => src('convert.js') + '\n' + src('convert-drawings.js')).replace('/*NOTEBOOK*/', () => PRODUCT.notebook ? PRODUCT.editors.map(e => src('editors/' + e + '.js')).join('\n') + '\n' + src('notebook/notebook.js') : src('notebook/none.js'));
 let html = src('index.html')
   .replace('{{product}}', PRODUCT.title)

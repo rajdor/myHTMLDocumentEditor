@@ -50,10 +50,12 @@ function status() { const sv = $('[data-a="save"]'); sv.classList.toggle('has', 
 /* The editor version and the document name are shown in the Help dialog. */
 function helpInfo() { const i = $('#help-info'); if (i) i.textContent = PRODUCT.label + ' v' + VERSION + ' | Document: ' + fname + (dirty ? ' (unsaved changes)' : '') + (statusEl.textContent ? ' | ' + statusEl.textContent : ''); }
 function keepGoing(what) { return !dirty || confirm('This document has unsaved changes. Save it first if you want to keep them.\n\nOK: discard the changes and ' + what + '.\nCancel: go back to the document.'); }
+let tidyQ = false;
 function touch() {
+  if (!tidyQ) { tidyQ = true; queueMicrotask(() => { tidyQ = false; if (tidy()) styleUI(); }); }   // once the command that changed the page has finished
   olTidy();
   checkFix(doc); dirty = true; status(); clearTimeout(timer);
-  timer = setTimeout(() => { histSnap(); try { localStorage.setItem(PRODUCT.key + '-draft', clean().innerHTML); } catch (e) { } }, 400);
+  timer = setTimeout(() => { histSnap(); if (NB.foreign()) return; try { localStorage.setItem(PRODUCT.key + '-draft', clean().innerHTML); } catch (e) { } }, 400);   // the browser's draft is for pages; a Markdown file's unsaved work is kept in its history
 }
 doc.addEventListener('input', touch);
 /* Document history: whole-document snapshots, so structural changes (tables, Q&A, code, Clear format, diagrams) undo as well as typing. */
@@ -62,9 +64,12 @@ function nodePath(n) { const p = []; while (n && n !== doc) { const par = n.pare
 function fromPath(p) { let n = doc; for (const i of p) { n = n.childNodes[i]; if (!n) return null; } return n; }
 function selState() { const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode)) return null; const r = s.getRangeAt(0), p = nodePath(r.startContainer); return p ? { p, o: r.startOffset } : null; }
 function histSnap() {
-  rebuild(); const h = doc.innerHTML.replace(/ ?\bed-(dsel|cell)\b/g, '').replace(/ data-ed-ct(="")?/g, '').replace(/ class=""/g, ''); if (hpos >= 0 && hist[hpos].h === h) { hist[hpos].sel = selState() || hist[hpos].sel; return; }
+  rebuild(); const h = preLF(doc.innerHTML).replace(/ ?\bed-(dsel|cell)\b/g, '').replace(/ data-ed-ct(="")?/g, '').replace(/ class=""/g, ''); if (hpos >= 0 && hist[hpos].h === h) { hist[hpos].sel = selState() || hist[hpos].sel; return; }
   hist = hist.slice(0, hpos + 1); hist.push({ h, sel: selState() }); if (hist.length > 80) hist.shift(); hpos = hist.length - 1;
 }
+/* HTML drops a line break straight after <pre> each time it is read, so HTML that will be read again gets one more there,
+   and a code block that starts with an empty line keeps it. */
+const preLF = h => h.replace(/<pre(\s[^>]*)?>\n/g, m => m + '\n');
 function histReset() { hist = []; hpos = -1; histSnap(); }
 function histGo(d) {
   if (board) { if (d < 0) undoDiagram(); return; }
@@ -112,6 +117,8 @@ function styleUI() {
   { const q = qaItem(), noList = !!(q && q.tagName === 'DT'); ['ul', 'ol', 'check'].forEach(a => $('[data-a="' + a + '"]').classList.toggle('dim', noList)); $('[data-a="qa"]').classList.toggle('on', !!q); $('[data-a="qa"]').classList.toggle('dim', !q && !!n.closest('li,td,th,pre')); }
   { const lt = listTop(); $('[data-a="ldense"]').classList.toggle('on', !!(lt && lt.classList.contains('dense'))); $('[data-a="ldense"]').classList.toggle('dim', !lt); const o = olAt(); $('[data-a="olstart"]').classList.toggle('dim', !o); $('[data-a="olstart"]').classList.toggle('on', !!(o && o.hasAttribute('start'))); }
   const ck = inCheck(); $('[data-a="check"]').classList.toggle('on', ck); if (ck) $('[data-a="ul"]').classList.remove('on');
+  { const code = selCode(); CODE_OFF.forEach(a => { const x = $('#tbar [data-a="' + a + '"]'); if (x && code) x.classList.add('dim'); }); $('#s-fmt').classList.toggle('dim', code); ['tag', 'link'].forEach(a => $('#tbar [data-a="' + a + '"]').classList.toggle('dim', code)); $('[data-a="bold"]').classList.toggle('dim', code); $('[data-a="italic"]').classList.toggle('dim', code); }
+  if (mdCellSel()) MD_CELL_OFF.forEach(a => { const x = $('#tbar [data-a="' + a + '"]'); if (x) x.classList.add('dim'); });
 }
 function live() { const s = getSelection(); if (s.rangeCount && doc.contains(s.anchorNode)) { let n = s.anchorNode; if (n.nodeType !== 1) n = n.parentElement; if (!n.closest('.fig')) lastRange = s.getRangeAt(0).cloneRange(); } }
 function restore() { doc.focus(); if (lastRange) { const s = getSelection(); s.removeAllRanges(); s.addRange(lastRange); } }
@@ -121,13 +128,153 @@ function curBlock() { let n = lastRange ? lastRange.startContainer : null; if (!
 function cmd(c, v) { restore(); document.execCommand(c, false, v); touch(); }
 function setBlock(v) {
   live();
+  /* A list item cannot be a heading, a paragraph style, a code block or a Q&A item: it leaves its list first (as Outdent
+     does, level by level), and the style goes on the paragraph it becomes. A list inside a Q&A answer is left alone. */
+  if (!qaItem(lastRange) && listItems().length) { restore(); liftLists(); live(); }
+  if (!qaItem(lastRange)) { restore(); if (liftMixed()) live(); }   // items the selection reaches in other lists, or from outside a list
   const [tag, cls] = v.split('.'); const qa = qaItem(lastRange);
   if (tag === 'dt' || tag === 'dd' || qa) { qaConvert(tag, cls); return; }
-  restore(); document.execCommand('formatBlock', false, tag);
+  restore(); if (tag === 'pre' ? preJoin() : blockEach(tag, cls)) { touch(); return; }
+  document.execCommand('formatBlock', false, tag);
   let n = getSelection().anchorNode; if (n && n.nodeType !== 1) n = n.parentElement; n = n && n.closest('p,h1,h2,h3,h4,pre');
   if (n && doc.contains(n)) { if (cls) n.className = cls; else n.removeAttribute('class'); }
   touch();
 }
+/* ---------- keeping the structure sound ----------
+   The browser's own editing commands can leave structures the editor never makes: a list inside a heading, markup in a
+   code block, text styled with the look of the block it came from (after Enter or Delete across two blocks). The
+   commands below avoid most of them, and tidy() mends any that still appear, after every change. */
+/* Code block over several blocks: one code block with a line for each block, as the browser would otherwise run
+   their text together. The blocks must sit side by side (in the page or in one box); a single block goes the browser's way. */
+function selBlocks() { const s = getSelection(); if (!s.rangeCount) return []; const r = s.getRangeAt(0); if (r.collapsed) { const p = blockOf(r.startContainer); return p ? [p] : []; }   // the cursor alone counts only in a code block, whose lines become blocks
+  return $$('p,h1,h2,h3,h4,pre', doc).filter(b => r.intersectsNode(b) && !b.closest('.fig,.dg,.note-log,.link-card,table,li,dl') && !b.matches('.box-h') && !b.parentElement.closest('p,h1,h2,h3,h4,pre')); }
+/* A line style over several blocks goes on each of them, as the browser would otherwise make them one block with line
+   breaks. A code block among them gives a block for each of its lines. */
+function blockEach(tag, cls) {
+  const bs = selBlocks(); if (bs.length < 2 && !(bs.length && bs[0].matches('pre'))) return false; const c = caretGet();
+  bs.forEach(b => {
+    if (b.tagName === tag.toUpperCase() && (b.getAttribute('class') || '') === (cls || '')) return;   // already this style: left as it is, with what it carries
+    const parts = b.matches('pre') ? preText(b).replace(/\n$/, '').split('\n').map(l => { const n = document.createElement(tag); n.textContent = l; return n; }) : [(() => { const n = document.createElement(tag); n.append(...b.childNodes); return n; })()];
+    [...b.attributes].forEach(x => { if (!/^(class|style|data-md-h|data-lang)$/.test(x.name)) parts[0].setAttribute(x.name, x.value); });   // an id stays, so links to the block still reach it
+    parts.forEach(n => { if (cls) n.className = cls; if (!n.firstChild) n.appendChild(document.createElement('br')); });
+    b.replaceWith(...parts);
+  });
+  caretPut(c); return true;
+}
+function preJoin() {
+  const s = getSelection(); if (!s.rangeCount) return false; const r = s.getRangeAt(0); if (r.collapsed && !blockOf(r.startContainer)) return false;
+  const bs = selBlocks(); if (bs.length === 1 && bs[0].matches('pre')) return true;   // already a code block
+  if (bs.length < 2 || bs.some(b => b.parentNode !== bs[0].parentNode)) return false;
+  const lines = []; bs.forEach(b => lines.push(...preText(b).replace(/\n$/, '').split('\n')));
+  const pre = document.createElement('pre'); lines.forEach((l, i) => { if (i) pre.appendChild(document.createElement('br')); if (l) pre.appendChild(document.createTextNode(l)); });
+  if (!pre.firstChild) pre.appendChild(document.createElement('br'));
+  bs[0].replaceWith(pre); bs.slice(1).forEach(b => b.remove());
+  const q = document.createRange(); q.selectNodeContents(pre); s.removeAllRanges(); s.addRange(q); lastRange = q.cloneRange(); return true;
+}
+/* A selection that starts outside a list and runs into one: the list items it reaches leave their list (each becomes a
+   paragraph after the part of the list before it; the rest of the list follows), so a line style can go on them too. */
+function liftMixed() {
+  const s = getSelection(); if (!s.rangeCount) return false; const r = s.getRangeAt(0); if (r.collapsed) return false;
+  const lis = $$('li', doc).filter(li => r.intersectsNode(li) && !li.closest('.fig,.dg,.note-log,table,dl'));
+  if (!lis.length) return false;
+  const c = caretGet(), touched = [];
+  lis.reverse().forEach(li => {
+    let top = li.parentNode; while (top.parentNode && top.parentNode.closest && top.parentNode.closest('li') && doc.contains(top.parentNode)) top = top.parentNode.closest('li').parentNode;
+    const after = document.createRange(); after.setStartAfter(li); after.setEndAfter(top); const rest = after.extractContents();
+    touched.push(top); const host = top.parentNode, ref = top.nextSibling, p = document.createElement('p'), subs = []; if (li.id) p.id = li.id;
+    [...li.childNodes].forEach(k => { if (k.nodeType === 1 && k.matches('ul,ol')) subs.push(k); else if (!(k.nodeType === 1 && k.matches('input'))) p.appendChild(k); });
+    const par = li.parentNode; li.remove();
+    for (let l = par; l && l !== top.parentNode;) { const up = l.parentNode; if (l.matches('ul,ol') && !l.children.length) l.remove(); else if (l.matches('li') && !l.textContent.trim() && !l.querySelector('img,input')) l.remove(); l = up && up.matches && up.matches('ul,ol,li') ? up : null; if (l && !doc.contains(l)) break; }
+    if (!p.firstChild) p.appendChild(document.createElement('br'));
+    const add = n => host.insertBefore(n, ref);
+    add(p); subs.forEach(n => { add(n); touched.push(n); });
+    [...rest.childNodes].forEach(n => { if (n.nodeType === 1 && n.matches('ul,ol') && !n.querySelector('li')) return; if (n.nodeType === 3 && !n.data.trim()) return; add(n); if (n.nodeType === 1) touched.push(n); });
+  });
+  listMend(touched); caretPut(c); return true;
+}
+/* After items leave their list: an item left with only an inner list gives its place to that list's items, and empty
+   items and lists go. */
+function listMend(roots) {
+  const mine = n => roots.some(r => r.isConnected && r.contains(n));
+  for (let k = 0; k < 6; k++) {
+    let did = false;
+    $$('li', doc).filter(li => mine(li) && !li.closest('.fig,.dg,.note-log,table,dl')).forEach(li => {
+      const own = [...li.childNodes].filter(n => !(n.nodeType === 1 && n.matches('ul,ol'))), subs = [...li.children].filter(n => n.matches('ul,ol'));
+      const empty = !own.some(n => n.nodeType === 3 ? n.data.trim() : n.nodeType === 1 && (n.textContent.trim() || n.matches('img,input,br') && n.matches('img,input') || n.querySelector('img,input')));
+      if (!empty) return;
+      if (subs.length) { li.replaceWith(...subs.flatMap(u => [...u.children])); did = true; }
+      else if (!li.textContent.trim() && li.parentNode.children.length > 1 && !li.querySelector('img,input')) { li.remove(); did = true; }
+    });
+    $$('ul,ol', doc).filter(l => mine(l) && !l.closest('.fig,.dg,.note-log') && !l.querySelector('li')).forEach(l => { l.remove(); did = true; });
+    if (!did) break;
+  }
+}
+function liftLists() { for (let i = 0; i < 8 && listItems().length; i++) if (!listShift(-1)) break; }
+/* Whether the selection is in or touches a code block, where text formatting and lists do not apply. */
+function selCode() { const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode)) return false; const r = s.getRangeAt(0); if (blockOf(r.startContainer) || blockOf(r.endContainer)) return true; return !r.collapsed && $$('pre', doc).some(p => !p.closest('.fig,.dg') && r.intersectsNode(p)); }
+/* Bold in text that is heavier by its style (headings, Q&A questions, header cells): the browser would take it for bold
+   already and wrap it in a "not bold" style. For the command the text counts as plain, so Bold adds <b> (700) and takes it off again. */
+function plainWeight(fn) { const s = getSelection(), r = s.rangeCount ? s.getRangeAt(0) : null; const ws = r ? $$(WEIGHTED, doc).filter(e => !e.closest('.fig,.dg') && r.intersectsNode(e)) : []; ws.forEach(e => e.style.fontWeight = '400'); try { return fn(); } finally { ws.forEach(e => { e.style.removeProperty('font-weight'); if (!e.getAttribute('style')) e.removeAttribute('style'); }); } }
+/* Whether the whole selection is in text that is already bold by its style: headings, Q&A questions, header cells, box labels. */
+function selWeighted() { const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode)) return false; const r = s.getRangeAt(0), w = n => { if (n.nodeType !== 1) n = n.parentElement; return !!(n && n.closest(WEIGHTED)); }; return w(r.startContainer) && w(r.endContainer); }
+/* Lists in a table cell, where a Markdown file cannot hold them: off while a Markdown file is open. */
+function mdCellSel() { if (!document.documentElement.classList.contains('md-mode')) return false; const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode)) return false; const r = s.getRangeAt(0), c = n => { if (n.nodeType !== 1) n = n.parentElement; return !!(n && n.closest('td,th')); }; return c(r.startContainer) || c(r.endContainer) || $$('td,th', doc).some(x => r.intersectsNode(x)); }
+const MD_CELL_OFF = ['ul', 'ol', 'check'];
+const CODE_OFF = ['bold', 'italic', 'ul', 'ol', 'check', 'tag', 'qa', 'ldense', 'olstart', 'indent', 'outdent', 'link'];
+/* The caret as a count of characters from the start of the document, so it can be put back after tidy() moves nodes. */
+function caretGet() { const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode) || !doc.contains(s.focusNode)) return null; const at = (n, o) => { const r = document.createRange(); r.setStart(doc, 0); try { r.setEnd(n, o); } catch (e) { return -1; } return r.toString().length; }; return [at(s.anchorNode, s.anchorOffset), at(s.focusNode, s.focusOffset)]; }
+function caretPut(c) {
+  if (!c || c[0] < 0) return; const find = k => { const w = document.createTreeWalker(doc, NodeFilter.SHOW_TEXT); let n, last = null; while ((n = w.nextNode())) { if (n.parentElement.closest('.fig,.dg,.note-log')) continue; if (k <= n.length) return [n, k]; k -= n.length; last = n; } return last ? [last, last.length] : null; };
+  const a = find(c[0]), f = find(c[1]); if (!a || !f) return; try { getSelection().setBaseAndExtent(a[0], a[1], f[0], f[1]); lastRange = getSelection().getRangeAt(0).cloneRange(); } catch (e) { }
+}
+const TIDY_INLINE = 'b,strong,i,em,a,code,sup,sub,s,strike,del,u,span,mark,kbd';
+const TIDY_Q = ['pre *:not(br)', 'span:not([class])', 'font', ':is(' + TIDY_INLINE + ',p,h1,h2,h3,h4,li,dt,dd)[style]', '[style=""]', ':is(p,h1,h2,h3,h4) > :is(ul,ol,dl,table,pre,div,hr,p,h1,h2,h3,h4)', 'li > :is(table,div.tw,pre,dl,div.box,hr,h1,h2,h3,h4)', 'li:not(ul > li, ol > li)', ':is(dt,dd):not(dl > *)', 'dl > :not(dt,dd)', ':is(ul,ol) > :not(li)', 'span.id span.id', ':is(b,strong,i,em,code,sup,sub,s,strike,del,u,mark,kbd,span.id,a:not(.link-card)):empty', ':is(i,em) :is(i,em)', ':is(b,strong) :is(b,strong)', ':is(s,strike,del) :is(s,strike,del)', 'sup sup', 'sub sub', 'code code', 'a a', ':is(b,strong,i,em,s,strike,del,sup,sub,code,u,mark) + :is(b,strong,i,em,s,strike,del,sup,sub,code,u,mark)',
+  ':is(table,thead,tbody,tfoot) > :not(thead,tbody,tfoot,tr,caption,colgroup,col)', 'tr > :not(td,th)'].join(',');
+function tidy() {
+  const out = n => !!n.closest('.dg,.fig,.wb-board,.note-log,.link-card,svg') || !doc.contains(n);
+  if (!$$(TIDY_Q, doc).some(n => !out(n)) && ![...doc.childNodes].some(n => n.nodeType === 3 && n.data.trim())) return false;
+  const c = caretGet(), all = q => $$(q, doc).filter(n => !out(n)), unwrap = e => e.replaceWith(...e.childNodes), rename = (e, tag) => { const n = document.createElement(tag); n.append(...e.childNodes); e.replaceWith(n); return n; };
+  // Q&A items outside a Q&A list: list items in a list, paragraphs elsewhere
+  all(':is(dt,dd):not(dl > *)').forEach(e => rename(e, e.parentNode.matches('ul,ol') ? 'li' : 'p'));
+  // anything but Q&A items in a Q&A list goes after it, and the Q&A list carries on after that
+  all('dl > :not(dt,dd)').forEach(x => { const dl = x.parentNode; if (!dl) return; const rest = []; for (let k = x.nextSibling; k; k = k.nextSibling) rest.push(k); dl.after(x); if (rest.some(k => k.nodeType === 1)) { const d2 = dl.cloneNode(false); d2.append(...rest); x.after(d2); } if (!dl.children.length) dl.remove(); });
+  // list items outside a list are put in one; a list holds only list items
+  all('li:not(ul > li, ol > li)').forEach(li => { if (!li.parentNode) return; const prev = li.previousElementSibling; if (prev && prev.matches('ul:not(.check)') && prev.lastElementChild === prev.lastChild) prev.appendChild(li); else { const u = document.createElement('ul'); li.replaceWith(u); u.appendChild(li); } });
+  all(':is(ul,ol) > :not(li)').forEach(x => { const L = x.parentNode; if (!L) return; if (x.matches('input')) return; const prev = x.previousElementSibling; if (x.matches('ul,ol') && prev && prev.tagName === 'LI') prev.appendChild(x); else { const li = document.createElement('li'); x.replaceWith(li); li.appendChild(x); } });
+  // a paragraph or heading holding a block is split around it
+  for (let k = 0; k < 20; k++) {
+    const x = all(':is(p,h1,h2,h3,h4) > :is(ul,ol,dl,table,pre,div,hr,p,h1,h2,h3,h4)')[0]; if (!x) break;
+    const b = x.parentNode, tail = b.cloneNode(false); tail.removeAttribute('id'); for (let n = x.nextSibling; n; n = x.nextSibling) tail.appendChild(n);
+    b.after(x); if (tail.textContent.trim() || tail.querySelector('img,br')) x.after(tail); if (!b.textContent.trim() && !b.querySelector('img')) b.remove();
+  }
+  // a table, code block, box, Q&A list, divider or heading that a list command took into a list item goes back after the list
+  for (let k = 0; k < 20; k++) {
+    const x = all('li > :is(table,div.tw,pre,dl,div.box,hr,h1,h2,h3,h4)')[0]; if (!x) break;
+    let li = x.parentNode, L = li.parentNode; while (L.parentNode && L.parentNode.tagName === 'LI' && L.parentNode.parentNode.matches('ul,ol')) { li = L.parentNode; L = li.parentNode; }
+    const rest = []; for (let n = li.nextSibling; n; n = n.nextSibling) rest.push(n);
+    L.after(x); if (rest.some(n => n.nodeType === 1)) { const L2 = L.cloneNode(false); L2.removeAttribute('start'); L2.append(...rest); x.after(L2); }
+    const box = x.previousSibling; if (box && box.matches && box.matches('ul,ol') && !box.querySelector('li')) box.remove();
+  }
+  // a code block holds plain text
+  all('pre').filter(p => p.querySelector('*:not(br)')).forEach(pre => { let s = ''; const walk = n => n.childNodes.forEach(k => { if (k.nodeType === 3) s += k.data; else if (k.nodeName === 'BR') s += '\n'; else if (k.nodeType === 1) { walk(k); if (/^(LI|P|DIV|H[1-6]|DT|DD|TR)$/.test(k.nodeName) && !s.endsWith('\n')) s += '\n'; } }); walk(pre); pre.textContent = s.replace(/\n$/, ''); });
+  // styling left by the browser's own commands
+  all('span:not([class]), font').forEach(unwrap);
+  all(':is(' + TIDY_INLINE + ',p,h1,h2,h3,h4,li,dt,dd)[style]').forEach(e => e.removeAttribute('style'));
+  all('[style=""]').forEach(e => e.removeAttribute('style'));
+  // an ID tag inside an ID tag is one tag; formatting with nothing in it goes (unless the cursor is in it, about to type)
+  all('span.id span.id').forEach(unwrap);
+  // the same formatting twice side by side is one run of it
+  all('b,strong,i,em,s,strike,del,sup,sub,code,u,mark').forEach(e => { const n = e.nextSibling; if (n && n.nodeType === 1 && n.tagName === e.tagName && !n.attributes.length && !e.attributes.length) { e.append(...n.childNodes); n.remove(); } });
+  all(':is(i,em) :is(i,em), :is(b,strong) :is(b,strong), :is(s,strike,del) :is(s,strike,del), sup sup, sub sub, code code, a a').forEach(unwrap);   // the same formatting twice is once
+  // in a table only rows and cells: anything else the browser put there gives up its content to the cells, or goes
+  all(':is(table,thead,tbody,tfoot) > :not(thead,tbody,tfoot,tr,caption,colgroup,col), tr > :not(td,th)').reverse().forEach(x => { if (x.querySelector('td,th,tr')) unwrap(x); else x.remove(); });
+  { const s = getSelection(), a = s.rangeCount ? s.anchorNode : null; all(':is(b,strong,i,em,code,sup,sub,s,strike,del,u,mark,kbd,span.id,a:not(.link-card)):empty').forEach(e => { if (a !== e) e.remove(); }); }
+  // loose text at the top level becomes a paragraph
+  let run = null; [...doc.childNodes].forEach(n => { const inline = n.nodeType === 3 ? !!n.data.trim() || !!run : n.nodeType === 1 && n.matches(TIDY_INLINE + ',br,img'); if (!inline) { run = null; return; } if (!run) { run = document.createElement('p'); n.before(run); } run.appendChild(n); });
+  doc.normalize(); caretPut(c); return true;
+}
+/* A code block's text, with each line break (<br>, as copied and pasted code has them) as a new line. */
+function preText(n) { let s = ''; const walk = x => x.childNodes.forEach(k => { if (k.nodeType === 3) s += k.data; else if (k.nodeName === 'BR') s += '\n'; else if (k.nodeType === 1 && k.nodeName !== 'INPUT') walk(k); }); walk(n); return s; }
 function blockOf(n) { if (!n) return null; if (n.nodeType !== 1) n = n.parentElement; const p = n && n.closest('pre'); return p && doc.contains(p) && !p.closest('.fig,.dg') ? p : null; }
 function lastLine(nodes) { let t = ''; for (const n of nodes.reverse()) { if (n.nodeName === 'BR') break; if (n.nodeType === 3) { const i = n.data.lastIndexOf('\n'); if (i >= 0) { t = n.data.slice(i + 1) + t; break; } t = n.data + t; } } return t.trim(); }
 function codeEnter(pre) {
@@ -218,7 +365,7 @@ function upgradeNotes(root) {
     });
     old.replaceWith(d);
   });
-  $$('.note-log', root).forEach(d => { d.removeAttribute('open'); const sm = $(':scope > summary', d); if (sm) { sm.innerHTML = ''; sm.setAttribute('contenteditable', 'false'); } });
+  $$('.note-log', root).forEach(d => { d.removeAttribute('open'); const sm = $(':scope > summary', d); if (sm) { sm.innerHTML = ''; sm.setAttribute('contenteditable', 'false'); sm.setAttribute('title', 'Note'); sm.setAttribute('aria-label', 'Note'); } });   // the button is drawn by the style sheet: its name is for screen readers
 }
 function openLog(note, on) {
   $$('.note-log[open]', doc).forEach(d => { if (d.parentNode !== note || !on) d.removeAttribute('open'); });
@@ -326,7 +473,7 @@ function clearFormat() {
   const B = 'p,h1,h2,h3,h4,pre,dt,dd,li,td,th';
   let blocks = $$(B, doc).filter(b => !b.closest('.fig,.dg') && r.intersectsNode(b) && !$(B, b));
   if (!r.collapsed && r.endOffset === 0 && blocks.length > 1 && blocks[blocks.length - 1].contains(r.endContainer)) blocks.pop();
-  const txt = t => t.replace(/[\s ​]+/g, '');
+  const txt = t => t.replace(/[\s\u00a0\u200b]+/g, '');
   const jobs = blocks.map(b => {
     const ir = document.createRange(); ir.selectNodeContents(b);
     if (b.contains(r.startContainer)) ir.setStart(r.startContainer, r.startOffset);
@@ -493,7 +640,7 @@ function setInline(c, sel, want) {
 }
 const inTable = () => { live(); return !!cell(); };
 const REP = {
-  bold: () => { let w = false; try { w = document.queryCommandState('bold'); } catch (e) { } return [w ? 'Bold' : 'Bold off', () => { restore(); setInline('bold', 'b,strong', w); }]; },
+  bold: () => { let w = false; try { w = plainWeight(() => document.queryCommandState('bold')); } catch (e) { } return [w ? 'Bold' : 'Bold off', () => { restore(); plainWeight(() => setInline('bold', 'b,strong', w)); }]; },
   italic: () => { let w = false; try { w = document.queryCommandState('italic'); } catch (e) { } return [w ? 'Italic' : 'Italic off', () => { restore(); setInline('italic', 'i,em', w); }]; },
   ul: () => { let w = false; try { w = document.queryCommandState('insertUnorderedList'); } catch (e) { } return [w ? 'Bulleted list' : 'Bulleted list off', () => { if (qaList('ul')) return; if (document.queryCommandState('insertUnorderedList') !== w) listCmd('insertUnorderedList'); }]; },
   ol: () => { let w = false; try { w = document.queryCommandState('insertOrderedList'); } catch (e) { } return [w ? 'Numbered list' : 'Numbered list off', () => { if (qaList('ol')) return; if (document.queryCommandState('insertOrderedList') !== w) listCmd('insertOrderedList'); }]; },
@@ -512,10 +659,13 @@ function repNote(a) { if (REP[a]) { const [label, run] = REP[a](); repSet(label,
 function repeatLast() {
   if (!lastCmd || editing || board || DE.open) return;
   const s = getSelection(); if (s.rangeCount && doc.contains(s.anchorNode)) live(); else if (!lastRange) return;
+  if (selCode() && !/^(Divider|Insert code block|Note|Clear format)/.test(lastCmd.label)) return;   // as the toolbar: these do not apply in a code block
+  if (mdCellSel() && /list/i.test(lastCmd.label)) return;   // as the toolbar: no lists in a table cell of a Markdown file
   clearTimeout(timer); histSnap(); lastCmd.run(); touch(); styleUI();
 }
 document.addEventListener('keydown', e => {
-  if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.code === 'KeyQ' && !DE.open && !$('#help').open) { e.preventDefault(); repeatLast(); return; }
+  if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.code === 'KeyQ' && !DE.open && !$('#help').open && !NB.textOn()) { e.preventDefault(); repeatLast(); return; }   // not in the text editor, where Option+Q types a character
+  { const k = e.key.toLowerCase(); if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && 'biu'.includes(k) && k && doc.contains(e.target) && !editing && (selCode() || (k === 'b' && selWeighted() && !cellSel))) { e.preventDefault(); e.stopPropagation(); if (!selCode()) { clearTimeout(timer); histSnap(); ACT.bold(); styleUI(); setTimeout(() => repNote('bold'), 0); } return; } }   // as the toolbar: no text formatting in a code block; Bold in heavier text goes through the toolbar's way
   // Bold and Italic by their own shortcuts count as the toolbar commands
   if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.key === 'b' || e.key === 'i' || e.key === 'B' || e.key === 'I') && doc.contains(e.target) && !editing) { const a = e.key.toLowerCase() === 'b' ? 'bold' : 'italic'; setTimeout(() => repNote(a), 0); }
 }, true);
@@ -712,6 +862,21 @@ function enterAfterTag() {
   clearTimeout(timer); histSnap();
   const n = blk.tagName === 'LI' ? mk('li') : mk('p'); blk.after(n); caret(n); touch(); styleUI(); return true;
 }
+/* Typing straight after an ID tag just made from a selection: the browser would put it in the tag. The first character
+   goes after the tag instead, and the typing carries on there. */
+let tagExit = null;
+doc.addEventListener('beforeinput', e => {
+  const sp = tagExit; tagExit = null; if (!sp || e.inputType !== 'insertText' || !e.data || !sp.isConnected) return;
+  const s = getSelection(); if (!s.rangeCount || !s.isCollapsed) return; const r = s.getRangeAt(0);
+  const inTag = sp.contains(r.startContainer), q = document.createRange();
+  if (inTag) { const e2 = document.createRange(); e2.selectNodeContents(sp); e2.setStart(r.startContainer, r.startOffset); if (e2.toString()) return; }   // in the tag but not at its end
+  else { try { q.setStartAfter(sp); q.setEnd(r.startContainer, r.startOffset); } catch (x) { return; } if (q.collapsed === false && (q.toString() || q.cloneContents().querySelector('*'))) return; }
+  e.preventDefault(); let tn = !inTag && r.startContainer.nodeType === 3 ? r.startContainer : null, at = tn ? r.startOffset : 0;
+  if (!tn) { tn = document.createTextNode(''); sp.after(tn); }
+  tn.insertData(at, e.data);
+  const c = document.createRange(); c.setStart(tn, at + e.data.length); c.collapse(true); s.removeAllRanges(); s.addRange(c); lastRange = c.cloneRange();
+  doc.dispatchEvent(new InputEvent('input', { inputType: 'insertText', data: e.data }));
+});
 /* Joining blocks (Backspace at the start of one, Delete at the end of one, or deleting a selection across them). */
 let joinWatch = null;
 const tagTexts = () => $$('span.id', doc).map(t => t.textContent);
@@ -794,6 +959,8 @@ function listCmd(c) {
   restore(); const s = getSelection(), at = () => { let n = s.rangeCount ? s.anchorNode : null; if (n && n.nodeType !== 1) n = n.parentElement; return n && n.closest('li,p,h1,h2,h3,h4'); };
   // taking a list off is done here: the browser's own way leaves the text loose in the page, and in a box it takes the box with it
   { let on = false; try { on = document.queryCommandState(c); } catch (e) { } if (on && listAt()) { listShift(-1); return; } }
+  { const r = s.rangeCount ? s.getRangeAt(0) : null;   // a heading cannot hold a list: it becomes a paragraph first, and that becomes the item
+    if (r) $$('h1,h2,h3,h4', doc).filter(h => !h.closest('.fig,.dg') && (r.collapsed ? h.contains(r.startContainer) : r.intersectsNode(h))).forEach(h => { const c = caretGet(); const p = document.createElement('p'); p.append(...h.childNodes); h.replaceWith(p); caretPut(c); }); }
   brHide();
   let b = s.isCollapsed ? at() : null, text = '', k = 0;
   if (b && doc.contains(b)) { const r = document.createRange(); r.selectNodeContents(b); text = r.toString(); r.setEnd(s.anchorNode, s.anchorOffset); k = r.toString().length; } else b = null;
@@ -867,7 +1034,7 @@ doc.addEventListener('click', e => {
    the document's style. Everything pasted goes through the same cleaning as Open. Code blocks take plain text. */
 const CLIP_INLINE = /^(B|STRONG|I|EM|U|S|SUB|SUP|A|CODE|SPAN|MARK)$/, CLIP_WRAP = /^(UL|OL|DL|TABLE|THEAD|TBODY|TFOOT|TR)$/;
 const BLOCKS = 'p,h1,h2,h3,h4,ul,ol,dl,pre,table,div,details,hr';
-const hasContent = n => !!(n.textContent.replace(/[\s ​]+/g, '') || n.nodeName === 'HR' || (n.querySelector && n.querySelector('img,svg,.dg,.fig,table,hr')));
+const hasContent = n => !!(n.textContent.replace(/[\s\u00a0\u200b]+/g, '') || n.nodeName === 'HR' || (n.querySelector && n.querySelector('img,svg,.dg,.fig,table,hr')));
 function clipClean(box) {
   $$('.ed-handle', box).forEach(n => n.remove());
   $$('.note-log', box).forEach(n => n.remove());
@@ -878,6 +1045,7 @@ function clipClean(box) {
   $$('.dg, .fig', box).forEach(n => n.removeAttribute('title'));
   $$('a[data-ed-title]', box).forEach(a => { a.removeAttribute('title'); a.removeAttribute('data-ed-title'); });
   $$('[id]', box).forEach(n => { if (!n.closest('.fig,.dg,svg')) n.removeAttribute('id'); });
+  $$('img[data-md-src]', box).forEach(i => { i.setAttribute('src', i.getAttribute('data-md-src')); i.removeAttribute('data-md-src'); });   // a picture shown from a Markdown file's folder goes with its path
 }
 function clipFrom(r) {
   r = r.cloneRange(); // a selection that starts at the start of a checklist item takes the item's box with it, so its tick is kept
@@ -939,7 +1107,7 @@ function foreign(box) {
   // a heading inside a cell or list item becomes a bold line: the toolbar has no headings there, so it could not be made again
   $$('h2,h3,h4', box).filter(h => h.parentNode.closest('td,th,li')).forEach(h => { $$('b,strong', h).forEach(x => x.replaceWith(...x.childNodes)); if (!hasContent(h)) { h.remove(); return; } if (h.parentNode.closest('td,th,li').tagName !== 'TH') { const w = document.createElement('b'); w.append(...h.childNodes); h.appendChild(w); } toLine(h); });
   unbold(box);
-  $$('pre', box).forEach(pre => { const lines = pre.textContent.replace(/\n$/, '').split('\n'); pre.textContent = ''; lines.forEach((t, i) => { if (i) pre.appendChild(document.createElement('br')); if (t) pre.appendChild(document.createTextNode(t)); }); });
+  $$('pre', box).forEach(pre => { const lines = preText(pre).replace(/\n$/, '').split('\n'); pre.textContent = ''; lines.forEach((t, i) => { if (i) pre.appendChild(document.createElement('br')); if (t) pre.appendChild(document.createTextNode(t)); }); });
   $$('p,h2,h3,h4,li', box).forEach(n => { if (!hasContent(n) && !n.closest('table')) n.remove(); });
   $$('ul,ol', box).forEach(l => { if (!l.children.length) l.remove(); });
   $$('table', box).forEach(t => { if (!t.rows.length) { t.remove(); return; } if (!(t.parentNode.classList && t.parentNode.classList.contains('tw'))) { const w = document.createElement('div'); w.className = 'tw'; t.replaceWith(w); w.appendChild(t); } });
@@ -948,7 +1116,7 @@ function clipRead(html) {
   const d = new DOMParser().parseFromString(html, 'text/html'), own = d.querySelector('[data-fle-clip]'), box = own || d.body;
   const w = d.createTreeWalker(box, NodeFilter.SHOW_COMMENT), cs = []; while (w.nextNode()) cs.push(w.currentNode); cs.forEach(c => c.remove());
   $$('script,nav,link,meta', box).forEach(n => n.remove());
-  sanitize(box); remoteImgs += cardify(box);
+  sanitize(box); unSave(box); remoteImgs += cardify(box);   // copied from a saved page: as when it is opened
   if (!own) foreign(box);
   // blocks present: loose text and inline runs between them become paragraphs
   if (box.querySelector(BLOCKS)) {
@@ -1898,6 +2066,8 @@ function clean() {
   $$('.note-log[open]', c).forEach(d => d.removeAttribute('open'));
   $$('a[data-ed-title]', c).forEach(a => { a.removeAttribute('title'); a.removeAttribute('data-ed-title'); });
   $$('[class=""]', c).forEach(n => n.removeAttribute('class'));
+  // HTML drops a line break straight after <pre> when the page is read, so a code block that starts with an empty line gets one more
+  $$('pre', c).forEach(p => { const f = p.firstChild; if (f && f.nodeType === 3 && f.data.startsWith('\n')) f.data = '\n' + f.data; });
   return c;
 }
 /* A saved page holds only plain ASCII bytes: every other character is written as its HTML code (&mdash;, &rarr;, &#9472;).
@@ -1923,12 +2093,48 @@ function fontsUsed() {
   return use;
 }
 function docCss() { const u = fontsUsed(); return DOC_CSS.replace(FONT_ITALIC, m => u.italic ? m : '').replace(FONT_MONO, m => u.mono ? m : ''); }
+/* The title of a saved page: its first heading; else the file's own name, once it has one; else Untitled and a number. */
+let untitledN = 1;
+function docTitle() {
+  const h = $('h1', doc), t = h ? h.textContent.replace(/[\u200b\ufeff]/g, '').replace(/\s+/g, ' ').trim() : ''; if (t) return t;
+  const f = (handle || fname !== 'document.html') ? fname.replace(/\.[^./\\]+$/, '').trim() : ''; if (f) return f;
+  return 'Untitled ' + untitledN;
+}
+/* The language of the page, for screen readers, spelling and hyphenation: an opened page keeps its own; a new one takes the browser's. */
+const LANG_OK = /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/;
+let docLang = LANG_OK.test(navigator.language || '') ? navigator.language : 'en';
+function setLang(l) { docLang = LANG_OK.test(l || '') ? l : (LANG_OK.test(navigator.language || '') ? navigator.language : 'en'); doc.setAttribute('lang', docLang); }
+/* Only in the saved page, for people reading it with assistive technology; they come off again when the page is opened,
+   so they cannot go stale while it is edited: each checklist box is named by its item, a table that can scroll sideways
+   can be reached and scrolled from the keyboard, and the empty corner of a table with header rows and columns is a plain cell. */
+function saveOnly(c) {
+  $$('ul.check > li > input[type=checkbox]', c).forEach(i => { const li = i.parentNode, k = li.cloneNode(true); $$('ul,ol,input', k).forEach(x => x.remove()); i.setAttribute('aria-label', k.textContent.replace(/\s+/g, ' ').trim().slice(0, 200) || 'Checklist item'); });
+  $$('div.tw', c).forEach(w => { if (w.closest('.fig,.dg')) return; const t = $('table', w); if (!t) return;
+    let lab = ''; const cap = w.nextElementSibling && w.nextElementSibling.matches('p.cap') ? w.nextElementSibling : w.previousElementSibling && w.previousElementSibling.matches('p.cap') ? w.previousElementSibling : null;
+    if (cap) lab = cap.textContent; else { const hs = $$('h1,h2,h3,h4', c).filter(h => h.compareDocumentPosition(w) & Node.DOCUMENT_POSITION_FOLLOWING && !h.closest('td,th,.fig,.dg')); if (hs.length) lab = hs[hs.length - 1].textContent; }   // its caption, or the heading it comes under
+    w.setAttribute('role', 'region'); w.setAttribute('tabindex', '0'); w.setAttribute('aria-label', 'Table' + (lab.trim() ? ': ' + lab.replace(/\s+/g, ' ').trim().slice(0, 120) : '')); });
+  $$('table', c).forEach(t => { const r0 = t.rows[0], x = r0 && r0.cells[0]; if (!x || x.tagName !== 'TH' || x.textContent.trim() || x.querySelector('img') || x.colSpan > 1 || x.rowSpan > 1 || r0.cells.length < 2 || t.rows.length < 2 || t.closest('.fig,.dg')) return;
+    if (![...r0.cells].slice(1).every(k => k.tagName === 'TH') || ![...t.rows].slice(1).every(r => r.cells[0] && r.cells[0].tagName === 'TH')) return;
+    const d = document.createElement('td'); [...x.attributes].filter(a => a.name !== 'scope').forEach(a => d.setAttribute(a.name, a.value)); d.append(...x.childNodes); x.replaceWith(d); });
+}
+/* What saveOnly() added, taken off when a page is opened (it is made again at each save). */
+function unSave(m) {
+  $$('ul.check > li > input[type=checkbox]', m).forEach(i => i.removeAttribute('aria-label'));
+  $$('div.tw', m).forEach(w => { if (w.getAttribute('role') === 'region') w.removeAttribute('role'); w.removeAttribute('tabindex'); if (/^Table(: |$)/.test(w.getAttribute('aria-label') || '')) w.removeAttribute('aria-label'); });
+  $$('table', m).forEach(t => { const r0 = t.rows[0], x = r0 && r0.cells[0]; if (!x || x.tagName !== 'TD' || x.textContent.trim() || x.querySelector('img') || x.colSpan > 1 || x.rowSpan > 1 || r0.cells.length < 2 || t.rows.length < 2) return;
+    if (![...r0.cells].slice(1).every(k => k.tagName === 'TH') || ![...t.rows].slice(1).every(r => r.cells[0] && r.cells[0].tagName === 'TH')) return;
+    const h = document.createElement('th'); [...x.attributes].forEach(a => h.setAttribute(a.name, a.value)); h.setAttribute('scope', 'col'); h.append(...x.childNodes); x.replaceWith(h); });   // a cell of the header row, as the editor makes it
+}
 function build(opts) {
   tidyNotes(false); rebuild(); const c = clean(), h1 = $('h1', c);
   if (opts && opts.noNotes) $$('.note', c).forEach(unwrapNote);
   $$('a[href]', c).forEach(a => { if (/^\s*https?:/i.test(a.getAttribute('href'))) { a.setAttribute('target', '_blank'); a.setAttribute('rel', 'noopener noreferrer'); } });
   const nav = indexHtml(c, idxDepth);
-  return '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<meta name="generator" content="fine-line-editor">\n<title>' + asciiHtml(esc(h1 ? h1.textContent.trim() : 'Document')) + '</title>\n<style>' + docCss() + '</style>\n</head>\n<body>\n<div class="page">\n<nav aria-label="Index" data-depth="' + idxDepth + '"><b>Index</b><ol>' + asciiHtml(nav) + '</ol></nav>\n<main' + (showNotes && !(opts && opts.noNotes) ? ' class="notes-on"' : '') + '>\n' + asciiHtml(c.innerHTML) + '\n</main>\n</div>\n' + ($('.fig', c) ? '<script>' + FIT_JS + '<\/script>\n' : '') + '</body>\n</html>\n';
+  saveOnly(c); const fig = !!$('.fig', c);
+  /* The saved page loads nothing and runs nothing but its own diagram-fitting script: pictures and fonts are inside it,
+     and a policy says so, so content that got past the clean-up still could not run or reach the web. */
+  const csp = "default-src 'none'; " + (fig ? 'script-src ' + FIT_HASH + '; ' : '') + "style-src 'unsafe-inline'; img-src data:; font-src data:; base-uri 'none'; form-action 'none'";
+  return '<!DOCTYPE html>\n<html lang="' + esc(docLang) + '">\n<head>\n<meta charset="utf-8">\n<meta http-equiv="Content-Security-Policy" content="' + csp + '">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<meta name="generator" content="fine-line-editor ' + VERSION + '">\n<title>' + asciiHtml(esc(docTitle())) + '</title>\n<style>' + docCss() + '</style>\n</head>\n<body>\n<div class="page">\n<nav aria-label="Index" data-depth="' + idxDepth + '"><b>Index</b><ol>' + asciiHtml(nav) + '</ol></nav>\n<main' + (showNotes && !(opts && opts.noNotes) ? ' class="notes-on"' : '') + '>\n' + asciiHtml(c.innerHTML) + '\n</main>\n</div>\n' + (fig ? '<script>' + FIT_JS + '<\/script>\n' : '') + '</body>\n</html>\n';
 }
 function prepView() { dgSel = null; ctSelect(null); $('#gbar').hidden = true; $$('.dg, .fig', doc).forEach(f => f.classList.remove('ed-dsel')); fit(); chromeHeight(); }
 function prep() {
@@ -1948,6 +2154,10 @@ function sanitize(root) {
     if (k.startsWith('on') || k === 'srcdoc' || k === 'formaction' || (/^(href|src|xlink:href|action|data|poster|background)$/.test(k) && (v.startsWith('javascript:') || v.startsWith('vbscript:') || v.startsWith('data:text/html')))) n.removeAttribute(a.name);
   }));
   $$('animate,set,animateMotion,animateTransform', root).filter(n => /^(href|xlink:href)$/i.test(n.getAttribute('attributeName') || '')).forEach(n => n.remove());
+  // what is left of content that was taken out: a reference to a drawing elsewhere, and pictures or formulas with nothing in them
+  $$('use', root).filter(u => { const h = u.getAttribute('href') || u.getAttribute('xlink:href') || ''; return !h.startsWith('#'); }).forEach(n => n.remove());
+  $$('math', root).filter(m => !m.textContent.trim()).forEach(n => n.remove());
+  $$('svg', root).filter(s => !s.querySelector('*') && !s.textContent.trim() && !s.closest('.fig,.dg')).forEach(n => n.remove());
 }
 /* Nothing in a document is downloaded when it opens, in the editor or in the saved file. Images, video and audio
    that point to the web become link cards (still links, so they work outside the editor); web addresses in styles are
@@ -1961,8 +2171,9 @@ function cardify(root) {
   $$('picture source', root).forEach(x => x.remove());
   $$('video, audio', root).forEach(m => { const srcs = [m.getAttribute('src'), ...$$('source', m).map(x => x.getAttribute('src'))].filter(isWeb); if (!srcs.length && !isWeb(m.getAttribute('poster'))) return; m.replaceWith(card(m.tagName === 'VIDEO' ? 'Video' : 'Audio', srcs[0] || m.getAttribute('poster'), m.getAttribute('title') || m.getAttribute('aria-label'))); n++; });
   $$('image, feImage, use', root).forEach(i => ['href', 'xlink:href'].forEach(k => { const v = i.getAttribute(k); if (isWeb(v) && !(i.tagName === 'use' && v.trim().startsWith('#'))) { i.removeAttribute(k); n++; } }));
-  const noUrl = t => t.replace(/@import[^;]*;?/gi, '').replace(/url\(\s*(['"]?)(?!data:|#)[^)]*\1\s*\)/gi, 'none');
-  $$('[style]', root).forEach(e => { const v = e.getAttribute('style'); if (/url\(|@import/i.test(v)) { const w = noUrl(v); if (w !== v) { e.setAttribute('style', w); n++; } } });
+  const noUrl = t => t.replace(/@import[^;]*;?/gi, '').replace(/url\(\s*(?:"(?!data:|#)[^"]*"|'(?!data:|#)[^']*'|(?!["']|data:|#)(?:[^()\s]|\([^)]*\))*)\s*\)/gi, 'none');
+  const webUrl = v => /url\(\s*(?!["']?\s*(?:data:|#))/i.test(v);
+  $$('[style]', root).forEach(e => { const v = e.getAttribute('style'); if (!/url\(|@import/i.test(v)) return; const s = e.style, drop = []; for (let i = 0; i < s.length; i++) if (webUrl(s.getPropertyValue(s[i]))) drop.push(s[i]); drop.forEach(p => s.removeProperty(p)); e.setAttribute('style', s.cssText);   /* what the browser could read, without what would load: a declaration it cannot read goes too */ if (!e.getAttribute('style')) e.removeAttribute('style'); if (e.getAttribute('style') !== v) n++; });   // the property that would load goes, read by the browser's own parser
   $$('style', root).forEach(e => { const v = e.textContent, w = noUrl(v); if (w !== v) { e.textContent = w; n++; } });
   return n;
 }
@@ -1971,10 +2182,11 @@ function load(text, name, opt) {
   const nv = d.querySelector('nav[data-depth]'); idxDepth = nv ? Math.min(3, Math.max(1, parseInt(nv.dataset.depth, 10) || 1)) : 1; setNotes(m.matches('main.notes-on'));
   $$('script,nav,link,meta', m).forEach(n => n.remove());
   $$('style,title', m).filter(n => !n.closest('svg')).forEach(n => n.remove());
-  sanitize(m); remoteImgs = cardify(m); upgradeNotes(m); repSet(null); $('#cleanbar').hidden = true; $('#savedbar').hidden = true;
+  sanitize(m); unSave(m); remoteImgs = cardify(m); upgradeNotes(m); repSet(null); $('#cleanbar').hidden = true; $('#savedbar').hidden = true;
   $$('section', m).forEach(s => s.replaceWith(...s.childNodes));
   $$('h2', m).forEach(h => { const f = h.firstChild; if (f && f.nodeType === 3 && !(opt && opt.asTyped)) f.nodeValue = f.nodeValue.replace(/^\s*\d+\.\s+/, ''); h.removeAttribute('id'); });   // a page numbers its H2s itself; a Markdown file keeps a number that was typed
-  deactivate(); doc.innerHTML = m.innerHTML.trim(); prep(); histReset(); fname = name || fname; dirty = false; status(); scrollTo(0, 0);
+  setLang(d.documentElement.getAttribute('lang'));
+  deactivate(); doc.innerHTML = preLF(m.innerHTML.trim()); prep(); histReset(); fname = name || fname; dirty = false; status(); scrollTo(0, 0);
   if (prepNote) { $('#savedmsg').textContent = prepNote; $('#savedmsg').removeAttribute('title'); $('#savedbar').hidden = false; prepNote = ''; chromeHeight(); }
 }
 function download(html) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([html], { type: 'text/html' })); a.download = fname; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
@@ -1994,10 +2206,13 @@ function afterSave(dl) {
 async function gate(what) { return NB.on() ? NB.leave() : keepGoing(what); }
 async function save(as) {
   if (NB.page() && (!as || NB.foreign())) return NB.savePage(as);   // a notebook page; or a Markdown or text file, which is saved as itself even by Save as
-  let dl = false; deactivate(); const html = build();
+  let dl = false; deactivate(); let html = build();
   try {
     if (window.showSaveFilePicker) {
-      if (!handle || as) handle = await showSaveFilePicker(pickerOpts({ suggestedName: fname }));
+      if (!handle || as) {   // a document with no file yet is offered its title as a name; the saved title then follows the name chosen
+        const sug = handle || fname !== 'document.html' ? fname : docTitle().replace(/[\\/:*?"<>|\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().replace(/^\.+|[. ]+$/g, '').slice(0, 120) + '.html';
+        handle = await showSaveFilePicker(pickerOpts({ suggestedName: sug })); fname = handle.name; html = build();
+      }
       const w = await handle.createWritable(); await w.write(html); await w.close(); fname = handle.name;
     } else { download(html); dl = true; }
   } catch (e) { if (e.name === 'AbortError') return; handle = null; download(html); dl = true; }
@@ -2020,8 +2235,8 @@ async function open() {
   $('#file').click();
 }
 $('#file').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; handle = null; NB.detach(); load(await withPictures(await f.text()), f.name); e.target.value = ''; });
-async function fresh() { if (!(await gate('start a new document'))) return; blank(); NB.newPage(); }
-function blank() { handle = null; fname = 'document.html'; idxDepth = 1; repSet(null); $('#cleanbar').hidden = true; $('#savedbar').hidden = true; setNotes(false); remoteImgs = 0; deactivate(); doc.innerHTML = STARTER; prep(); histReset(); dirty = false; status(); }
+async function fresh() { if (!(await gate('start a new document'))) return; untitledN++; blank(); NB.newPage(); }
+function blank() { handle = null; fname = 'document.html'; idxDepth = 1; setLang(null); repSet(null); $('#cleanbar').hidden = true; $('#savedbar').hidden = true; setNotes(false); remoteImgs = 0; deactivate(); doc.innerHTML = STARTER; prep(); histReset(); dirty = false; status(); }
 
 /* ---------- emoji ----------
    The Emoji button opens a small list under it; a click puts that emoji in where the cursor is, in place of any selected
@@ -2047,17 +2262,23 @@ window.addEventListener('resize', () => { if (!emojiBox.hidden) emojiShow(false)
 /* ---------- toolbar wiring ---------- */
 const ACT = {
   new: fresh, open: open, nbwarnx: () => NB.warnOff(), save: () => save(false), saveas: () => save(true),
-  bold: () => cmd('bold'), italic: () => cmd('italic'), ul: () => { if (qaList('ul')) return; const l = listAt(); if (l && l.matches('ul.check')) { l.classList.remove('check'); if (!l.getAttribute('class')) l.removeAttribute('class'); touch(); } else { listCmd('insertUnorderedList'); touch(); } }, ol: () => { if (qaList('ol')) return; listCmd('insertOrderedList'); touch(); }, check: checkList, ldense: listDense, indent: () => { listShift(1); }, outdent: () => { listShift(-1); },
+  bold: () => plainWeight(() => cmd('bold')), italic: () => cmd('italic'), ul: () => { if (qaList('ul')) return; const l = listAt(); if (l && l.matches('ul.check')) { l.classList.remove('check'); if (!l.getAttribute('class')) l.removeAttribute('class'); touch(); } else { listCmd('insertUnorderedList'); touch(); } }, ol: () => { if (qaList('ol')) return; listCmd('insertOrderedList'); touch(); }, check: checkList, ldense: listDense, indent: () => { listShift(1); }, outdent: () => { listShift(-1); },
   undo: () => histGo(-1), redo: () => histGo(1),
   code: addCode, divider: addDivider, clear: clearFormat, paint: () => { if (paint) paintStop(); else paintPick(false); }, note: addNote, margin: toggleNotes, who: () => initials(true), saveclean: saveClean, repeat: repeatLast, nosaved: () => { $('#savedbar').hidden = true; chromeHeight(); }, noclean: () => { $('#cleanbar').hidden = true; chromeHeight(); },
   blocks: () => blocksSet(!showBlocks), ctunwrap: () => ctUnwrap(ctSel), ctdel: () => ctDelete(ctSel), ctempty: ctDeleteEmpties,
+  print: () => window.print(),
   inspect: inspect, emoji: () => emojiShow(emojiBox.hidden), link: editLink, olstart: editStart, index: () => { idxDepth = idxDepth % 3 + 1; rebuild(); touch(); }, // steps 1, 2, 3 and back to 1
   tag: () => { // put in by hand: the browser's own insert drops the tag in a list item and adds styles to it elsewhere
     restore(); const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode)) return; const none = !s.toString(), t = s.toString() || 'ID', r = s.getRangeAt(0), blk = x => (x.nodeType === 1 ? x : x.parentElement).closest(TEXT_BLOCK);
+    { const sb = blk(r.startContainer); if (sb && blk(r.endContainer) !== sb) { r.setEnd(sb, sb.childNodes.length); s.removeAllRanges(); s.addRange(r); return ACT.tag(); } }   // an ID tag stays within one block
     if (blk(r.startContainer) !== blk(r.endContainer) || /[\r\n]/.test(t)) { document.execCommand('insertHTML', false, '<span class="id">' + esc(t) + '</span>&nbsp;'); touch(); return; }
-    r.deleteContents(); const sp = document.createElement('span'), gap = document.createTextNode('\u00a0'); sp.className = 'id'; sp.textContent = t; r.insertNode(gap); r.insertNode(sp);
+    // a space after the tag to carry on typing outside it, but only where none follows: text after a selection keeps its spacing
+    const tb = blk(r.endContainer), tq = document.createRange(); tq.setStart(r.endContainer, r.endOffset); if (tb) tq.setEnd(tb, tb.childNodes.length); const tail = tb ? tq.toString().replace(/\u200b/g, '') : '', spaced = none ? !/^[\s\u00a0]/.test(tail) : !tail;
+    r.deleteContents(); const sp = document.createElement('span'), gap = document.createTextNode(spaced ? '\u00a0' : ''); sp.className = 'id'; sp.textContent = t; r.insertNode(gap); r.insertNode(sp);
     [sp.previousSibling, gap.nextSibling].forEach(x => { if (x && x.nodeName === 'BR' && x.parentNode.matches(TEXT_BLOCK) && (x === x.parentNode.lastChild || (x === x.parentNode.firstChild && gap === x.parentNode.lastChild))) x.remove(); }); // the break that held an empty line open is not needed now
-    const c = document.createRange(); if (none) c.selectNodeContents(sp.firstChild); else { c.setStart(gap, 1); c.collapse(true); } // with nothing selected the placeholder is selected, ready to type over
+    let after = null; if (!spaced) { const nx = gap.nextSibling; gap.remove(); if (nx && nx.nodeType === 3) after = nx; }
+    tagExit = none || spaced ? null : sp;   // what is typed straight after it goes outside it
+    const c = document.createRange(); if (none) c.selectNodeContents(sp.firstChild); else if (spaced) { c.setStart(gap, 1); c.collapse(true); } else if (after) { c.setStart(after, 0); c.collapse(true); } else { c.setStartAfter(sp); c.collapse(true); } // with nothing selected the placeholder is selected, ready to type over
     s.removeAllRanges(); s.addRange(c); lastRange = c.cloneRange(); touch();
   },
   table: addTable, stage: addStage, mr: () => tableOp('mr'), md: () => tableOp('md'), split: () => tableOp('split'), qa: addQa, 'r+': () => tableOp('r+'), ra: () => tableOp('ra'), cl: () => tableOp('cl'), 'r-': () => tableOp('r-'), 'c+': () => tableOp('c+'), 'c-': () => tableOp('c-'), dense: () => tableOp('dense'), hr: () => tableOp('hr'), sr: () => tableOp('sr'), hc: () => tableOp('hc'), sc: () => tableOp('sc'),
@@ -2067,10 +2288,10 @@ const ACT = {
   dismiss: () => { try { localStorage.removeItem(PRODUCT.key + '-draft'); } catch (e) { } $('#draft').hidden = true; chromeHeight(); },
 };
 $('#chrome').addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
-$('#chrome').addEventListener('click', e => { const b = e.target.closest('button[data-a]'); if (!b) return; const a = b.dataset.a; if (!board && !['undo', 'redo', 'help', 'inspect', 'new', 'open', 'save', 'saveas', 'who', 'saveclean', 'noclean', 'nosaved', 'margin', 'paint', 'repeat', 'nbwarnx', 'emoji', 'blocks'].includes(a)) { clearTimeout(timer); histSnap(); } if (cellSel && (a === 'bold' || a === 'italic' || a === 'clear')) cellFormat(a); else if (ACT[a]) { ACT[a](); if (!board) repNote(a); } else if (ADD[a] && board) ADD[a](); });
+$('#chrome').addEventListener('click', e => { const b = e.target.closest('button[data-a]'); if (!b) return; const a = b.dataset.a; if (!board && ((CODE_OFF.includes(a) && selCode()) || (MD_CELL_OFF.includes(a) && mdCellSel()))) { restore(); return; } if (!board && !['undo', 'redo', 'help', 'inspect', 'new', 'open', 'save', 'saveas', 'who', 'saveclean', 'noclean', 'nosaved', 'margin', 'paint', 'repeat', 'nbwarnx', 'emoji', 'blocks', 'print'].includes(a)) { clearTimeout(timer); histSnap(); } if (cellSel && (a === 'bold' || a === 'italic' || a === 'clear')) cellFormat(a); else if (ACT[a]) { ACT[a](); if (!board) repNote(a); } else if (ADD[a] && board) ADD[a](); });
 $('#help').addEventListener('click', e => { if (e.target === e.currentTarget || e.target.closest('[data-a="helpclose"]')) e.currentTarget.close(); });
 $('#s-block').addEventListener('change', e => { const v = e.target.value; if (v) { const label = e.target.selectedOptions[0].textContent; clearTimeout(timer); histSnap(); setBlock(v); repSet(label, () => setBlock(v)); } styleUI(); });
-$('#s-fmt').addEventListener('change', e => { const v = e.target.value; e.target.value = ''; if (v && FMT[v]) { clearTimeout(timer); histSnap(); restore(); const want = !fmtOn(v); setFmt(v, want); repSet(FMT[v][0] + (want ? '' : ' off'), () => setFmt(v, want)); } styleUI(); });
+$('#s-fmt').addEventListener('change', e => { const v = e.target.value; e.target.value = ''; if (selCode()) { restore(); styleUI(); return; } if (v && FMT[v]) { clearTimeout(timer); histSnap(); restore(); const want = !fmtOn(v); setFmt(v, want); repSet(FMT[v][0] + (want ? '' : ' off'), () => setFmt(v, want)); } styleUI(); });
 $('#s-boxtype').addEventListener('change', e => { const v = e.target.value; if (v) { clearTimeout(timer); histSnap(); setBox(v); repSet(v === 'none' ? 'Remove box' : BOXES[v] + ' box', () => setBox(v)); } styleUI(); });
 /* The cursor stays in the document: once a toolbar list has been opened and closes, with or without a choice, focus goes
    back to the text, so the arrow keys move the cursor and do not change the list. A list reached with Tab and never

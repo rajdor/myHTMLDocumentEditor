@@ -14,7 +14,7 @@ for (const [what, mark] of Object.entries(NB_ONLY)) {
 }
 same('the browser tab names each program', [editor.match(/<title>([^<]*)<\/title>/)[1], notebook.match(/<title>([^<]*)<\/title>/)[1]], ['Document editor', 'Fine Line notebook']);
 check('each program keeps its unsaved draft under its own key', /PRODUCT = \{[^}]*"key":"fle"/.test(editor) && /PRODUCT = \{[^}]*"key":"fln"/.test(notebook));
-check('both write the same page format marker', [editor, notebook].every(h => h.includes('<meta name="generator" content="fine-line-editor">')));
+check('both write the same page format marker, with the version that wrote it', [editor, notebook].every(h => h.includes('<meta name="generator" content="fine-line-editor \' + VERSION + \'">')));
 check('both carry a Content Security Policy that allows no outside source', [editor, notebook].every(h => /Content-Security-Policy" content="default-src 'none'; script-src 'sha256-/.test(h)));
 check('neither has a placeholder left from the build', [editor, notebook].every(h => !/\{\{(nb|icf?):[a-z0-9-]+\}\}|\{\{product\}\}|\/\*NOTEBOOK\*\//.test(h)));
 check('neither loads anything from the network', [editor, notebook].every(h => !/<(script|link|img)[^>]+(src|href)="https?:/i.test(h)));

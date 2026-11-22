@@ -35,7 +35,7 @@ Special folders are created on first use. They stay reachable when hidden files 
 ## Pages
 
 - A new page is created in the selected folder and exists in memory until first saved.
-- At first save the file name is taken from the first H1. After that, the name changes only by explicit rename.
+- At first save the file name is taken from the first H1, or Untitled and the first number free in its folder when the H1 is empty (the saved title then follows the name). After that, the name changes only by explicit rename.
 - Saving is explicit. If a file of that name already exists at first save, the user is prompted.
 - Rename is checked when Enter is pressed, not while typing. A rename that would clash is refused. Names are compared ignoring case.
 - Links between pages are relative paths. They are not rewritten when a page is renamed or moved.
@@ -70,6 +70,10 @@ The notebook is the host: it lists the files, chooses the editor by the file's n
 - A Markdown file keeps its front matter, bullet and emphasis characters, code languages and heading levels 5 and 6. Line wrapping inside a paragraph, reference-style links and HTML written in the file are not kept; the file is otherwise rewritten in one style.
 - If a Markdown file holds something Markdown cannot keep (a pasted box or diagram, HTML in the file), this is named before the save, once for each time the file is opened.
 - A file that is not UTF-8 or UTF-16 text is shown read-only by the text editor.
+- The text editor follows the file's own indentation (tabs, or 2, 4 or 8 spaces).
+- Pictures in a Markdown file that point into the notebook folder are shown, read from the folder, and saved with their own path.
+- Print prints the whole file: a text file with every line numbered and coloured, a Markdown file in its plain look.
+- History copies of Markdown and text files are the file's own bytes.
 - The text editor is CodeMirror 6. It is carried inside the notebook as text and started the first time a text file is opened.
 - History, the unsaved-changes prompt, rename, move and trash work for every kind of file the notebook edits. A history copy keeps the extension of its file.
 - New pages are Fine Line pages. New Markdown and text files are made outside the notebook.

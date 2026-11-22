@@ -24,9 +24,10 @@ const NB = (() => {
   const opens = n => isPage(n) || isText(n);
   const kindOf = n => isPage(n) ? 'page' : isMd(n) ? 'md' : 'text';
   const extName = n => { const m = n.name.match(/\.[A-Za-z0-9]+$/); return isPage(n) ? '.html' : m ? m[0] : '.txt'; };
-  let kind = 'page';   // which editor is in front: 'page', 'md' (the page editor with the Markdown profile) or 'text'
+  let kind = 'page', openSeq = 0;   // which editor is in front: 'page', 'md' (the page editor with the Markdown profile) or 'text'
   function setKind(k, info) {
-    kind = k; MD.profile(k === 'md'); document.documentElement.classList.toggle('tx-mode', k === 'text'); $('#tx').hidden = k !== 'text'; if (k !== 'text') TXT.close();
+    kind = k; if (k !== 'md') mdUrlsFree(); if (k !== 'page' && showBlocks) blocksSet(false);   // Show blocks is for pages; its button is off in the other editors
+    MD.profile(k === 'md'); document.documentElement.classList.toggle('tx-mode', k === 'text'); $('#tx').hidden = k !== 'text'; if (k !== 'text') TXT.close();
     $('#xbar').hidden = k === 'page'; if (k === 'page') $('[data-a="xsrc"]').hidden = true;
     if (k === 'md') { $('#x-kind').textContent = 'Markdown'; $('#x-name').textContent = info.name; $('#x-info').textContent = info.text; $('[data-a="xwrap"]').hidden = true; $('[data-a="xfind"]').hidden = true; }
     $('#xbar .sep').hidden = k !== 'text'; repSet(null); chromeHeight(); fit();
@@ -41,7 +42,7 @@ const NB = (() => {
   }
   /* Switch a Markdown file between the formatted view and its source, keeping unsaved changes. Both are the same file:
      Save writes Markdown from whichever view is in front. Each view has its own undo, which starts afresh at the switch. */
-  function mdSwitch() {
+  async function mdSwitch() {
     if (!cur || !cur.md) return;
     const was = dirty;
     if (cur.kind === 'md') {
@@ -58,7 +59,7 @@ const NB = (() => {
       if (TXT.readOnly()) { say('"' + cur.name + '" is read-only here, so it can only be shown as its source.', true); return; }
       const text = TXT.content(); cur.meta = MD.read(text); cur.warned = false;
       setKind('md', { name: cur.name, text: mdInfo(cur.enc) });
-      handle = null; load('<main>' + cur.meta.html + '</main>', cur.name, { asTyped: true }); cur.kind = 'md';
+      handle = null; load('<main>' + await mdPictures(cur.meta.html, cur.dir) + '</main>', cur.name, { asTyped: true }); cur.kind = 'md';
     }
     dirty = was; status(); srcUI(); render();
   }
@@ -75,7 +76,7 @@ const NB = (() => {
   const attached = n => { for (; n.parent; n = n.parent) if (!(n.parent.kids || []).includes(n)) return false; return n === root; };
   const badName = v => !v ? 'Enter a name.' : /[\\/:*?"<>|\u0000-\u001f]/.test(v) ? 'A name cannot contain \\ / : * ? " < > |' : (/^\.+$/.test(v) || /[. ]$/.test(v)) ? 'A name cannot end with a dot or a space.' : '';
   const fileName = t => t.replace(/[\\/:*?"<>|\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().replace(/^\.+|[. ]+$/g, '').slice(0, 120) || 'Untitled';
-  const isOwn = text => /<meta name="generator" content="fine-line-editor">/.test(text.slice(0, 4000)) || (/<nav aria-label="Index"/.test(text) && /<div class="page">/.test(text));
+  const isOwn = text => /<meta name="generator" content="fine-line-editor( [^"]*)?">/.test(text.slice(0, 4000)) || (/<nav aria-label="Index"/.test(text) && /<div class="page">/.test(text));
   function stamp(name) { const d = new Date(), p = n => String(n).padStart(2, '0'), s = ' (' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + '.' + p(d.getMinutes()) + '.' + p(d.getSeconds()) + ')'; const i = name.lastIndexOf('.'); return i > 0 ? name.slice(0, i) + s + name.slice(i) : name + s; }
   function say(text, bad) { clearTimeout(msgTimer); msgEl.textContent = text || ''; msgEl.classList.toggle('bad', !!bad); if (text && !bad) msgTimer = setTimeout(() => { msgEl.textContent = ''; }, 6000); }
 
@@ -327,25 +328,32 @@ const NB = (() => {
     const want = as || kindOf(n);
     if (cur && cur.node === n && ((cur.kind || 'page') === want || (cur.md && !as))) { sel = n; render(); return; }
     if (!(await leave())) return;
+    /* Files are read with awaits. If another file is clicked meanwhile, the later click wins: an earlier open that finishes
+       late stops before it changes anything, so what is shown and what is saved are always the same file. */
+    const my = ++openSeq;
     rec = null;
-    if (want !== 'page') return openOther(n, want);
+    if (want !== 'page') return openOther(n, want, my);
     let text, mtime;
-    try { const f = await n.handle.getFile(); text = await f.text(); mtime = f.lastModified; } catch (e) { say('Could not open ' + n.name + ': ' + e.message, true); return; }
+    try { const f = await n.handle.getFile(); text = await f.text(); mtime = f.lastModified; } catch (e) { if (my === openSeq) say('Could not open ' + n.name + ': ' + e.message, true); return; }
+    const other = isOwn(text) ? null : await withPictures(text);
+    if (my !== openSeq) return;
     sel = n; setKind('page');
     if (isOwn(text)) { handle = ro ? null : n.handle; load(text, n.name); cur = { dir: n.parent, node: n, kind: 'page', name: n.name, mtime, disk: text }; say(''); if (!ro && !inTrash(n)) await checkRecover(n, text, mtime); }
-    else { handle = null; load(await withPictures(text), n.name); cur = { dir: inTrash(n) ? root : n.parent, node: null, kind: 'page' }; say('Imported ' + n.name + ' as a new page. The original file stays as it is; Save writes a new page named after the title.'); }
+    else { handle = null; load(other, n.name); cur = { dir: inTrash(n) ? root : n.parent, node: null, kind: 'page' }; say('Imported ' + n.name + ' as a new page. The original file stays as it is; Save writes a new page named after the title.'); }
     render();
   }
   /* A Markdown, text or code file: it stays the file it is. The bytes are read so that its encoding and line endings can be kept. */
-  async function openOther(n, want) {
+  async function openOther(n, want, my) {
     let buf, mtime;
-    try { const f = await n.handle.getFile(); buf = await f.arrayBuffer(); mtime = f.lastModified; } catch (e) { say('Could not open ' + n.name + ': ' + e.message, true); return; }
+    try { const f = await n.handle.getFile(); buf = await f.arrayBuffer(); mtime = f.lastModified; } catch (e) { if (my === openSeq) say('Could not open ' + n.name + ': ' + e.message, true); return; }
+    if (my !== openSeq) return;
     let d = null;
     if (want === 'md') { d = TXT.decode(buf); if (d.error) want = 'text'; }   // Markdown that is not readable text is shown, read-only, by the text editor
     if (want === 'md') {
-      const meta = MD.read(d.text);
+      const meta = MD.read(d.text), html = await mdPictures(meta.html, n.parent, my);
+      if (my !== openSeq) return;
       setKind('md', { name: n.name, text: mdInfo(d.enc) });
-      handle = null; load('<main>' + meta.html + '</main>', n.name, { asTyped: true });
+      handle = null; load('<main>' + html + '</main>', n.name, { asTyped: true });
       cur = { dir: n.parent, node: n, kind: 'md', md: true, name: n.name, mtime, disk: d.text, enc: d.enc, meta };
     } else {
       const why = TXT.open(n.name, buf, { as: isMd(n) ? MD_SOURCE : null, changed: () => { if (!dirty) { dirty = true; status(); } } });
@@ -356,6 +364,25 @@ const NB = (() => {
     }
     sel = n; say(''); srcUI(); if (!ro && !inTrash(n) && !(cur.kind === 'text' && TXT.readOnly())) await checkRecover(n, cur.disk, mtime);
     render();
+  }
+  /* Pictures in a Markdown file that point to files in the notebook (![](img/pic.png), ../shared/x.svg) are shown: each is
+     read from the notebook folder and shown from a blob: address; data-md-src keeps the path, which is what is saved.
+     Pictures on the web, or not found, stay link cards as before. The addresses are let go when another file opens. */
+  let mdUrls = [];
+  function mdUrlsFree() { mdUrls.forEach(u => URL.revokeObjectURL(u)); mdUrls = []; }
+  async function fileAt(dir, rel) {
+    let p = rel.split(/[?#]/)[0]; try { p = decodeURIComponent(p); } catch (e) { }
+    if (!p || /^[a-z][a-z0-9+.-]*:/i.test(p) || p.startsWith('/') || p.startsWith('\\')) return null;
+    const parts = pathArr(dir); for (const s of p.replace(/\\/g, '/').split('/')) { if (!s || s === '.') continue; if (s === '..') { if (!parts.length) return null; parts.pop(); } else parts.push(s); }
+    try { let h = root.handle; for (const s of parts.slice(0, -1)) h = await h.getDirectoryHandle(s); return await (await h.getFileHandle(parts[parts.length - 1])).getFile(); } catch (e) { return null; }
+  }
+  async function mdPictures(html, dir, my) {
+    if (!/<img/i.test(html)) { mdUrlsFree(); return html; }
+    const mine = [];
+    const t = document.createElement('template'); t.innerHTML = html;
+    for (const i of $$('img', t.content)) { const src = i.getAttribute('data-md-src') || i.getAttribute('src') || '', f = src && await fileAt(dir, src); if (!f || !/^image\//.test(f.type || 'image/') && !/\.(png|jpe?g|gif|webp|svg|bmp|ico|avif)$/i.test(f.name)) continue; const u = URL.createObjectURL(f.type ? f : new Blob([f], { type: 'image/' + f.name.split('.').pop().replace('jpg', 'jpeg').replace('svg', 'svg+xml') })); mine.push(u); i.setAttribute('data-md-src', src); i.setAttribute('src', u); }
+    if (my !== undefined && my !== openSeq) { mine.forEach(u => URL.revokeObjectURL(u)); return t.innerHTML; }
+    mdUrlsFree(); mdUrls = mine; return t.innerHTML;
   }
   function downloadAs(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
   /* Save a Markdown, text or code file as itself: the same name, encoding and line endings. as: write a copy somewhere else. */
@@ -376,10 +403,11 @@ const NB = (() => {
       }
       if (ro) { downloadAs(data, cur.name); done(cur.name, true); return; }
       if (cur.node) {
-        let changed = false, old = null, oldTime = 0; try { const f = await cur.node.handle.getFile(), d = TXT.decode(await f.arrayBuffer()); old = d.error ? null : d.text; oldTime = f.lastModified; changed = !!cur.mtime && oldTime !== cur.mtime && old !== cur.disk; } catch (e) { }
+        let changed = false, old = null, oldTime = 0; let raw = null; try { const f = await cur.node.handle.getFile(); raw = await f.arrayBuffer(); const d = TXT.decode(raw); old = d.error ? null : d.text; oldTime = f.lastModified; changed = !!cur.mtime && oldTime !== cur.mtime && old !== cur.disk; } catch (e) { }
         if (changed && !confirm('"' + cur.name + '" has changed on disk since it was opened here.\n\nOK: save and replace what is on disk.\nCancel: do not save.')) return;
         await write(cur.node.handle, data);
-        if (old !== null && old !== text && !inTrash(cur.node)) { try { await addSnap(cur.node, old, oldTime, false); } catch (e) { say('The file was saved, but its earlier version could not be copied to history: ' + e.message, true); } }
+        if (old !== null && old !== text && !inTrash(cur.node)) { try { await addSnap(cur.node, new Blob([raw]), oldTime, false); }   // the copy is the file's own bytes: encoding and line endings as they were
+ catch (e) { say('The file was saved, but its earlier version could not be copied to history: ' + e.message, true); } }
       } else {   // its file went away outside the editor: it is written again, under its own name
         const dir = attached(cur.dir) ? cur.dir : root; await readDir(dir);
         if (find(dir, cur.name) && !confirm('"' + cur.name + '" is already in this folder.\n\nOK: replace it.\nCancel: do not save.')) return;
@@ -393,8 +421,12 @@ const NB = (() => {
   /* Save the open page into the notebook. A page that has no file yet is named after its first H1. */
   async function savePage(as) {
     if (cur.kind && cur.kind !== 'page') return saveOther(as);
-    deactivate(); const html = build();
-    if (ro) { fname = cur.node ? cur.node.name : fileName(pageTitle()) + '.html'; download(html); afterSave(true); return; }
+    deactivate();
+    /* A new page with no H1 is named Untitled and the first number free in its folder; the saved title follows the name. */
+    const h1t = (($('h1', doc) || {}).textContent || '').replace(/[\u200b\ufeff]/g, '').trim();
+    if (!cur.node && !h1t) { const dir = ro ? null : attached(cur.dir) ? cur.dir : root; if (dir) await readDir(dir); let n = 1; while (dir && find(dir, 'Untitled ' + n + '.html')) n++; fname = 'Untitled ' + n + '.html'; }
+    const html = build();
+    if (ro) { fname = cur.node ? cur.node.name : h1t ? fileName(h1t) + '.html' : fname; download(html); afterSave(true); return; }
     try {
       if (cur.node) {
         /* Changed on disk means the content differs from what was last read or written here; a new date alone (a sync tool touching the file) does not count. */
@@ -405,7 +437,7 @@ const NB = (() => {
         if (old !== null && old !== html && isOwn(old) && !inTrash(cur.node)) { try { await addSnap(cur.node, old, oldTime, false); } catch (e) { say('The page was saved, but its earlier version could not be copied to history: ' + e.message, true); } }
       } else {
         const dir = attached(cur.dir) ? cur.dir : root; await readDir(dir);
-        let name = fileName(pageTitle()) + '.html';
+        let name = h1t ? fileName(h1t) + '.html' : fname;
         if (find(dir, name)) { name = await clash(dir, name); if (!name) return; }
         await write(await dir.handle.getFileHandle(name, { create: true }), html);
         await readDir(dir); cur.dir = dir; cur.node = find(dir, name); cur.name = name; dir.open = true;
@@ -507,10 +539,11 @@ const NB = (() => {
   const when = name => new Date(snapTime(name)).toLocaleString();
   /* A page's copies, newest first. */
   async function snaps(n) { const d = await nodeAt(['.history', ...pathArr(n)]); if (!d || d.kind !== 'directory') return []; await readDir(d); return d.kids.filter(isSnap).sort((a, b) => snapKey(b.name) - snapKey(a.name)); }
+  /* html: a page's text, or the bytes (a Blob) of a Markdown or text file, so a copy is the file as it was, byte for byte. */
   async function addSnap(n, html, ms, unsaved) {
     const d = await nodeAt(['.history', ...pathArr(n)], true); await readDir(d);
-    const bytes = new Blob([html]).size;
-    for (const k of d.kids.filter(isSnap)) { try { const f = await k.handle.getFile(); if (f.size === bytes && await f.text() === html) return false; } catch (e) { } }   // already kept
+    const blob = typeof html === 'string' ? null : html, bytes = blob ? blob.size : new Blob([html]).size, mine = blob ? new Uint8Array(await blob.arrayBuffer()) : null;
+    for (const k of d.kids.filter(isSnap)) { try { const f = await k.handle.getFile(); if (f.size === bytes && (blob ? sameBytes(new Uint8Array(await f.arrayBuffer()), mine) : await f.text() === html)) return false; } catch (e) { } }   // already kept
     const ext = extName(n); let name = snapName(ms, unsaved, 0, ext), i = 2; while (find(d, name)) name = snapName(ms, unsaved, i++, ext);
     await write(await d.handle.getFileHandle(name, { create: true }), html); await readDir(d);
     sizes.history += bytes; statusUI(); return true;
@@ -519,20 +552,25 @@ const NB = (() => {
   async function snapshot() {
     if (!root || ro || !cur || !cur.node || !dirty || inTrash(cur.node) || (cur.kind === 'text' && TXT.readOnly())) return false;
     const html = curText(); if (html === cur.disk || html === cur.snap) return false;
-    try { const made = await addSnap(cur.node, html, Date.now(), true); cur.snap = html; return made; } catch (e) { say('Could not write the history copy: ' + e.message, true); return false; }
+    try { const made = await addSnap(cur.node, cur.kind === 'page' || !cur.enc ? html : TXT.encode(html, cur.enc), Date.now(), true); cur.snap = html; return made; } catch (e) { say('Could not write the history copy: ' + e.message, true); return false; }
   }
   /* On opening a page: unsaved work newer than the file means the editor closed before it was saved. */
   async function checkRecover(n, text, mtime) {
-    try { const s = (await snaps(n))[0]; if (s && UNSAVED.test(s.name) && snapTime(s.name) >= Math.floor(mtime / 1000) * 1000 && await (await s.handle.getFile()).text() !== text) rec = { node: n, snap: s }; } catch (e) { }
+    try { const s = (await snaps(n))[0]; if (s && UNSAVED.test(s.name) && snapTime(s.name) >= Math.floor(mtime / 1000) * 1000 && await copyText(n, s) !== text) rec = { node: n, snap: s }; } catch (e) { }
+  }
+  /* The text of a history copy: a page's as it is; a Markdown or text file's decoded like the file, line breaks as \n. */
+  async function copyText(n, s) {
+    const f = await s.handle.getFile(); if (isPage(n)) return f.text();
+    const d = TXT.decode(await f.arrayBuffer()); return d.error ? new TextDecoder('windows-1252').decode(await f.arrayBuffer()).replace(/\r\n?/g, '\n') : d.text;
   }
   function recUI() { const b = $('#nb-rec'), on = !!(rec && cur && cur.node === rec.node); b.hidden = !on; if (on) $('#nb-rec-t').textContent = 'Unsaved changes to this page from ' + when(rec.snap.name) + ' were found in its history.'; }
   /* Restore puts a copy in the editor as unsaved changes. Nothing on disk changes until Save, and that save keeps the version it replaces. */
   async function restoreSnap(n, s) {
     if (!(await leave())) return;
-    let text; try { text = await (await s.handle.getFile()).text(); } catch (e) { say('Could not read the history copy: ' + e.message, true); return; }
+    let text; try { text = await copyText(n, s); } catch (e) { say('Could not read the history copy: ' + e.message, true); return; }
     dirty = false; if (!cur || cur.node !== n) { await openPage(n); if (!cur || cur.node !== n) return; }
     if (cur.kind === 'text') TXT.restore(text);
-    else if (cur.kind === 'md') { cur.meta = MD.read(text.replace(/\r\n?/g, '\n')); load('<main>' + cur.meta.html + '</main>', n.name, { asTyped: true }); }
+    else if (cur.kind === 'md') { cur.meta = MD.read(text.replace(/\r\n?/g, '\n')); load('<main>' + await mdPictures(cur.meta.html, n.parent) + '</main>', n.name, { asTyped: true }); }
     else { load(text, n.name); handle = n.handle; }
     dirty = true; status(); cur.snap = undefined; rec = null; sel = n;
     say('Restored the copy from ' + when(s.name) + '. It is not saved yet: press Save to keep it.'); render();
@@ -721,6 +759,7 @@ const NB = (() => {
   async function init() {
     wire();
     { const u = ACT.undo, r = ACT.redo; ACT.undo = () => kind === 'text' ? TXT.undo() : u(); ACT.redo = () => kind === 'text' ? TXT.redo() : r(); ACT.xwrap = () => TXT.wrap(); ACT.xfind = () => TXT.find(); ACT.xsrc = mdSwitch; }
+    window.addEventListener('beforeprint', () => { if (kind === 'text') TXT.printFill(); }); window.addEventListener('afterprint', () => TXT.printClear());
     let open = false, warn = true, w = '';
     try { open = localStorage.getItem('fle-nb-open') === '1'; warn = localStorage.getItem('fle-nb-warn') !== '0'; w = localStorage.getItem('fle-nb-w') || ''; } catch (e) { }
     if (/^\d+px$/.test(w)) document.documentElement.style.setProperty('--nbw', w);

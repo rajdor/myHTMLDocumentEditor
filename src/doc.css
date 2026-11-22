@@ -191,13 +191,13 @@ nav { position: sticky; top: 24px; align-self: start; max-height: calc(100vh - 4
 nav b { display: block; font: 400 22px/1.2 var(--font); color: var(--ink); margin-bottom: 10px; }
 nav ol { list-style: none; margin: 0; padding: 0; counter-reset: n; }
 nav li { counter-increment: n; }
-nav a { display: block; padding: 4px 0; color: var(--ink-soft); text-decoration: none; }
+nav a { display: block; box-sizing: border-box; min-height: 24px; padding: 4px 0; color: var(--ink-soft); text-decoration: none; }   /* 24px: a target size that can be clicked or tapped (WCAG 2.5.8) */
 nav a::before { content: counter(n) ". "; color: #8a9bb0; }
 nav li.u { counter-increment: none; }
 nav li.u > a::before { content: none; }
 nav a:hover { color: var(--redline); }
 nav ol ol { padding-left: 14px; margin: 0 0 4px; }
-nav ol ol a { font-size: 13px; padding: 2px 0; }
+nav ol ol a { font-size: 13px; padding: 3px 0; }
 nav ol ol a::before { content: none; }
 main { min-width: 0; }
 h1 { font: 400 40px/1.15 var(--font); color: var(--ink); margin: 0 0 4px; }
@@ -228,10 +228,11 @@ ul.dense, ol.dense { line-height: 1.25; }
 .box > :last-child { margin-bottom: 0; }
 .box > p.box-h + * { margin-top: 0; }
 .box > p.box-h { position: relative; min-height: 22px; padding-left: 24px; margin: 0 0 2px; font-weight: 600; color: var(--c); }
-.box > p.box-h::before { content: ""; position: absolute; left: 0; top: 2px; width: 18px; height: 18px; background: var(--c); -webkit-mask: var(--i) center / contain no-repeat; mask: var(--i) center / contain no-repeat; }
+.box > p.box-h::before { content: ""; position: absolute; left: 0; top: 2px; width: 18px; height: 18px; background: var(--c); -webkit-mask: var(--i) center / contain no-repeat; mask-image: var(--i); mask-position: center; mask-size: contain; mask-repeat: no-repeat; }
 /* Checklist: a real checkbox starts each item, so the boxes can be ticked with no script. */
 ul.check { list-style: none; }
 ul.check > li { position: relative; }
+@media screen { :is(ul,ol):not(.dense, .dense *, td *, th *) > li { min-height: 24px; } }   /* items at least 24px apart, so a checklist's boxes can be clicked or tapped (WCAG 2.5.8); other lists keep the same spacing. A compact list is closer by choice; paper is as before */
 ul.check > li > input[type="checkbox"] { position: absolute; left: -20px; top: .3em; width: 14px; height: 14px; margin: 0; accent-color: var(--ink); print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 td ul.check > li > input[type="checkbox"] { left: -16px; width: 12px; height: 12px; }
 .tw { overflow-x: auto; margin: 10px 0 18px; }
@@ -307,7 +308,7 @@ dl.qa dd::before { content: "A"; color: var(--ink-soft); background: #f6f9fc; }
 
 /* Links use the browser's own style: the surrounding font, standard blue (purple once visited) and an underline. */
 a.link-card { display: inline-flex; align-items: center; gap: 4px 10px; flex-wrap: wrap; max-width: 100%; margin: 6px 0; padding: 8px 12px 8px 40px; position: relative; border: 1.5px solid var(--ink); border-radius: 3px; background: var(--fill); box-shadow: 2px 3px 0 var(--shadow); color: var(--ink); text-decoration: none; font-size: 14px; line-height: 1.35; vertical-align: middle; }
-a.link-card::before { content: ""; position: absolute; left: 12px; top: 50%; width: 20px; height: 20px; margin-top: -10px; background: var(--ink); -webkit-mask: /*ICONURL:link-simple*/ center / contain no-repeat; mask: /*ICONURL:link-simple*/ center / contain no-repeat; }
+a.link-card::before { content: ""; position: absolute; left: 12px; top: 50%; width: 20px; height: 20px; margin-top: -10px; background: var(--ink); -webkit-mask: /*ICONURL:link-simple*/ center / contain no-repeat; mask-image: /*ICONURL:link-simple*/; mask-position: center; mask-size: contain; mask-repeat: no-repeat; }
 a.link-card[data-kind="image"]::before { -webkit-mask-image: /*ICONURL:image*/; mask-image: /*ICONURL:image*/; }
 a.link-card[data-kind="video"]::before { -webkit-mask-image: /*ICONURL:video*/; mask-image: /*ICONURL:video*/; }
 a.link-card[data-kind="audio"]::before { -webkit-mask-image: /*ICONURL:speaker-high*/; mask-image: /*ICONURL:speaker-high*/; }
@@ -326,7 +327,7 @@ main:not(.notes-on) .note::after, main:not(.notes-on) .note-log { display: none;
 .note-log { position: absolute; top: 0; left: calc(100% + 30px); width: calc(var(--margin) - 44px); z-index: 5; }
 .note-log > summary { list-style: none; cursor: pointer; width: 26px; height: 26px; border-radius: 3px; background: var(--note-fill); border: 1.5px solid var(--note-bar); position: relative; }
 .note-log > summary::-webkit-details-marker { display: none; }
-.note-log > summary::before { content: ""; position: absolute; inset: 3px; background: var(--note-ink); -webkit-mask: /*ICONURL:note*/ center / contain no-repeat; mask: /*ICONURL:note*/ center / contain no-repeat; }
+.note-log > summary::before { content: ""; position: absolute; inset: 3px; background: var(--note-ink); -webkit-mask: /*ICONURL:note*/ center / contain no-repeat; mask-image: /*ICONURL:note*/; mask-position: center; mask-size: contain; mask-repeat: no-repeat; }
 .note-log[open] > summary { background: var(--note-bar); }
 .note-entries { margin-top: 6px; background: var(--note-fill); border: 1px solid #EAD97A; border-left: 4px solid var(--note-bar); border-radius: 3px; padding: 8px 10px; box-shadow: 2px 3px 0 var(--shadow); font-size: 13px; line-height: 1.45; color: var(--note-ink); }
 .note-entries p { margin: 0 0 4px; max-width: none; }

@@ -207,7 +207,7 @@ function writeDrawio(D, o) {
 const MM_KIND = /^\s*(?:%%\{[\s\S]*?\}%%\s*)*(?:---[ \t]*\n[\s\S]*?\n---[ \t]*\n\s*)?(?:%%[^\n]*\n\s*)*(flowchart|graph|sequenceDiagram|classDiagram|stateDiagram(?:-v2)?|erDiagram|gantt|pie|journey|mindmap|timeline|gitGraph|quadrantChart|requirementDiagram|C4Context|xychart-beta|sankey-beta|block-beta)\b/;
 function mmBlock(n) {
   if (!n || !n.closest) return null; let b = n.closest('pre, .mermaid'); if (!b || !doc.contains(b) || b.closest('.dg, .fig, .note')) return null;
-  return MM_KIND.test(b.textContent) ? b : null;
+  return MM_KIND.test(preText(b)) ? b : null;
 }
 function mermaidToDrawio(src) {
   const kind = (src.match(MM_KIND) || [])[1];
@@ -385,7 +385,7 @@ function pictureAt(n) {
 function drawingToDrawio(el) {
   try {
     if (el.matches('svg')) { let r = svgToDrawio(el), n = r.report; if (r.report.style === 'sketch' && !(n.boxes + n.diamonds + n.ellipses)) { r = svgToDrawio(el, true); n = r.report; } return n.boxes + n.diamonds + n.ellipses ? r : { error: 'No boxes, diamonds or ellipses were recognised in this picture, so it cannot be made into a diagram. It stays as a picture.' }; }
-    return mermaidToDrawio(el.textContent);
+    return mermaidToDrawio(preText(el));
   } catch (e) { return { error: 'This could not be made into a diagram (' + e.message + '). It stays as it is.' }; }
 }
 
@@ -512,7 +512,7 @@ function unbundle(text) {
 let prepNote = '';
 function withPictures(text) {
   prepNote = '';
-  if (/<meta name="generator" content="fine-line-editor">/.test(text.slice(0, 4000))) return Promise.resolve(text);
+  if (/<meta name="generator" content="fine-line-editor( [^"]*)?">/.test(text.slice(0, 4000))) return Promise.resolve(text);
   text = unbundle(text);
   if (!/<svg[\s>]/i.test(text) && !/display\s*:\s*(inline-)?(grid|flex)/i.test(text)) return Promise.resolve(text);
   return new Promise(res => {

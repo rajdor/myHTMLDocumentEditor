@@ -35,7 +35,7 @@ Special folders are created on first use. They stay reachable when hidden files 
 ## Pages
 
 - A new page is created in the selected folder and exists in memory until first saved.
-- At first save the file name is taken from the first H1, or Untitled and the first number free in its folder when the H1 is empty (the saved title then follows the name). After that, the name changes only by explicit rename.
+- At first save the file name is taken from the first H1, or Untitled and the first number free in its folder when the H1 is empty (the saved title then follows the name). After that, the name changes only by explicit rename: a page always saves under the file name it was opened from or first saved as, whatever its title, including when its file went away outside the editor.
 - Saving is explicit. If a file of that name already exists at first save, the user is prompted.
 - Rename is checked when Enter is pressed, not while typing. A rename that would clash is refused. Names are compared ignoring case.
 - Links between pages are relative paths. They are not rewritten when a page is renamed or moved.
@@ -50,7 +50,7 @@ If the current page has unsaved changes, a prompt offers: Save and switch, Disca
 | File | Behaviour |
 |---|---|
 | Page made by the editor | Opens for editing |
-| Other HTML | Best-effort import through the existing cleaning |
+| Other HTML | Opens through the existing cleaning, tied to its own file; Save writes it there in the editor's page format, and the file as it was goes into its history first |
 | Markdown (`.md`, `.markdown`) | Opens in the WYSIWYG editor with the Markdown profile; saved back as Markdown, in place. Right-click offers Open as text |
 | Plain text, data and code (JSON, XML, CSS, JavaScript, TypeScript, Python, SQL, YAML, shell, PowerShell, batch, TOML, ini, plain text) | Opens in the text editor; saved in place, in its own encoding and with its own line endings |
 | Anything else | Greyed; right-click offers Open in new browser tab |

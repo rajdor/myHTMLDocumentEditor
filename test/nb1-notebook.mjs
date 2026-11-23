@@ -192,15 +192,15 @@ check('Refresh shows files added outside the editor', (await state()).rows.inclu
 await pg.evaluate(() => MFS.drop(R, 'Projects/Alpha one.html')); await pg.click('#nb button[data-nb="refresh"]'); await sleep(300);
 s = await state(); check('an open page removed outside the editor is kept as an unsaved page', s.cur.node === null && await dirty() && await h1() === 'Alpha mine' && /outside the editor/.test(await msg()));
 await save();
-check('and Save puts it back in the folder', (await paths()).includes('Projects/Alpha mine.html'));
+check('and Save puts it back in the folder under the name it had, not its title', (await paths()).includes('Projects/Alpha one.html') && /Alpha mine/.test(await text('Projects/Alpha one.html')) && !(await paths()).includes('Projects/Alpha mine.html'));
 
-/* ----- import of other HTML ----- */
+/* ----- HTML made elsewhere ----- */
+const FOREIGN = '<html><body><h1>Foreign</h1><p>from elsewhere</p></body></html>';
 await clickRow('foreign.html');
-s = await state(); check('other HTML opens as an import, not tied to the original file', await h1() === 'Foreign' && s.cur.node === null && /Imported foreign.html/.test(await msg()));
-await setH1('Foreign'); await save();
-check('the import clashes with its own original name here, so it asks', await dlgOpen('#nb-clash'));
-await pg.$eval('#nb-clash-n', e => { e.value = 'Foreign imported'; }); await pg.click('#nb-clash button[value="rename"]'); await sleep(400);
-check('the original file is unchanged after the import is saved', await text('foreign.html') === '<html><body><h1>Foreign</h1><p>from elsewhere</p></body></html>' && (await paths()).includes('Foreign imported.html'));
+s = await state(); check('other HTML opens tied to its own file, and says what Save will do', await h1() === 'Foreign' && s.cur.node === 'foreign.html' && /not made in Fine Line/.test(await msg()), [s.cur, await msg()]);
+await setH1('Foreign retitled'); await save();
+check('Save writes it under its own name, as a Fine Line page, with no new file named after the title', /fine-line-editor/.test(await text('foreign.html')) && /Foreign retitled/.test(await text('foreign.html')) && !(await paths()).some(p => /Foreign retitled/.test(p)) && !(await dlgOpen('#nb-clash')), await paths());
+check('the file as it was is kept in its history', await pg.evaluate((t) => MFS.paths(R).filter(p => p.startsWith('.history/')).some(p => MFS.text(R, p) === t), FOREIGN));
 
 /* ----- Markdown and plain text open in their own editors and stay the files they are (nb4 and nb5 test them in full) ----- */
 const MD = '---\npageid: x1\ntitle: From front matter\n---\n## Tasks\n\n- [ ] buy **milk**\n- [x] call [Sam](https://example.com)\n\n1. one\n2. two\n\n| A | B |\n|---|---|\n| 1 | 2 |\n\n```js\nlet x = 1;\n```\n\n##### Small heading\n\n<script>window.HACKED = 1</script>\n<img src="x" onerror="window.HACKED = 2">\n';

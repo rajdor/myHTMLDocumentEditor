@@ -249,7 +249,7 @@ const NB = (() => {
     if (n === renaming) {
       const ext = isPage(n) ? n.name.match(/\.html?$/i)[0] : '', inp = document.createElement('input');
       inp.type = 'text'; inp.value = n.name.slice(0, n.name.length - ext.length); inp.spellcheck = false; inp.setAttribute('aria-label', 'New name'); r.lastChild.replaceWith(inp);
-      inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); commitRename(n, inp.value.trim() + ext, inp); } else if (e.key === 'Escape') { e.preventDefault(); endRename(); } });
+      inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); { const v = inp.value.trim(); commitRename(n, ext && /\.html?$/i.test(v) ? v : v + ext, inp); } } else if (e.key === 'Escape') { e.preventDefault(); endRename(); } });
       inp.addEventListener('blur', () => { if (renaming === n) { renaming = null; render(); } });
       ['click', 'mousedown', 'dblclick', 'contextmenu'].forEach(t => inp.addEventListener(t, e => e.stopPropagation()));
     } else {
@@ -280,7 +280,7 @@ const NB = (() => {
     if (!root) return render();
     lastScan = Date.now();
     if (!ro) {
-      const walk = async n => { await readDir(n); for (const k of n.kids) if (k.kind === 'directory' && k.kids) await walk(k).catch(() => { k.kids = null; k.open = false; }); };
+      const walk = async n => { await readDir(n); for (const k of n.kids) if (k.kind === 'directory' && k.kids) await walk(k).catch(() => { }); };
       try { await walk(root); } catch (e) { say('The notebook folder could not be read: ' + e.message, true); return; }
       if (cur && cur.node && !attached(cur.node)) { cur.node = null; handle = null; dirty = true; status(); say('The open page was moved, renamed or deleted outside the editor. Press Save to keep it in this folder.', true); }
       if (cur && cur.dir && !attached(cur.dir)) cur.dir = root;
@@ -339,7 +339,7 @@ const NB = (() => {
     if (my !== openSeq) return;
     sel = n; setKind('page');
     if (isOwn(text)) { handle = ro ? null : n.handle; load(text, n.name); cur = { dir: n.parent, node: n, kind: 'page', name: n.name, mtime, disk: text }; say(''); if (!ro && !inTrash(n)) await checkRecover(n, text, mtime); }
-    else { handle = null; load(other, n.name); cur = { dir: inTrash(n) ? root : n.parent, node: null, kind: 'page' }; say('Imported ' + n.name + ' as a new page. The original file stays as it is; Save writes a new page named after the title.'); }
+    else { handle = ro ? null : n.handle; load(other, n.name); cur = { dir: n.parent, node: n, kind: 'page', name: n.name, mtime, disk: text }; say(n.name + ' was not made in Fine Line. Save writes it in the Fine Line page format under its own name; the file as it is now is kept in its history first.'); }
     render();
   }
   /* A Markdown, text or code file: it stays the file it is. The bytes are read so that its encoding and line endings can be kept. */
@@ -424,9 +424,9 @@ const NB = (() => {
     deactivate();
     /* A new page with no H1 is named Untitled and the first number free in its folder; the saved title follows the name. */
     const h1t = (($('h1', doc) || {}).textContent || '').replace(/[\u200b\ufeff]/g, '').trim();
-    if (!cur.node && !h1t) { const dir = ro ? null : attached(cur.dir) ? cur.dir : root; if (dir) await readDir(dir); let n = 1; while (dir && find(dir, 'Untitled ' + n + '.html')) n++; fname = 'Untitled ' + n + '.html'; }
+    if (!cur.node && !cur.name && !h1t) { const dir = ro ? null : attached(cur.dir) ? cur.dir : root; if (dir) await readDir(dir); let n = 1; while (dir && find(dir, 'Untitled ' + n + '.html')) n++; fname = 'Untitled ' + n + '.html'; }
     const html = build();
-    if (ro) { fname = cur.node ? cur.node.name : h1t ? fileName(h1t) + '.html' : fname; download(html); afterSave(true); return; }
+    if (ro) { fname = cur.node ? cur.node.name : cur.name ? cur.name : h1t ? fileName(h1t) + '.html' : fname; download(html); afterSave(true); return; }
     try {
       if (cur.node) {
         /* Changed on disk means the content differs from what was last read or written here; a new date alone (a sync tool touching the file) does not count. */
@@ -434,10 +434,10 @@ const NB = (() => {
         if (changed && !confirm('"' + label(cur.node) + '" has changed on disk since it was opened here.\n\nOK: save and replace what is on disk.\nCancel: do not save.')) return;
         await write(cur.node.handle, html);
         /* The version just replaced goes into history, so every saved version can be brought back. */
-        if (old !== null && old !== html && isOwn(old) && !inTrash(cur.node)) { try { await addSnap(cur.node, old, oldTime, false); } catch (e) { say('The page was saved, but its earlier version could not be copied to history: ' + e.message, true); } }
+        if (old !== null && old !== html && !inTrash(cur.node)) { try { await addSnap(cur.node, old, oldTime, false); } catch (e) { say('The page was saved, but its earlier version could not be copied to history: ' + e.message, true); } }
       } else {
         const dir = attached(cur.dir) ? cur.dir : root; await readDir(dir);
-        let name = h1t ? fileName(h1t) + '.html' : fname;
+        let name = cur.name || (h1t ? fileName(h1t) + '.html' : fname);
         if (find(dir, name)) { name = await clash(dir, name); if (!name) return; }
         await write(await dir.handle.getFileHandle(name, { create: true }), html);
         await readDir(dir); cur.dir = dir; cur.node = find(dir, name); cur.name = name; dir.open = true;

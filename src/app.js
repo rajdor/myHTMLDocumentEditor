@@ -26,11 +26,15 @@ function fit() {
 function slug(t) { return t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'section'; }
 const HEADS = 'h2,h3,h4';
 function heads(root) { return $$(HEADS, root).filter(h => !h.closest('.fig,.dg,td,th')); }
+/* The headings the Index lists: H2 to H4; with more than one H1 on the page, the H1s too, unnumbered, so that the H2
+   numbers in the Index still match the numbers on the page. */
+function idxHeads(root) { const h1s = $$('h1', root).filter(h => !h.closest('.fig,.dg,td,th')); return h1s.length > 1 ? $$('h1,' + HEADS, root).filter(h => !h.closest('.fig,.dg,td,th')) : heads(root); }
 function indexHtml(root, depth) {
   const top = [], stack = [];
-  heads(root).forEach(h => {
+  idxHeads(root).forEach(h => {
     let L = +h.tagName[1] - 1; if (L > depth) return;
     const n = { h, kids: [] };
+    if (L === 0) { top.push(Object.assign(n, { loose: true })); stack.length = 0; return; }
     if (L === 1) { top.push(n); stack.length = 0; stack.push(n); return; }
     if (!stack.length) { top.push(Object.assign(n, { loose: true })); return; }
     L = Math.min(L, stack.length + 1); stack.length = L - 1; stack[L - 2].kids.push(n); stack.push(n);
@@ -40,11 +44,67 @@ function indexHtml(root, depth) {
 }
 function rebuild() {
   const seen = {};
-  heads(doc).forEach(h => { const base = slug(h.textContent); let s = base, k = 1; while (seen[s]) s = base + '-' + (++k); seen[s] = 1; h.id = s; });
+  idxHeads(doc).forEach(h => { const base = slug(h.textContent); let s = base, k = 1; while (seen[s]) s = base + '-' + (++k); seen[s] = 1; h.id = s; });
   idx.innerHTML = indexHtml(doc, idxDepth); { const ib = $('#s-index'); ib.value = String(idxDepth); ib.lastElementChild.textContent = idxDepth; } notesUI();
   const h1 = $('h1', doc); document.title = (h1 ? h1.textContent.trim() : 'Document') + ' - editor';
+  foldApply();
 }
-idx.addEventListener('click', e => { const a = e.target.closest('a'); if (!a) return; e.preventDefault(); const t = document.getElementById(a.getAttribute('href').slice(1)); if (t) t.scrollIntoView({ behavior: 'smooth' }); });
+/* ---------- folding sections ----------
+   An aid while editing only: nothing about it is saved, and a page opens with every section open. Any heading (H1 to H4)
+   on the page itself can be folded with the arrow in the margin beside it; that hides everything below it down to the
+   next heading of the same or a higher level. A folded block is hidden "until found", so the browser's Find opens its
+   section. The section the cursor is in never stays folded, and following an Index link opens the sections above it.
+   Undo keeps the folds, by heading text. Printing shows everything. */
+const FOLD_HEADS = 'h1,h2,h3,h4';
+let foldEl = new WeakSet(), foldKeys = new Set();
+const foldHeads = () => [...doc.children].filter(e => e.matches(FOLD_HEADS));
+function foldKeyed() { const n = {}; return foldHeads().map(h => { const k = h.tagName + ':' + h.textContent.replace(/\s+/g, ' ').trim(); n[k] = (n[k] || 0) + 1; return [h, k + '#' + n[k]]; }); }
+function foldApply(moveCaret) {
+  const keyed = foldKeyed(), isF = new Set();
+  for (const [h, k] of keyed) if (foldEl.has(h) || foldKeys.has(k)) { isF.add(h); foldEl.add(h); }
+  const s = getSelection(); let at = s.rangeCount && doc.contains(s.anchorNode) ? s.anchorNode : null; if (at && at.nodeType !== 1) at = at.parentNode;
+  while (at && at.parentNode !== doc) at = at.parentNode;
+  const pass = () => { const hide = new Set(), closed = []; let L = 9;
+    for (const e of doc.children) {
+      const h = e.matches(FOLD_HEADS) ? +e.tagName[1] : 0;
+      if (h) { while (closed.length && closed[closed.length - 1].lvl >= h) closed.pop(); }
+      if (closed.length) hide.add(e);
+      if (h && isF.has(e)) closed.push({ lvl: h, h: e });
+      e._foldBy = closed.length ? closed.slice() : null;
+    }
+    return hide; };
+  let hide = pass();
+  if (at && hide.has(at)) {
+    if (moveCaret) { const by = at._foldBy || []; if (by.length) caret(by[0].h, true); }   // folding the section the cursor is in: the cursor goes to the end of its heading
+    else { (at._foldBy || []).forEach(c => { isF.delete(c.h); foldEl.delete(c.h); }); hide = pass(); }   // editing into a folded section opens it
+  }
+  for (const e of doc.children) {
+    const hid = hide.has(e); if (hid !== e.classList.contains('ed-fhide')) { e.classList.toggle('ed-fhide', hid); if (hid) e.setAttribute('hidden', 'until-found'); else e.removeAttribute('hidden'); }
+    if (e.matches(FOLD_HEADS)) e.classList.toggle('ed-folded', isF.has(e));
+    delete e._foldBy;
+  }
+  foldKeys = new Set(foldKeyed().filter(([h]) => isF.has(h)).map(([, k]) => k));
+  foldDraw();
+}
+function foldSet(h, on) { if (on) foldEl.add(h); else foldEl.delete(h); foldKeys.clear(); foldApply(true); }
+function foldAll(on) { foldHeads().forEach(h => { if (on) foldEl.add(h); else foldEl.delete(h); }); foldKeys.clear(); foldApply(true); }
+function foldReset() { foldEl = new WeakSet(); foldKeys = new Set(); }
+function foldOpenTo(t) { let e = t; while (e && e.parentNode !== doc) e = e.parentNode; if (!e || !e.classList.contains('ed-fhide')) return; let lvl = e.matches(FOLD_HEADS) ? +e.tagName[1] : 9; for (let p = e.previousElementSibling; p; p = p.previousElementSibling) if (p.matches(FOLD_HEADS) && +p.tagName[1] < lvl) { foldEl.delete(p); lvl = +p.tagName[1]; } foldKeys.clear(); foldApply(); }
+const foldBox = document.createElement('div'); foldBox.id = 'folds'; foldBox.setAttribute('aria-hidden', 'false'); document.body.appendChild(foldBox);
+function foldDraw() {
+  const hs = foldHeads().filter(h => !h.classList.contains('ed-fhide')), d = doc.getBoundingClientRect(), sx = scrollX, sy = scrollY;
+  while (foldBox.children.length > hs.length) foldBox.lastChild.remove();
+  while (foldBox.children.length < hs.length) { const b = document.createElement('button'); b.type = 'button'; b.className = 'fold-t'; b.tabIndex = -1; b.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3l6 5-6 5z"/></svg>'; foldBox.appendChild(b); }
+  hs.forEach((h, i) => { const b = foldBox.children[i], r = h.getBoundingClientRect(), f = h.classList.contains('ed-folded'), cs = getComputedStyle(h), lh = parseFloat(cs.lineHeight) || r.height;
+    b._h = h; b.classList.toggle('on', f); const t = (f ? 'Expand' : 'Collapse') + ' "' + h.textContent.trim().slice(0, 60) + '"'; b.title = t + ' (Alt+click: every heading)'; b.setAttribute('aria-label', t); b.setAttribute('aria-expanded', f ? 'false' : 'true');
+    b.style.left = (d.left + sx - 24) + 'px'; b.style.top = (r.top + sy + parseFloat(cs.paddingTop) + Math.min(lh, r.height) / 2 - 9) + 'px'; });
+}
+foldBox.addEventListener('mousedown', e => e.preventDefault());
+foldBox.addEventListener('click', e => { const b = e.target.closest('.fold-t'); if (!b || !b._h || !doc.contains(b._h)) return; e.preventDefault(); if (e.altKey) foldAll(!b._h.classList.contains('ed-folded')); else foldSet(b._h, !b._h.classList.contains('ed-folded')); });
+new ResizeObserver(() => foldDraw()).observe(doc); addEventListener('resize', foldDraw);
+doc.addEventListener('beforematch', e => foldOpenTo(e.target));
+idx.addEventListener('click', e => { const a = e.target.closest('a'); if (!a) return; e.preventDefault(); const t = document.getElementById(a.getAttribute('href').slice(1)); if (t) { foldOpenTo(t); t.scrollIntoView({ behavior: 'smooth' }); } });
+$('#idx-fold').addEventListener('click', e => { const b = e.target.closest('button'); if (b) foldAll(b.dataset.f === 'collapse'); });
 let remoteImgs = 0;
 function status() { const sv = $('[data-a="save"]'); sv.classList.toggle('has', dirty); sv.title = 'Save (Ctrl+S)' + (dirty ? ': unsaved changes' : ''); statusEl.textContent = [remoteImgs ? remoteImgs + (remoteImgs === 1 ? ' web item shown as a link card' : ' web items shown as link cards') + ', not downloaded' : ''].filter(Boolean).join(' | '); helpInfo(); }
 /* The editor version and the document name are shown in the Help dialog. */
@@ -64,7 +124,7 @@ function nodePath(n) { const p = []; while (n && n !== doc) { const par = n.pare
 function fromPath(p) { let n = doc; for (const i of p) { n = n.childNodes[i]; if (!n) return null; } return n; }
 function selState() { const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode)) return null; const r = s.getRangeAt(0), p = nodePath(r.startContainer); return p ? { p, o: r.startOffset } : null; }
 function histSnap() {
-  rebuild(); const h = preLF(doc.innerHTML).replace(/ ?\bed-(dsel|cell)\b/g, '').replace(/ data-ed-ct(="")?/g, '').replace(/ class=""/g, ''); if (hpos >= 0 && hist[hpos].h === h) { hist[hpos].sel = selState() || hist[hpos].sel; return; }
+  rebuild(); const h = preLF(doc.innerHTML).replace(/ ?\bed-(dsel|cell|fhide|folded)\b/g, '').replace(/ hidden="until-found"/g, '').replace(/ data-ed-ct(="")?/g, '').replace(/ class=""/g, ''); if (hpos >= 0 && hist[hpos].h === h) { hist[hpos].sel = selState() || hist[hpos].sel; return; }
   hist = hist.slice(0, hpos + 1); hist.push({ h, sel: selState() }); if (hist.length > 80) hist.shift(); hpos = hist.length - 1;
 }
 /* HTML drops a line break straight after <pre> each time it is read, so HTML that will be read again gets one more there,
@@ -408,6 +468,7 @@ doc.addEventListener('click', e => {
   if (open) { const { list } = noteParts(note); const last = list.lastElementChild; if (last) caret(last, true); }
 }, true);
 doc.addEventListener('mousedown', e => { if (e.target.closest && e.target.closest('.note-log > summary')) e.preventDefault(); });
+document.addEventListener('pointerdown', e => { if (dgSel && e.target.closest && !e.target.closest('#chrome, #de-overlay') && !doc.contains(e.target)) dgSelect(null); }, true);   // a click beside the page, not only on it
 document.addEventListener('pointerdown', e => { if (!e.target.closest || e.target.closest('.note-log') || e.target.closest('#chrome')) return; if ($('.note-log[open]', doc)) openLog(null, false); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('.note-log[open]', doc)) { const s = getSelection(); let n = s.anchorNode; if (n && n.nodeType !== 1) n = n.parentElement; const note = n && n.closest('.note'); openLog(null, false); if (note) caret(noteParts(note).body.firstElementChild || noteParts(note).body, false); } });
 window.addEventListener('beforeprint', () => $$('.note-log', doc).forEach(d => d.setAttribute('open', '')));
@@ -544,6 +605,19 @@ function placeBlock(node) {
   else { const rest = b.cloneNode(false); rest.removeAttribute('id'); rest.append(tail.extractContents()); b.after(node); node.after(rest); }
 }
 function insertBlock(node) { placeBlock(node); touch(); }
+/* A click in the blank space of the page above, between or below blocks that cannot be typed in (a diagram, a picture, a table)
+   makes a paragraph there, so text can always be written before and after them. Beside a block that takes text, the
+   browser places the cursor as usual. */
+const TYPEABLE = 'p,h1,h2,h3,h4,ul,ol,dl,pre,blockquote';
+function gapPara(e) {
+  if (e.target !== doc) return false;
+  const y = e.clientY, kids = [...doc.children]; let prev = null, next = null;
+  for (const k of kids) { const r = k.getBoundingClientRect(); if (r.bottom <= y) prev = k; else if (r.top >= y) { next = k; break; } else return false; }
+  if ((prev && prev.matches(TYPEABLE)) || (next && next.matches(TYPEABLE))) return false;
+  e.preventDefault(); dgSelect(null); clearTimeout(timer); histSnap();
+  const p = mk('p'); if (next) next.before(p); else doc.appendChild(p);
+  doc.focus(); caret(p, false); touch(); return true;
+}
 /* Drag and drop: content dragged within the document moves as usual (it is already clean); anything dropped from
    outside arrives as plain text, and a dropped .html file is opened through the same cleaning as Open. */
 let dragInside = false;
@@ -552,8 +626,8 @@ document.addEventListener('dragend', () => { dragInside = false; });
 doc.addEventListener('drop', async e => {
   if (dragInside) { dragInside = false; return; }
   e.preventDefault(); const dt = e.dataTransfer; if (!dt) return;
-  const f = dt.files && dt.files[0];
-  if (f) { if (/\.html?$/i.test(f.name)) { if (!(await gate('open the dropped document'))) return; handle = null; NB.detach(); load(await withPictures(await f.text()), f.name); } return; }
+  const f = dt.files && dt.files[0], it = dt.items && dt.items[0], hp = f && it && it.kind === 'file' && it.getAsFileSystemHandle ? it.getAsFileSystemHandle().catch(() => null) : null;   // asked for at once: the browser gives it only while the drop is handled
+  if (f) { if (/\.html?$/i.test(f.name)) { if (!(await gate('open the dropped document'))) return; const h = hp ? await hp : null; handle = h && h.kind === 'file' ? h : null; NB.detach(); load(await withPictures(await f.text()), f.name); } return; }
   const t = dt.getData('text/plain'); if (!t) return;
   const r = document.caretRangeFromPoint && document.caretRangeFromPoint(e.clientX, e.clientY);
   if (r && doc.contains(r.startContainer)) { const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
@@ -1058,7 +1132,7 @@ function clipFrom(r) {
   clipClean(box); return box;
 }
 function onCopy(e, cut) {
-  if (editing || board) return;
+  if (editing || board || DE.open) return;
   if (cellSel && cellSelCopy(e, cut)) return;
   const s = getSelection(); let box = null, text = '';
   if (s.rangeCount && !s.isCollapsed && doc.contains(s.anchorNode) && doc.contains(s.focusNode)) {
@@ -1217,6 +1291,7 @@ function clipInsert(box) {
   if (end.matches('p,h1,h2,h3,h4,pre')) caret(end, true); else { if (!end.nextElementSibling) end.after(mk('p')); caret(end.nextElementSibling, false); }
 }
 doc.addEventListener('paste', e => {
+  if (DE.open) { e.preventDefault(); return; }   // the diagram editor is open over the page: nothing goes into the document behind it
   if (editing) return; e.preventDefault(); const t = e.clipboardData.getData('text/plain'), h = e.clipboardData.getData('text/html');
   clearTimeout(timer); histSnap(); clipNoop = false;
   if (blockOf(getSelection().anchorNode)) codeInsert(t);
@@ -1796,6 +1871,7 @@ doc.addEventListener('click', e => {
 doc.addEventListener('mouseover', e => { const a = e.target.closest && e.target.closest('a[href]'); if (a && doc.contains(a) && !a.hasAttribute('title')) { a.setAttribute('title', a.getAttribute('href') + '  (Ctrl or Cmd + click to open)'); a.dataset.edTitle = '1'; } });
 doc.addEventListener('mouseout', e => { const a = e.target.closest && e.target.closest('a[data-ed-title]'); if (a) { a.removeAttribute('title'); delete a.dataset.edTitle; } });
 doc.addEventListener('pointerdown', e => {
+  if (e.button === 0 && gapPara(e)) return;
   const g = e.target.closest('.dg, .fig') || pictureAt(e.target); dgSelect(g || null); if (g) { deactivate(); e.preventDefault(); return; }
   const b = e.target.closest('.wb-board'); if (!b) { deactivate(); return; }
   if (editing && editing.contains(e.target)) return;
@@ -1951,9 +2027,11 @@ function openDiagram(fig) {
   const xml = !fig ? '' : conv ? conv.xml : board ? boardToDrawio(board) : (fig.getAttribute('data-drawio') || '');
   const msg = { type: 'de:init', xml, title: conv ? conv.name : dgTitle(fig), mode: 'blueprint' };
   $('#de-overlay').classList.remove('de-quiet'); $('#de-overlay').hidden = false; document.documentElement.classList.add('de-open');
-  deFrame();
+  deFrame(); deFocus();
   if (DE.ready) DE.frame.contentWindow.postMessage(msg, '*'); else DE.pending = msg;
 }
+/* The keys go to the diagram editor once it is open, so Ctrl+V pastes into the diagram, never into the page behind it. */
+function deFocus() { const a = document.activeElement; if (a && a !== document.body && a.blur) a.blur(); getSelection().removeAllRanges(); try { DE.frame.focus(); DE.frame.contentWindow.focus(); } catch (e) { } }
 /* Ask the diagram editor for the picture of a diagram without opening it (its de:render message). Gives the answer, or null. */
 function deRender(xml, title) {
   return new Promise(res => {
@@ -1965,12 +2043,13 @@ function deRender(xml, title) {
   });
 }
 function deQuiet() { const o = $('#de-overlay'); if (!DE.jobs.size && o.classList.contains('de-quiet')) { o.classList.remove('de-quiet'); if (!DE.open) o.hidden = true; } }
-function closeDiagram() { DE.open = false; DE.target = null; $('#de-overlay').hidden = true; document.documentElement.classList.remove('de-open'); }
+function closeDiagram() { DE.open = false; DE.target = null; $('#de-overlay').hidden = true; document.documentElement.classList.remove('de-open'); restore(); }
 function dgApply(m) {
   if (typeof m.svg !== 'string' || !/^\s*<svg[\s>]/i.test(m.svg)) { alert('The diagram editor returned no picture; the document was not changed.'); return; }
   const tmp = document.createElement('div'); tmp.innerHTML = m.svg; const svg = tmp.querySelector('svg'); if (!svg) return;
   sanitize(tmp); cardify(tmp);
   let fig = DE.target && doc.contains(DE.target) ? DE.target : null;
+  if (fig && fig.classList.contains('dg') && typeof m.xml === 'string' && m.xml === fig.getAttribute('data-drawio')) return;   // Done with nothing changed: the page is not changed either
   if (fig && !fig.classList.contains('dg')) { clearTimeout(timer); histSnap(); const n = document.createElement('div'); n.className = 'dg'; fig.replaceWith(n); fig = n; mmSel = null; } // a page diagram, picture or Mermaid definition, now converted
   if (!fig) {
     fig = document.createElement('div'); fig.className = 'dg';
@@ -1985,7 +2064,7 @@ function dgApply(m) {
 window.addEventListener('message', e => {
   if (!DE.frame || e.source !== DE.frame.contentWindow) return;
   const m = e.data; if (!m || typeof m !== 'object') return;
-  if (m.type === 'de:ready') { DE.ready = true; DE.queue.splice(0).forEach(q => DE.frame.contentWindow.postMessage(q, '*')); if (DE.pending) { DE.frame.contentWindow.postMessage(DE.pending, '*'); DE.pending = null; } }
+  if (m.type === 'de:ready') { DE.ready = true; DE.queue.splice(0).forEach(q => DE.frame.contentWindow.postMessage(q, '*')); if (DE.pending) { DE.frame.contentWindow.postMessage(DE.pending, '*'); DE.pending = null; } if (DE.open) deFocus(); }
   else if (m.type === 'de:rendered') { const j = DE.jobs.get(m.id); if (j) { DE.jobs.delete(m.id); j(m.error ? null : m); } }
   else if (m.type === 'de:save' && DE.open) { dgApply(m); closeDiagram(); }
   else if (m.type === 'de:cancel' && DE.open) closeDiagram();
@@ -2065,6 +2144,7 @@ function clean() {
   $$('.dg, .fig', c).forEach(n => { n.classList.remove('ed-dsel'); n.removeAttribute('title'); });
   $$('.note-log[open]', c).forEach(d => d.removeAttribute('open'));
   $$('a[data-ed-title]', c).forEach(a => { a.removeAttribute('title'); a.removeAttribute('data-ed-title'); });
+  $$('.ed-fhide', c).forEach(n => { n.classList.remove('ed-fhide'); n.removeAttribute('hidden'); }); $$('.ed-folded', c).forEach(n => n.classList.remove('ed-folded'));
   $$('[class=""]', c).forEach(n => n.removeAttribute('class'));
   // HTML drops a line break straight after <pre> when the page is read, so a code block that starts with an empty line gets one more
   $$('pre', c).forEach(p => { const f = p.firstChild; if (f && f.nodeType === 3 && f.data.startsWith('\n')) f.data = '\n' + f.data; });
@@ -2186,7 +2266,7 @@ function load(text, name, opt) {
   $$('section', m).forEach(s => s.replaceWith(...s.childNodes));
   $$('h2', m).forEach(h => { const f = h.firstChild; if (f && f.nodeType === 3 && !(opt && opt.asTyped)) f.nodeValue = f.nodeValue.replace(/^\s*\d+\.\s+/, ''); h.removeAttribute('id'); });   // a page numbers its H2s itself; a Markdown file keeps a number that was typed
   setLang(d.documentElement.getAttribute('lang'));
-  deactivate(); doc.innerHTML = preLF(m.innerHTML.trim()); prep(); histReset(); fname = name || fname; dirty = false; status(); scrollTo(0, 0);
+  deactivate(); foldReset(); doc.innerHTML = preLF(m.innerHTML.trim()); prep(); histReset(); fname = name || fname; dirty = false; status(); scrollTo(0, 0);
   if (prepNote) { $('#savedmsg').textContent = prepNote; $('#savedmsg').removeAttribute('title'); $('#savedbar').hidden = false; prepNote = ''; chromeHeight(); }
 }
 function download(html) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([html], { type: 'text/html' })); a.download = fname; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
@@ -2236,7 +2316,7 @@ async function open() {
 }
 $('#file').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; handle = null; NB.detach(); load(await withPictures(await f.text()), f.name); e.target.value = ''; });
 async function fresh() { if (!(await gate('start a new document'))) return; untitledN++; blank(); NB.newPage(); }
-function blank() { handle = null; fname = 'document.html'; idxDepth = 1; setLang(null); repSet(null); $('#cleanbar').hidden = true; $('#savedbar').hidden = true; setNotes(false); remoteImgs = 0; deactivate(); doc.innerHTML = STARTER; prep(); histReset(); dirty = false; status(); }
+function blank() { handle = null; fname = 'document.html'; idxDepth = 1; setLang(null); repSet(null); $('#cleanbar').hidden = true; $('#savedbar').hidden = true; setNotes(false); remoteImgs = 0; deactivate(); foldReset(); doc.innerHTML = STARTER; prep(); histReset(); dirty = false; status(); }
 
 /* ---------- emoji ----------
    The Emoji button opens a small list under it; a click puts that emoji in where the cursor is, in place of any selected

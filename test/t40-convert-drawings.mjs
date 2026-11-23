@@ -23,7 +23,7 @@ const look = await pg.evaluate(() => { const r = document.querySelector('#doc sv
 same('a picture styled by its page keeps its colours when opened, and the page script did not run', look.slice(0, 4).concat(look[4] !== 'ran'), ['rgb(238, 237, 254)', 'rgb(83, 74, 183)', 'none', 'rgb(136, 135, 128)', true]);
 check('no bar until a picture is selected', await bar() === null);
 await pg.click('#doc svg rect'); await sleep(100);
-same('clicking the picture selects it and offers the conversion', await bar(), ['Picture', 'Convert to editable diagram', 'Delete picture']);
+same('clicking the picture selects it and offers the conversion', await bar(), ['Picture', 'Convert to editable diagram', 'Copy', 'Cut', 'Delete picture']);
 await pg.click('[data-a="dgconv"]');
 let c = await cells();
 check('the diagram editor opens with the picture as shapes, lines and text', !!c && c.mode === 'outline', c);

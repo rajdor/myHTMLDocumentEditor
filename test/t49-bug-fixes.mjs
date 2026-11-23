@@ -29,6 +29,33 @@ await load(pg, DOC);
 await pg.mouse.click(1435, 300); await sleep(80);
 check('a click beside the page also ends the diagram selection', await pg.evaluate(() => !document.querySelector('.ed-dsel')));
 
+// straight after opening, with no cursor placed in the page first: click the diagram, Ctrl+C, click a place, Ctrl+V
+await load(pg, DOC); await pg.evaluate(() => { document.activeElement && document.activeElement.blur && document.activeElement.blur(); getSelection().removeAllRanges(); });
+[x, y] = await centre('#doc .dg'); await pg.mouse.click(x, y); await sleep(80);
+check('a selected diagram is clearly marked and the text cursor goes', await pg.evaluate(() => { const g = document.querySelector('#doc .dg.ed-dsel'); return !!g && /Selected/.test(getComputedStyle(g, '::after').content) && !getSelection().rangeCount; }));
+await pg.mouse.move(5, 5); await key('c');
+check('Ctrl+C says it was copied, wherever the pointer is', /Copied/.test(await pg.evaluate(() => document.querySelector('#gbar .dgsaid').textContent)));
+const h2b = await pg.evaluate(() => { const h = document.querySelectorAll('#doc h2')[1], r = document.createRange(); r.selectNodeContents(h); const t = r.getBoundingClientRect(); return [t.right - 2, t.y + t.height / 2]; });
+await pg.mouse.click(h2b[0], h2b[1]); await sleep(80); await key('v');
+same('with no cursor placed first, the copy still pastes where the cursor is put', await order(), ['H1:T', 'H2:First', 'P:Alpha', 'DG', 'P:Figure. One', 'H2:Second', 'DG', 'P:Bravo']);
+// text selected elsewhere before the diagram is clicked: the diagram is what is copied
+await load(pg, DOC);
+await pg.evaluate(() => { const p = document.querySelector('#doc p'), r = document.createRange(); r.selectNodeContents(p); const s = getSelection(); s.removeAllRanges(); s.addRange(r); document.getElementById('doc').focus(); });
+[x, y] = await centre('#doc .dg'); await pg.mouse.click(x, y); await sleep(80); await key('c');
+const last = await pg.evaluate(() => { const p = [...document.querySelectorAll('#doc p')].pop(), r = document.createRange(); r.selectNodeContents(p); r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r); document.getElementById('doc').focus(); }); await key('v');
+same('with text selected before, the clicked diagram is what is copied', (await order()).filter(t => t === 'DG').length, 2);
+// Cut: one undo step
+await load(pg, DOC);
+[x, y] = await centre('#doc .dg'); await pg.mouse.click(x, y); await sleep(80); await key('x');
+same('Ctrl+X takes the diagram and its default caption out', await order(), ['H1:T', 'H2:First', 'P:Alpha', 'P:Figure. One', 'H2:Second', 'P:Bravo']);
+await pg.evaluate(() => { const p = [...document.querySelectorAll('#doc p')].pop(), r = document.createRange(); r.selectNodeContents(p); r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r); document.getElementById('doc').focus(); }); await key('v');
+same('and Ctrl+V puts it where the cursor is', (await order()).slice(-3), ['P:Bravo', 'DG', 'P']);
+await pg.keyboard.down('Control'); await pg.keyboard.press('z'); await pg.keyboard.up('Control'); await sleep(200);
+await pg.keyboard.down('Control'); await pg.keyboard.press('z'); await pg.keyboard.up('Control'); await sleep(200);
+check('Undo twice puts it back where it was', JSON.stringify(await order()) === JSON.stringify(['H1:T', 'H2:First', 'P:Alpha', 'DG', 'P:Figure. One', 'H2:Second', 'P:Bravo']), await order());
+await load(pg, DOC); [x, y] = await centre('#doc .dg'); await pg.mouse.click(x, y); await sleep(80);
+check('the bar under the toolbar offers Copy and Cut for the diagram', await pg.evaluate(() => !document.querySelector('[data-a="dgcopy"]').hidden && !document.querySelector('[data-a="dgcut"]').hidden));
+
 /* ----- the diagram editor open: Ctrl+V goes into the diagram, never into the page ----- */
 const XML = '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="a" value="Counter" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="144" height="64" as="geometry"/></mxCell><mxCell id="b" value="Kitchen" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="280" y="40" width="144" height="64" as="geometry"/></mxCell></root></mxGraphModel>';
 await load(pg, '<main><h1>T</h1><p id="a">Alpha</p><p id="b">Bravo</p></main>');

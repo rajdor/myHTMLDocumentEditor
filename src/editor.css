@@ -59,7 +59,10 @@ html.de-open, html.de-open body { overflow: hidden; }
 .dg, .fig { cursor: pointer; user-select: none; }
 .fig .wb-board > * { cursor: pointer !important; }
 .dg:hover, .fig:hover { outline: 1px dashed #B8C2CE; outline-offset: 4px; }
-.ed-dsel { outline: 2px solid #1F5FA8; outline-offset: 4px; }
+.ed-dsel { outline: 3px solid #1F5FA8; outline-offset: 4px; box-shadow: 0 0 0 9px rgba(31, 95, 168, .16); }
+.dg.ed-dsel, .fig.ed-dsel { position: relative; }
+.dg.ed-dsel::after, .fig.ed-dsel::after { content: 'Selected  \00B7  Ctrl+C copy  \00B7  Enter edit  \00B7  Delete'; position: absolute; left: -4px; top: -30px; padding: 2px 8px; border-radius: 4px 4px 0 0; background: #1F5FA8; color: #fff; font: 600 11px/18px system-ui, sans-serif; white-space: nowrap; pointer-events: none; }
+#gbar .dgsaid { margin-left: 8px; color: #1F5FA8; font-weight: 600; }
 #chrome #tbar { gap: 6px 3px; padding-left: 4px; padding-right: 4px; }
 #tbar .grp { gap: 2px; padding-right: 3px; border-right: 1px solid #CFDBE8; }
 #tbar .grp:has(+ #status) { border-right: 0; padding-right: 0; }

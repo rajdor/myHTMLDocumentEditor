@@ -1,5 +1,5 @@
 // The saved page, checked by others' rules: axe-core finds no WCAG 2.2 AA or best-practice problem in the example; the
-// page carries a security policy that lets nothing load and runs only its own diagram-fitting script; hostile content
+// page carries a security policy that lets nothing load and runs no script; hostile content
 // opened and saved keeps nothing that runs or reaches the web; what the save adds for screen readers (box names, table
 // regions, a plain corner cell) comes off when the page is opened, so editing, table changes and the next save are as
 // before; the title falls back from the H1 to the file name to Untitled and a number; the page keeps its language.
@@ -29,10 +29,11 @@ check('and has a security policy: nothing loads, no script runs, no form sends, 
 await load(pg, saved, 'candy-shop-sop.html'); same('saving, opening and saving again gives the same file', await q(() => FLE.build()), saved);
 check('the names and regions are not in the editor after opening', await q(() => !document.querySelector('#doc input[aria-label], #doc div.tw[role], #doc div.tw[tabindex]')));
 
-// a diagram that fits the page: its script is allowed by its hash, and runs
+// an older page diagram: no script; it keeps its drawn size and scrolls sideways in a narrow window
 await load(pg, '<main><h1>Fig</h1><div class="fig"><div class="wb-board" style="width:2000px;height:400px"><div class="wb-box" style="left:10px;top:10px;width:100px;height:50px"><span>A</span></div></div></div></main>', 'f.html');
-{ const h = await q(() => FLE.build()); check('a page with a diagram allows exactly its one script', /script-src 'sha256-[A-Za-z0-9+/=]+';/.test(h) && (h.match(/<script>/g) || []).length === 1);
-  const { p, v } = await view(h); same('which runs under the policy, with nothing blocked', [v, await p.evaluate(() => /scale\(/.test(document.querySelector('.fig > *').style.transform))], [[], true]); await p.close(); }
+{ const h = await q(() => FLE.build()); check('a page with an older diagram carries no script and no script permission', !/<script/.test(h) && !/script-src/.test(h));
+  const { p, v } = await view(h); same('it shows at its drawn size and scrolls sideways, with nothing blocked', [v, await p.evaluate(() => { const f = document.querySelector('.fig'), b = f.firstElementChild; return [b.style.transform || '', f.scrollWidth > f.clientWidth, getComputedStyle(f).overflowX]; })], [[], ['', true, 'auto']]); await p.close(); }
+check('in the editor it is shown the same way, unscaled', await q(() => { const f = document.querySelector('#doc .fig'); return !f.firstElementChild.style.transform && f.scrollWidth > f.clientWidth; }));
 
 // hostile content
 await load(pg, `<!doctype html><html><head><meta http-equiv="refresh" content="0;url=https://evil.example"><base href="https://evil.example/"><script>alert(1)</script></head><body>

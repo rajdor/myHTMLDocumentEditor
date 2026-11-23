@@ -220,16 +220,23 @@ const NB = (() => {
   function favUI() {
     const box = $('#nb-fav'); box.textContent = ''; box.hidden = !root || !favs.length; if (box.hidden) return;
     const h = document.createElement('div'); h.className = 'nb-fav-h'; h.setAttribute('role', 'button'); h.tabIndex = 0; h.setAttribute('aria-expanded', favOpen ? 'true' : 'false');
-    h.innerHTML = '<span class="nb-caret">' + ic(favOpen ? 'caret-down' : 'caret-right') + '</span>' + ic('star-fill') + '<span>Favourites</span>'; box.appendChild(h);
+    if (favs.length > 1) h.title = 'Drag a favourite to reorder, or use its right-click menu or Alt+Up and Alt+Down'; h.innerHTML = '<span class="nb-caret">' + ic(favOpen ? 'caret-down' : 'caret-right') + '</span>' + ic('star-fill') + '<span>Favourites</span>'; box.appendChild(h);
     if (!favOpen) return; const at = cur && cur.node ? key(cur.node) : null;
     favs.forEach((p, i) => {
       const r = document.createElement('div'), gone = favGone.has(p);
-      r.className = 'nb-frow' + (gone ? ' is-gone' : '') + (p === at ? ' is-cur' : ''); r.dataset.f = i; r.title = p + (gone ? ' (not found)' : '');
+      r.className = 'nb-frow' + (gone ? ' is-gone' : '') + (p === at ? ' is-cur' : ''); r.dataset.f = i; r.title = p + (gone ? ' (not found)' : ''); r.tabIndex = -1; if (favs.length > 1) r.draggable = true;
       r.innerHTML = ic('file-text') + '<span class="nb-lbl"></span><span class="nb-star on" role="button" aria-label="Remove from favourites" title="Remove from favourites">' + ic('star-fill') + '</span>';
       r.children[1].textContent = p.slice(p.lastIndexOf('/') + 1); box.appendChild(r);
     });
   }
 
+  /* Favourites are kept in the order the user puts them in: dragged up or down in the list, moved from its right-click
+     menu, or with Alt+Up and Alt+Down on a favourite with the focus. The order is saved in the notebook's settings. */
+  function favMove(i, j) {
+    if (i === j || i < 0 || i >= favs.length) return; j = Math.max(0, Math.min(favs.length - 1, j));
+    const [p] = favs.splice(i, 1); favs.splice(j, 0, p); saveSettings(); render();
+    const r = $('.nb-frow[data-f="' + j + '"]'); if (r) r.focus();
+  }
   /* ----- the tree ----- */
   function visible(n) {
     const all = (n.kids || []).filter(k => showHidden || k.name[0] !== '.' || (n === root && KEEP.includes(k.name)));
@@ -723,7 +730,17 @@ const NB = (() => {
     const favBox = $('#nb-fav'), favOf = e => { const r = e.target.closest('.nb-frow'); return r ? favs[+r.dataset.f] : null; }, favFlip = () => { favOpen = !favOpen; saveSettings(); render(); };
     favBox.addEventListener('click', e => { if (e.target.closest('.nb-fav-h')) return favFlip(); const p = favOf(e); if (!p) return; if (e.target.closest('.nb-star')) dropFav(p); else openFav(p); });
     favBox.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('.nb-fav-h')) { e.preventDefault(); e.stopPropagation(); favFlip(); const h = $('.nb-fav-h', favBox); if (h) h.focus(); } });
-    favBox.addEventListener('contextmenu', e => { e.preventDefault(); const p = favOf(e); if (p) drawMenu([['Open', () => openFav(p)], ['Remove from favourites', () => dropFav(p)]], e.clientX, e.clientY); });
+    favBox.addEventListener('contextmenu', e => { e.preventDefault(); const p = favOf(e); if (!p) return; const i = favs.indexOf(p), last = favs.length - 1, m = [['Open', () => openFav(p)]];
+      if (last > 0) { m.push(null); if (i > 0) m.push(['Move to top', () => favMove(i, 0)], ['Move up', () => favMove(i, i - 1)]); if (i < last) m.push(['Move down', () => favMove(i, i + 1)], ['Move to bottom', () => favMove(i, last)]); }
+      m.push(null, ['Remove from favourites', () => dropFav(p)]); drawMenu(m, e.clientX, e.clientY); });
+    favBox.addEventListener('keydown', e => { const r = e.target.closest('.nb-frow'); if (!r || !e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return; e.preventDefault(); e.stopPropagation(); const i = +r.dataset.f; favMove(i, i + (e.key === 'ArrowUp' ? -1 : 1)); });
+    let favDrag = -1; const favMark = (r, below) => { $$('.nb-frow', favBox).forEach(x => x.classList.remove('drop-above', 'drop-below')); if (r) r.classList.add(below ? 'drop-below' : 'drop-above'); };
+    const favSpot = e => { const r = e.target.closest('.nb-frow'); if (!r) return null; const b = r.getBoundingClientRect(), below = e.clientY > b.top + b.height / 2, i = +r.dataset.f; return { r, below, to: i + (below ? 1 : 0) }; };
+    favBox.addEventListener('dragstart', e => { const r = e.target.closest('.nb-frow'); if (!r) return; favDrag = +r.dataset.f; e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', favs[favDrag]); } catch (x) { } e.stopPropagation(); });
+    favBox.addEventListener('dragover', e => { if (favDrag < 0) return; const s = favSpot(e); if (!s) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'move'; favMark(s.r, s.below); });
+    favBox.addEventListener('dragleave', e => { if (favDrag >= 0 && !favBox.contains(e.relatedTarget)) favMark(null); });
+    favBox.addEventListener('drop', e => { if (favDrag < 0) return; e.preventDefault(); e.stopPropagation(); const s = favSpot(e), i = favDrag; favDrag = -1; favMark(null); if (s) favMove(i, s.to > i ? s.to - 1 : s.to); });
+    favBox.addEventListener('dragend', () => { favDrag = -1; favMark(null); });
     tree.addEventListener('click', e => { if (renaming) return; const n = nodeOf(e); if (n && e.target.closest('.nb-star')) { toggleFav(n); return; } if (n) clickRow(n); else if (e.target === tree) { sel = null; render(); } });
     tree.addEventListener('contextmenu', e => { e.preventDefault(); if (renaming) return; const n = nodeOf(e); if (n) { sel = n; render(); } showMenu(n, e.clientX, e.clientY); });
     tree.addEventListener('keydown', e => {

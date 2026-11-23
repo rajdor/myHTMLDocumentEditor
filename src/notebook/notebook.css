@@ -47,6 +47,10 @@ html.nb-open #chrome { margin-left: calc(-1 * var(--nbw, 260px)); }
 .nb-fav-h .nb-caret svg { width: 12px; height: 12px; color: inherit; }
 .nb-frow { display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px 0 22px; cursor: default; white-space: nowrap; user-select: none; -webkit-user-select: none; }
 .nb-frow:hover { background: #EAF1F8; }
+.nb-frow:focus-visible { outline: 2px solid #2563EB; outline-offset: -2px; }
+.nb-frow.drop-above { box-shadow: inset 0 2px 0 #2563EB; }
+.nb-frow.drop-below { box-shadow: inset 0 -2px 0 #2563EB; }
+.nb-frow[draggable="true"] { cursor: grab; }
 .nb-frow.is-cur .nb-lbl { font-weight: 600; }
 .nb-frow.is-gone { color: #8A9BB0; }
 .nb-frow.is-gone .nb-lbl { text-decoration: line-through; }

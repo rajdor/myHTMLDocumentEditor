@@ -258,7 +258,7 @@ table.matrix th:first-child { text-align: left; padding-left: 8px; }
 table.matrix td.hit { text-align: center; color: var(--ink); padding: 2px; }
 table.balls td:not(:first-child), table.balls th:not(:first-child) { text-align: center; }
 table.balls .wb-ball { display: inline-block; vertical-align: middle; }
-.fig { margin: 16px 0 0; overflow: hidden; border: 1px solid var(--dots); border-radius: 3px; }
+.fig { margin: 16px 0 0; overflow-x: auto; overflow-y: hidden; border: 1px solid var(--dots); border-radius: 3px; }   /* an older page diagram keeps its drawn size; a narrow window scrolls it sideways (the saved page runs no script to shrink it) */
 .fig .wb-board { transform-origin: 0 0; }
 .wb-box > span { display: block; }
 .wb-legend.lg { font-size: 15px; color: var(--ink-soft); opacity: .8; }

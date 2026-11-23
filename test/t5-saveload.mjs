@@ -6,7 +6,7 @@ await caretCell(pg, 0, 0, 0); await click(pg, 'mr');
 const html = await pg.evaluate(() => FLE.build());
 check('one self-contained file', html.startsWith('<!DOCTYPE html>') && !/<link[^>]+stylesheet/.test(html) && !/src="http/.test(html));
 check('no editor state saved', !/contenteditable|ed-sel|ed-active|ed-handle|ed-dsel/.test(html));
-check('no script without page diagrams', !/<script/.test(html));
+check('no script in the saved page', !/<script/.test(html) && !/script-src/.test(html));
 check('index built', /<nav aria-label="Index" data-depth="1"><b>Index<\/b><ol><li><a href="#one">One<\/a>/.test(html));
 check('font embedded', /@font-face[^}]*Architects Daughter[^}]*base64/.test(html));
 check('merged cell saved', /<td colspan="2">a<br>b<\/td>/.test(html), html.match(/<td[^>]*>a[^<]*/));

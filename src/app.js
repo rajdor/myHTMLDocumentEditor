@@ -3,7 +3,6 @@
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const doc = $('#doc'), idx = $('#idx'), dbar = $('#dbar'), statusEl = $('#status');
 const DOC_CSS = $('#doc-css').textContent;
-const FIT_JS = "function fit(){document.querySelectorAll('.fig').forEach(function(f){var b=f.firstElementChild;if(!b)return;var w=parseFloat(b.style.width),h=parseFloat(b.style.height);f.style.maxWidth='';var s=Math.min(1,f.clientWidth/w);b.style.transform='scale('+s+')';f.style.maxWidth=w+'px';f.style.height=(h*s)+'px';});}window.addEventListener('resize',fit);fit();";
 const STARTER = '<h1>Untitled document</h1><p class="sub">Subtitle</p><h2>Section</h2><p>Start writing.</p>';
 const STATES = ['note', 'good', 'bad', 'warning', 'alert', 'critical', 'new', 'changed', 'retire', 'neutral'];
 let board = null, sel = null, selC = null, mode = null, connFrom = null, editing = null, lastRange = null;
@@ -15,13 +14,10 @@ const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&
 function el(html) { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
 
 /* ---------- document: index, fit, status ---------- */
+/* An older page diagram is shown at its drawn size, as the saved page shows it (with no script there to shrink it): a
+   narrow window scrolls it sideways. Scaling left on one by an earlier version is taken off. */
 function fit() {
-  $$('.fig', doc).forEach(f => {
-    const b = f.firstElementChild; if (!b) return;
-    const w = parseFloat(b.style.width), h = parseFloat(b.style.height);
-    f.style.maxWidth = ''; const s = Math.min(1, f.clientWidth / w);
-    b.style.transform = 'scale(' + s + ')'; f.style.maxWidth = w + 'px'; f.style.height = (h * s) + 'px';
-  });
+  $$('.fig', doc).forEach(f => { f.style.height = ''; f.style.maxWidth = ''; if (f.firstElementChild) f.firstElementChild.style.transform = ''; if (!f.getAttribute('style')) f.removeAttribute('style'); });
 }
 function slug(t) { return t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'section'; }
 const HEADS = 'h2,h3,h4';
@@ -1133,12 +1129,13 @@ function clipFrom(r) {
 }
 function onCopy(e, cut) {
   if (editing || board || DE.open) return;
+  if (dgSel && doc.contains(dgSel) && (dgCopyNow || !e.target.closest || !e.target.closest('#chrome, input, textarea, select'))) { dgCopyNow = false; e.preventDefault(); dgToClip(e.clipboardData); if (cut) dgCut(); return; }
   if (cellSel && cellSelCopy(e, cut)) return;
   const s = getSelection(); let box = null, text = '';
   if (s.rangeCount && !s.isCollapsed && doc.contains(s.anchorNode) && doc.contains(s.focusNode)) {
     if (blockOf(s.anchorNode) && blockOf(s.anchorNode) === blockOf(s.focusNode)) return; // inside one code block: plain text, as the browser does it
     box = clipFrom(s.getRangeAt(0)); text = s.toString();
-  } else if (dgSel && !cut && (!s.rangeCount || s.isCollapsed)) { box = document.createElement('div'); box.appendChild(dgSel.cloneNode(true)); clipClean(box); text = dgTitle(dgSel) || 'Diagram'; }
+  }
   if (!box) return;
   e.preventDefault(); box.setAttribute('data-fle-clip', '1');
   e.clipboardData.setData('text/html', box.outerHTML); e.clipboardData.setData('text/plain', text);
@@ -1914,6 +1911,7 @@ document.addEventListener('keydown', e => {
   if (DE.open) return;
   if (NB.textOn && NB.textOn()) { if (ctrl && k.toLowerCase() === 's') { e.preventDefault(); save(e.shiftKey); } else if (ctrl && k.toLowerCase() === 'o') { e.preventDefault(); open(); } return; }   // the text editor has the keys; only Save and Open are the program's
   if (ctrl && !e.altKey && !board && !e.target.closest('#chrome') && (k.toLowerCase() === 'z' || k.toLowerCase() === 'y')) { e.preventDefault(); histGo(k.toLowerCase() === 'y' || e.shiftKey ? 1 : -1); return; }
+  if (dgSel && ctrl && !e.shiftKey && !e.altKey && !e.target.closest('#chrome') && (k.toLowerCase() === 'c' || k.toLowerCase() === 'x')) { e.preventDefault(); dgCopy(k.toLowerCase() === 'x'); return; }
   if (dgSel && !ctrl && !e.target.closest('#chrome')) { if (k === 'Delete' || k === 'Backspace') { e.preventDefault(); dgDelete(); return; } if (k === 'Enter') { e.preventDefault(); openDiagram(dgSel); return; } if (k === 'Escape') { dgSelect(null); return; } }
   if (ctrl && k.toLowerCase() === 's') { e.preventDefault(); save(e.shiftKey); return; }
   if (ctrl && k.toLowerCase() === 'o') { e.preventDefault(); open(); return; }
@@ -2069,16 +2067,35 @@ window.addEventListener('message', e => {
   else if (m.type === 'de:save' && DE.open) { dgApply(m); closeDiagram(); }
   else if (m.type === 'de:cancel' && DE.open) closeDiagram();
 });
-function dgSelect(f) { $$('.ed-dsel', doc).forEach(n => n.classList.remove('ed-dsel')); dgSel = f; if (f) f.classList.add('ed-dsel'); gbarUI(); }
+function dgSelect(f) { $$('.ed-dsel', doc).forEach(n => n.classList.remove('ed-dsel')); dgSel = f; if (f) { f.classList.add('ed-dsel'); const s = getSelection(); if (s.rangeCount && doc.contains(s.anchorNode)) s.removeAllRanges(); } gbarUI(); }
 /* The bar under the toolbar: for a selected diagram, Edit and Delete; for a selected picture from elsewhere, or with the
    cursor in a Mermaid definition, the offer to make it a diagram. */
 function gbarUI() {
   const f = dgSel, pic = !!f && !f.matches('.dg, .fig'), mm = !f && mmSel && doc.contains(mmSel) ? mmSel : null, bar = $('#gbar'), was = bar.hidden;
   bar.hidden = !(f || mm); $('b', bar).textContent = pic ? 'Picture' : mm ? 'Mermaid definition' : 'Diagram';
-  $('[data-a="dgedit"]').hidden = !f || pic; $('[data-a="dgconv"]').hidden = !(pic || mm); $('[data-a="dgdel"]').hidden = !f; $('[data-a="dgdel"]').textContent = pic ? 'Delete picture' : 'Delete diagram';
+  $('[data-a="dgedit"]').hidden = !f || pic; $('[data-a="dgconv"]').hidden = !(pic || mm); $('[data-a="dgdel"]').hidden = !f; $('[data-a="dgcopy"]').hidden = !f; $('[data-a="dgcut"]').hidden = !f; if (!f) $('#gbar .dgsaid').textContent = ''; $('[data-a="dgdel"]').textContent = pic ? 'Delete picture' : 'Delete diagram';
   if (was !== bar.hidden) chromeHeight();
 }
 function mmUI(n) { const b = dgSel ? null : mmBlock(n); if (b !== mmSel) { mmSel = b; gbarUI(); } }
+/* A selected diagram or picture is copied with Ctrl+C (or cut with Ctrl+X) wherever the keyboard focus is: the keys ask
+   the browser to copy, and the copy writes the diagram. It used to be copied only when the cursor had been in the page
+   before the diagram was clicked, which is why it seemed to depend on where the pointer was. */
+let dgCopyNow = false;
+function dgToClip(cd) { const box = document.createElement('div'); box.appendChild(dgSel.cloneNode(true)); $$('.ed-dsel', box).forEach(n => n.classList.remove('ed-dsel')); clipClean(box); box.setAttribute('data-fle-clip', '1'); cd.setData('text/html', box.outerHTML); cd.setData('text/plain', dgTitle(dgSel) || 'Diagram'); }
+function dgCopy(cut) {
+  if (!dgSel) return; dgCopyNow = true; let ok;
+  try { ok = document.execCommand(cut ? 'cut' : 'copy'); } catch (e) { ok = false; }
+  if (dgCopyNow) {   // no copy event came: write it with the asynchronous clipboard
+    dgCopyNow = false; const box = document.createElement('div'); box.appendChild(dgSel.cloneNode(true)); $$('.ed-dsel', box).forEach(n => n.classList.remove('ed-dsel')); clipClean(box); box.setAttribute('data-fle-clip', '1');
+    const html = box.outerHTML, text = dgTitle(dgSel) || 'Diagram';
+    try { navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([html], { type: 'text/html' }), 'text/plain': new Blob([text], { type: 'text/plain' }) })]).then(() => { if (cut) dgCut(); dgSaid(cut); }, () => alert('The browser did not let the editor copy the diagram.')); } catch (e) { alert('The browser did not let the editor copy the diagram.'); }
+    return;
+  }
+  if (ok) dgSaid(cut);
+}
+function dgSaid(cut) { const m = $('#gbar .dgsaid'); if (m) { m.textContent = cut ? 'Cut: click where it goes, then Ctrl+V' : 'Copied: click where it goes, then Ctrl+V'; clearTimeout(m._t); m._t = setTimeout(() => { m.textContent = ''; }, 4000); } }
+// Cut: the diagram goes, with its default caption, as one undo step; the cursor is left where it was.
+function dgCut() { const f = dgSel; if (!f) return; clearTimeout(timer); histSnap(); dgSelect(null); const cap = f.nextElementSibling; const at = f.previousElementSibling || cap; f.remove(); if (cap && cap.classList.contains('cap') && /^Figure\.\s*Caption$/.test(cap.textContent.trim())) cap.remove(); if (at && doc.contains(at)) caret(at, true); touch(); }
 function dgDelete() { if (!dgSel || !confirm(dgSel.matches('.dg, .fig') ? 'Delete this diagram?' : 'Delete this picture?')) return; const f = dgSel; dgSelect(null); const cap = f.nextElementSibling; f.remove(); if (cap && cap.classList.contains('cap') && /^Figure\.\s*Caption$/.test(cap.textContent.trim())) cap.remove(); touch(); }
 
 /* ---------- show blocks ----------
@@ -2210,11 +2227,11 @@ function build(opts) {
   if (opts && opts.noNotes) $$('.note', c).forEach(unwrapNote);
   $$('a[href]', c).forEach(a => { if (/^\s*https?:/i.test(a.getAttribute('href'))) { a.setAttribute('target', '_blank'); a.setAttribute('rel', 'noopener noreferrer'); } });
   const nav = indexHtml(c, idxDepth);
-  saveOnly(c); const fig = !!$('.fig', c);
-  /* The saved page loads nothing and runs nothing but its own diagram-fitting script: pictures and fonts are inside it,
-     and a policy says so, so content that got past the clean-up still could not run or reach the web. */
-  const csp = "default-src 'none'; " + (fig ? 'script-src ' + FIT_HASH + '; ' : '') + "style-src 'unsafe-inline'; img-src data:; font-src data:; base-uri 'none'; form-action 'none'";
-  return '<!DOCTYPE html>\n<html lang="' + esc(docLang) + '">\n<head>\n<meta charset="utf-8">\n<meta http-equiv="Content-Security-Policy" content="' + csp + '">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<meta name="generator" content="fine-line-editor ' + VERSION + '">\n<title>' + asciiHtml(esc(docTitle())) + '</title>\n<style>' + docCss() + '</style>\n</head>\n<body>\n<div class="page">\n<nav aria-label="Index" data-depth="' + idxDepth + '"><b>Index</b><ol>' + asciiHtml(nav) + '</ol></nav>\n<main' + (showNotes && !(opts && opts.noNotes) ? ' class="notes-on"' : '') + '>\n' + asciiHtml(c.innerHTML) + '\n</main>\n</div>\n' + (fig ? '<script>' + FIT_JS + '<\/script>\n' : '') + '</body>\n</html>\n';
+  saveOnly(c);
+  /* The saved page loads nothing and runs nothing: pictures and fonts are inside it, and a policy says so, so content
+     that got past the clean-up still could not run or reach the web. */
+  const csp = "default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; base-uri 'none'; form-action 'none'";
+  return '<!DOCTYPE html>\n<html lang="' + esc(docLang) + '">\n<head>\n<meta charset="utf-8">\n<meta http-equiv="Content-Security-Policy" content="' + csp + '">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<meta name="generator" content="fine-line-editor ' + VERSION + '">\n<title>' + asciiHtml(esc(docTitle())) + '</title>\n<style>' + docCss() + '</style>\n</head>\n<body>\n<div class="page">\n<nav aria-label="Index" data-depth="' + idxDepth + '"><b>Index</b><ol>' + asciiHtml(nav) + '</ol></nav>\n<main' + (showNotes && !(opts && opts.noNotes) ? ' class="notes-on"' : '') + '>\n' + asciiHtml(c.innerHTML) + '\n</main>\n</div>\n</body>\n</html>\n';
 }
 function prepView() { dgSel = null; ctSelect(null); $('#gbar').hidden = true; $$('.dg, .fig', doc).forEach(f => f.classList.remove('ed-dsel')); fit(); chromeHeight(); }
 function prep() {
@@ -2362,7 +2379,7 @@ const ACT = {
     s.removeAllRanges(); s.addRange(c); lastRange = c.cloneRange(); touch();
   },
   table: addTable, stage: addStage, mr: () => tableOp('mr'), md: () => tableOp('md'), split: () => tableOp('split'), qa: addQa, 'r+': () => tableOp('r+'), ra: () => tableOp('ra'), cl: () => tableOp('cl'), 'r-': () => tableOp('r-'), 'c+': () => tableOp('c+'), 'c-': () => tableOp('c-'), dense: () => tableOp('dense'), hr: () => tableOp('hr'), sr: () => tableOp('sr'), hc: () => tableOp('hc'), sc: () => tableOp('sc'),
-  diagram: () => openDiagram(null), dgedit: () => dgSel && openDiagram(dgSel), dgconv: () => { const t = dgSel || mmSel; if (t) openDiagram(t); }, dgdel: dgDelete, help: () => { const h = $('#help'); if (h.open) h.close(); else { helpInfo(); h.showModal(); } },
+  diagram: () => openDiagram(null), dgedit: () => dgSel && openDiagram(dgSel), dgcopy: () => dgCopy(false), dgcut: () => dgCopy(true), dgconv: () => { const t = dgSel || mmSel; if (t) openDiagram(t); }, dgdel: dgDelete, help: () => { const h = $('#help'); if (h.open) h.close(); else { helpInfo(); h.showModal(); } },
   connect: () => setMode(mode === 'connect' ? null : 'connect'), del: remove, dup: duplicate, deldiagram: deleteDiagram,
   restore: () => { try { const d = localStorage.getItem(PRODUCT.key + '-draft'); if (d) { const t = new DOMParser().parseFromString('<main>' + d + '</main>', 'text/html'); sanitize(t.querySelector('main')); cardify(t.querySelector('main')); doc.innerHTML = t.querySelector('main').innerHTML; prep(); histReset(); dirty = true; status(); } } catch (e) { } $('#draft').hidden = true; chromeHeight(); },
   dismiss: () => { try { localStorage.removeItem(PRODUCT.key + '-draft'); } catch (e) { } $('#draft').hidden = true; chromeHeight(); },

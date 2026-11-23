@@ -7,8 +7,9 @@ export function installMockFs() {
   const err = (m, n) => new DOMException(m, n);
   class F {
     constructor(name, text, parent, noMove) { this.kind = 'file'; this.name = name; this.text = text; this.parent = parent; this.mtime = tick(); if (!noMove) this.move = this._move; }
-    async getFile() { return new File([this.bytes || this.text], this.name, { lastModified: this.mtime }); }   // bytes: set when something other than a string was written, so that encodings can be tested
-    async createWritable() { const f = this; let buf = '', raw = null; return { async write(d) { if (typeof d === 'string') { buf = d; raw = null; } else { raw = new Uint8Array(await new Blob([d]).arrayBuffer()); buf = new TextDecoder('utf-8').decode(raw); } }, async close() { f.text = buf; f.bytes = raw; f.mtime = tick(); } }; }
+    get gone() { return !this.parent || this.parent.kids.get(this.name) !== this; }   // a real handle names a path: once its file is renamed or removed, reading it fails and writing it makes the file again
+    async getFile() { if (this.gone) throw err('not found', 'NotFoundError'); return new File([this.bytes || this.text], this.name, { lastModified: this.mtime }); }   // bytes: set when something other than a string was written, so that encodings can be tested
+    async createWritable() { const f = this; if (f.gone) { f.parent.kids.set(f.name, f); f.text = ''; } let buf = '', raw = null; return { async write(d) { if (typeof d === 'string') { buf = d; raw = null; } else { raw = new Uint8Array(await new Blob([d]).arrayBuffer()); buf = new TextDecoder('utf-8').decode(raw); } }, async close() { f.text = buf; f.bytes = raw; f.mtime = tick(); } }; }
     async _move(a, b) { const dest = b === undefined ? this.parent : a, name = b === undefined ? a : b; this.parent.kids.delete(this.name); this.name = name; this.parent = dest; dest.kids.set(name, this); }
   }
   class D {

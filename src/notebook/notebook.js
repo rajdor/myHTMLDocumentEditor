@@ -78,7 +78,12 @@ const NB = (() => {
   const fileName = t => t.replace(/[\\/:*?"<>|\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().replace(/^\.+|[. ]+$/g, '').slice(0, 120) || 'Untitled';
   const isOwn = text => /<meta name="generator" content="fine-line-editor( [^"]*)?">/.test(text.slice(0, 4000)) || (/<nav aria-label="Index"/.test(text) && /<div class="page">/.test(text));
   function stamp(name) { const d = new Date(), p = n => String(n).padStart(2, '0'), s = ' (' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + '.' + p(d.getMinutes()) + '.' + p(d.getSeconds()) + ')'; const i = name.lastIndexOf('.'); return i > 0 ? name.slice(0, i) + s + name.slice(i) : name + s; }
-  function say(text, bad) { clearTimeout(msgTimer); msgEl.textContent = text || ''; msgEl.classList.toggle('bad', !!bad); if (text && !bad) msgTimer = setTimeout(() => { msgEl.textContent = ''; }, 6000); }
+  function say(text, bad) {   // any message can be closed with its x; a message that is not a problem also goes by itself
+    clearTimeout(msgTimer); msgEl.replaceChildren(); msgEl.classList.toggle('bad', !!bad); if (!text) return;
+    const t = document.createElement('span'), x = document.createElement('button');
+    t.textContent = text; x.type = 'button'; x.className = 'nb-msg-x'; x.title = 'Dismiss'; x.setAttribute('aria-label', 'Dismiss'); x.innerHTML = ic('x'); x.onclick = () => say('');
+    msgEl.append(t, x); if (!bad) msgTimer = setTimeout(() => say(''), 6000);
+  }
 
   /* ----- remembered folder: the handle is kept in the browser's own storage, never in a document ----- */
   const idb = () => new Promise((res, rej) => { const r = indexedDB.open('fine-line-notebook', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
@@ -115,8 +120,11 @@ const NB = (() => {
   }
   /* Move or rename on disk. The browser's own move is used where it works; otherwise the item is copied, then removed. */
   async function moveEntry(n, dest, name) {
-    if (n.handle.move) { try { await (dest === n.parent ? n.handle.move(name) : n.handle.move(dest.handle, name)); return; } catch (e) { if (n.kind === 'file' && e.name !== 'TypeError' && e.name !== 'NotSupportedError' && e.name !== 'InvalidStateError') throw e; } }
-    if (n.kind === 'file') { const w = await (await dest.handle.getFileHandle(name, { create: true })).createWritable(); await w.write(await n.handle.getFile()); await w.close(); await n.parent.handle.removeEntry(n.name); }
+    if (n.handle.move) { try { await (dest === n.parent ? n.handle.move(name) : n.handle.move(dest.handle, name)); return; } catch (e) { if (n.kind === 'file' && !['TypeError', 'NotSupportedError', 'InvalidStateError', 'NotAllowedError'].includes(e.name)) throw e; } }   // NotAllowedError: the browser refuses its own move in some folders, such as OneDrive on a Mac; copy, then remove, still works there
+    if (n.kind === 'file') {
+      const nh = await dest.handle.getFileHandle(name, { create: true }), w = await nh.createWritable(); await w.write(await n.handle.getFile()); await w.close();
+      try { await n.parent.handle.removeEntry(n.name); } catch (e) { try { await dest.handle.removeEntry(name); } catch (e2) { } throw new Error('the file is in use or being synced; try again in a moment (' + e.message + ')', { cause: e }); }   // never leave two copies
+    }
     else { await copyDir(n.handle, await dest.handle.getDirectoryHandle(name, { create: true })); await n.parent.handle.removeEntry(n.name, { recursive: true }); }
   }
   /* Move a node and keep the open page pointing at its file when the page, or a folder above it, is what moved. */
@@ -283,13 +291,36 @@ const NB = (() => {
     if (canWrite) { t.textContent = 'A notebook is a folder on this computer: its folders are sections and its files are pages. Choose the folder and allow the browser to edit files in it. Pages are saved straight into the folder.'; pk.textContent = remembered ? 'Choose another folder' : 'Choose notebook folder'; }
     else { t.textContent = 'This browser can show a notebook folder but cannot save into it. The explorer is read-only here, and new or changed pages are saved to the downloads folder for you to move. Chrome and Edge can save straight into the folder.'; pk.textContent = 'Choose folder (read-only)'; }
   }
+  /* The open file is no longer under its name. A rename outside the editor keeps the file's date and content, so the one file
+     in the same folder with the same date and the same content as last read or saved here is the same file under its new name. */
+  const exists = async n => { try { await n.handle.getFile(); return true; } catch (e) { return e.name !== 'NotFoundError'; } };
+  async function renamedTo(n) {
+    const dir = n.parent; if (!dir || !attached(dir) || !cur.mtime || cur.disk === undefined) return null;
+    const hits = [];
+    for (const k of dir.kids || []) {
+      if (k.kind !== 'file' || k.name === n.name) continue;
+      try { const f = await k.handle.getFile(); if (f.lastModified !== cur.mtime) continue; const buf = await f.arrayBuffer(), t = cur.kind === 'page' ? new TextDecoder().decode(buf) : TXT.decode(buf).text; if (t === cur.disk) hits.push(k); } catch (e) { }
+    }
+    return hits.length === 1 ? hits[0] : null;
+  }
+  async function follow(n, to) {   // the open page, its history and its favourite go with the new name
+    const a = pathArr(n), b = pathArr(to);
+    await moveHistory(a, b); if (repath(a, b)) saveSettings();
+    cur.node = to; cur.name = to.name; cur.dir = to.parent; fname = to.name; if (sel === n) sel = to;
+    if (cur.kind === 'page') handle = to.handle; else { $('#x-name').textContent = to.name; TXT.rename(to.name); }
+    status(); say('"' + n.name + '" was renamed outside the editor to "' + to.name + '". The open page now saves there.');
+  }
   async function refresh() {
     if (!root) return render();
     lastScan = Date.now();
     if (!ro) {
       const walk = async n => { await readDir(n); for (const k of n.kids) if (k.kind === 'directory' && k.kids) await walk(k).catch(() => { }); };
       try { await walk(root); } catch (e) { say('The notebook folder could not be read: ' + e.message, true); return; }
-      if (cur && cur.node && !attached(cur.node)) { cur.node = null; handle = null; dirty = true; status(); say('The open page was moved, renamed or deleted outside the editor. Press Save to keep it in this folder.', true); }
+      if (cur && cur.node && !attached(cur.node)) {
+        const to = await renamedTo(cur.node);
+        if (to) await follow(cur.node, to);
+        else { cur.node = null; handle = null; dirty = true; status(); say('The open page was moved, renamed or deleted outside the editor. Press Save to keep it in this folder.', true); }
+      }
       if (cur && cur.dir && !attached(cur.dir)) cur.dir = root;
       if (sel && !attached(sel)) sel = null;
     }
@@ -401,6 +432,7 @@ const NB = (() => {
       if (lost.length && !cur.warned && !confirm('Markdown cannot keep everything in "' + cur.name + '":\n\n' + lost.map(x => '  ' + x).join('\n') + '\n\nOK: save as Markdown anyway.\nCancel: do not save.')) return;
       cur.warned = lost.length > 0; text = MD.write(c, cur.meta);
     } else text = TXT.content();
+    if (!ro && !as && cur.node && !(await exists(cur.node))) await refresh();
     const data = TXT.encode(text, cur.enc), done = (name, dl) => { dirty = false; status(); try { localStorage.removeItem(PRODUCT.key + '-draft'); } catch (e) { } $('#cleanbar').hidden = true; savedLine(name, dl); };
     try {
       if (as) {
@@ -433,6 +465,7 @@ const NB = (() => {
     const h1t = (($('h1', doc) || {}).textContent || '').replace(/[\u200b\ufeff]/g, '').trim();
     if (!cur.node && !cur.name && !h1t) { const dir = ro ? null : attached(cur.dir) ? cur.dir : root; if (dir) await readDir(dir); let n = 1; while (dir && find(dir, 'Untitled ' + n + '.html')) n++; fname = 'Untitled ' + n + '.html'; }
     const html = build();
+    if (!ro && cur.node && !(await exists(cur.node))) await refresh();   // renamed outside since the last look: save follows it rather than bringing the old name back
     if (ro) { fname = cur.node ? cur.node.name : cur.name ? cur.name : h1t ? fileName(h1t) + '.html' : fname; download(html); afterSave(true); return; }
     try {
       if (cur.node) {
@@ -643,7 +676,7 @@ const NB = (() => {
       $('#nb-orph-t').textContent = 'History of pages that no longer exist: ' + gone.length + (gone.length === 1 ? ' page, ' : ' pages, ') + fmt(total(gone.flatMap(p => p.files)));
       $('#nb-trash-t').textContent = 'Trash: ' + A.trashCount + (A.trashCount === 1 ? ' file, ' : ' files, ') + fmt(A.trash);
       const a = await dlg($('#nb-clean')); if (a === 'cancel') break;
-      if (a === 'trash') { await emptyTrash(); note.textContent = msgEl.textContent; continue; }
+      if (a === 'trash') { await emptyTrash(); note.textContent = msgEl.firstChild ? msgEl.firstChild.textContent : ''; continue; }
       const keep = Math.max(1, Math.floor(+$('#nb-keep').value) || 0), days = Math.max(1, Math.floor(+$('#nb-days').value) || 0), cut = Date.now() - days * 86400000;
       const del = a === 'keep' ? A.pages.flatMap(p => p.files.slice(keep)) : a === 'days' ? all.filter(f => snapTime(f.name) < cut) : gone.flatMap(p => p.files);
       const what = a === 'keep' ? 'beyond the newest ' + keep + ' of each page' : a === 'days' ? 'older than ' + days + ' days' : 'of pages that no longer exist';

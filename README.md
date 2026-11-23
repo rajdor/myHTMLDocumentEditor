@@ -99,7 +99,7 @@ Tests use puppeteer-core with a local Chrome or Edge (or `CHROME_PATH`). `npm te
 | Test | Covers |
 |---|---|
 | t1-text | Style list, index, labels as typed, Q&A lists |
-| t2-tables | Rows above and below, columns left and right, deletes, merge, split, refused merges, Fancy Table |
+| t2-tables | Rows above and below, columns left and right, deletes, merge, split, refused merges, Fancy Table ; after Delete column the cursor stays in the same row, so columns can be deleted one after another; deleting the only column or the only body row deletes the table, undone in one step |
 | t3-cells | Enter, Shift+Enter, paste, Tab, Shift+Tab, Up and Down in cells |
 | t4-migrate | Documents made with grids open as tables |
 | t5-saveload | Saved file is self-contained, clean and re-opens unchanged |

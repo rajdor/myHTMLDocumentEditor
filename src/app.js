@@ -1594,9 +1594,16 @@ function tableOp(op) {
     T.M.forEach((m, i) => { const x = m[col]; if (x && col > 0 && m[col - 1] === x) { m.splice(col, 0, x); return; } m.splice(col, 0, fresh(newCellLike(x, headRow(i)), K.rowKind[i], headRow(i))); });
     focus = T.M[r][col]; halve(col, col);
   }
+  function dropTable() {   // one undo step; the cursor goes to the text after the table, or before it, or a new paragraph
+    const w = t.closest('div.tw') || t, nx = w.nextElementSibling, pv = w.previousElementSibling;
+    clearTimeout(timer); histSnap(); cellSelClear();
+    let to = nx && nx.matches('p,h1,h2,h3,h4,h5,h6') ? nx : pv && pv.matches('p,h1,h2,h3,h4,h5,h6') ? pv : null;
+    if (!to) { to = mk('p'); w.after(to); }
+    w.remove(); touch(); caret(to, to === pv);
+  }
   if (op === 'r-') {
     if (headRow(r)) { alert('The heading row stays; clear its text instead.'); return; }
-    if (T.rows.filter(x => x.sec.tagName !== 'THEAD').length <= (r2 - r + 1)) { alert('A table needs at least one body row.'); return; }
+    if (T.rows.filter(x => x.sec.tagName !== 'THEAD').length <= (r2 - r + 1)) return dropTable();   // the last body row: the table goes, as in Word
     T.M.splice(r, r2 - r + 1); T.rows.splice(r, r2 - r + 1).forEach(x => x.tr.remove()); focus = (T.M[r] || T.M[r - 1] || [])[col] || null;
   }
   if (op === 'c+') {
@@ -1604,8 +1611,9 @@ function tableOp(op) {
     focus = T.M[r][col2 + 1]; halve(col2, col2 + 1);
   }
   if (op === 'c-') {
-    if (W - (col2 - col + 1) < 1) { alert('A table needs at least one column.'); return; }
-    T.M.forEach(m => m.splice(col, col2 - col + 1)); focus = null; if (CW) CW.splice(col, col2 - col + 1);
+    if (W - (col2 - col + 1) < 1) return dropTable();   // the last column: the table goes, as in Word
+    T.M.forEach(m => m.splice(col, col2 - col + 1)); if (CW) CW.splice(col, col2 - col + 1);
+    focus = T.M[r][Math.min(col, T.M[r].length - 1)] || null;   // the cursor stays in the table, in the same row: the column now in that place, or the last one, so the next column can be deleted straight away
   }
   if (op === 'mr' || op === 'md') {
     let R = tSelRect(T, c);

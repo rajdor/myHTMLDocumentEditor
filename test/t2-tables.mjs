@@ -13,6 +13,27 @@ await caretCell(pg, 0, 1, 1); await click(pg, 'r+'); same('add row under a merge
 await caretCell(pg, 0, 1, 1); await click(pg, 'split'); same('split a merged cell', await shape(pg), '. . . . . | . . . . . | . . . . . | . . . . . | . . . . . | . . . . .');
 await caretCell(pg, 0, 2, 2); await click(pg, 'split'); same('split a single cell into two', await shape(pg), '. . c2 . . | . . c2 . . | . . . . . . | . . c2 . . | . . c2 . . | . . c2 . .');
 await caretCell(pg, 0, 2, 2); await click(pg, 'c-'); same('delete column', await shape(pg), '. . . . . | . . . . . | . . . . . | . . . . . | . . . . . | . . . . .');
+same('after deleting a column the cursor is in the column that took its place, same row', await where(pg), '2:2');
+{ const n = dialogs.length; await click(pg, 'c-'); await click(pg, 'c-');
+  same('so columns can be deleted one after another with no message', [await shape(pg), dialogs.length - n], ['. . . | . . . | . . . | . . . | . . . | . . .', 0]);
+  await caretCell(pg, 0, 2, 2); await click(pg, 'c-');
+  same('deleting the last column leaves the cursor in the column to its left', await where(pg), '2:1');
+  for (let i = 0; i < 3; i++) { await pg.keyboard.down('Control'); await pg.keyboard.press('z'); await pg.keyboard.up('Control'); await sleep(60); }
+  same('and Undo brings the columns back', await shape(pg), '. . . . . | . . . . . | . . . . . | . . . . . | . . . . . | . . . . .'); }
+{ const n = dialogs.length, before = await pg.evaluate(() => document.querySelectorAll('#doc table').length);
+  await caretCell(pg, 0, 2, 0); for (let i = 0; i < 5; i++) { await click(pg, 'c-'); await sleep(40); }
+  same('deleting the last column left deletes the table, as Word does, with no message', [await pg.evaluate(() => document.querySelectorAll('#doc table').length), dialogs.length - n], [before - 1, 0]);
+  check('and the cursor is in the text after where it was', await pg.evaluate(() => { const s = getSelection(); return s.rangeCount && document.getElementById('doc').contains(s.anchorNode) && !(s.anchorNode.nodeType === 1 ? s.anchorNode : s.anchorNode.parentElement).closest('table'); }));
+  await pg.keyboard.down('Control'); await pg.keyboard.press('z'); await pg.keyboard.up('Control'); await sleep(100);
+  same('Undo brings the table back', await pg.evaluate(() => document.querySelectorAll('#doc table').length), before);
+  for (let i = 0; i < 4; i++) { await pg.keyboard.down('Control'); await pg.keyboard.press('z'); await pg.keyboard.up('Control'); await sleep(60); }
+  same('and the columns', await shape(pg), '. . . . . | . . . . . | . . . . . | . . . . . | . . . . . | . . . . .'); }
+{ const n = dialogs.length, before = await pg.evaluate(() => document.querySelectorAll('#doc table').length);
+  const body = await pg.evaluate(() => document.querySelectorAll('#doc table')[0].querySelectorAll('tbody tr').length);
+  for (let i = 0; i < body; i++) { await caretCell(pg, 0, (await pg.evaluate(() => document.querySelectorAll('#doc table')[0].rows.length)) - 1, 0); await click(pg, 'r-'); await sleep(40); }
+  same('deleting the last body row deletes the table too, with no message', [await pg.evaluate(() => document.querySelectorAll('#doc table').length), dialogs.length - n], [before - 1, 0]);
+  for (let i = 0; i < body; i++) { await pg.keyboard.down('Control'); await pg.keyboard.press('z'); await pg.keyboard.up('Control'); await sleep(60); }
+  same('and Undo brings it back row by row', await shape(pg), '. . . . . | . . . . . | . . . . . | . . . . . | . . . . . | . . . . .'); }
 await caretCell(pg, 0, 3, 1); await click(pg, 'r-'); same('delete row', await shape(pg), '. . . . . | . . . . . | . . . . . | . . . . . | . . . . .');
 same('after deleting a row the cursor is in the row below', await where(pg), '3:1');
 await caretCell(pg, 0, 4, 2); await click(pg, 'r-'); same('after deleting the last row the cursor is in the row above', await where(pg), '3:2');

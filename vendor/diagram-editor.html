@@ -587,7 +587,7 @@ function safeCss(css) {
     const i = d.indexOf(':'); if (i < 1) return false;
     const prop = d.slice(0, i).trim().toLowerCase(), val = d.slice(i + 1).toLowerCase();
     if (!/^-?[a-z-]+$/.test(prop) || /^(position|behavior|-moz-binding|content|cursor|mask|filter)/.test(prop)) return false;
-    if (prop === 'line-height') return false; // a label's lines are always 1.2 of their own text size, as the exported picture draws them; a fixed line height (often pasted in) made larger words overlap
+    if (prop === 'line-height' || prop === 'text-align' || prop === 'text-align-last') return false; // the label's alignment is the shape's (the Position grid), as the exported picture draws it; alignment pasted in with the text used to override it // a label's lines are always 1.2 of their own text size, as the exported picture draws them; a fixed line height (often pasted in) made larger words overlap
     return !/url\s*\(|expression|image-set|@import|javascript:|[<>{}\\]/.test(val); // a backslash could hide any of these as a CSS escape
   }).join(';');
 }
@@ -609,7 +609,7 @@ function sanitizeOnce(html) {
         }
         for (const a of Array.from(ch.attributes)) {
           const n = a.name.toLowerCase();
-          if (!['style', 'color', 'face', 'size', 'href', 'align'].includes(n)) ch.removeAttribute(a.name);
+          if (!['style', 'color', 'face', 'size', 'href'].includes(n)) ch.removeAttribute(a.name);   // align too: see safeCss
           else if (n === 'href' && (ch.tagName !== 'A' || !safeUrl(a.value))) ch.removeAttribute(a.name);
           else if (n === 'style') { const v = safeCss(a.value); if (v) ch.setAttribute('style', v); else ch.removeAttribute('style'); }
           else if (n === 'color' && !safeColour(a.value)) ch.removeAttribute(a.name);

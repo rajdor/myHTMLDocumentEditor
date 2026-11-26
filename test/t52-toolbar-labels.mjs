@@ -10,9 +10,11 @@ const state = () => pg.evaluate(() => ({ cls: document.querySelector('#chrome').
 const rows = () => pg.evaluate(() => new Set([...document.querySelectorAll('#tbar > *')].filter(x => x.offsetParent).map(x => Math.round(x.offsetTop / 20))).size);
 
 /* labels under the groups */
-for (const g of ['File', 'History', 'Text', 'Lists', 'Insert', 'Notes', 'Index']) same('a label under the ' + g + ' group', await label('#tbar .grp[aria-label="' + g + '"]'), g);
+for (const g of ['File', 'History', 'Text', 'Inspect', 'Lists', 'Insert', 'Notes', 'Index']) same('a label under the ' + g + ' group', await label('#tbar .grp[aria-label="' + g + '"]'), g);
 same('the Table group is labelled under its two insert buttons', [await label('#tbar .grp[aria-label="Table"] > .tg'), await label('#tbar .grp[aria-label="Table"]')], ['Table', 'none']);
 check('the labels take no width', await pg.evaluate(() => { const g = document.querySelector('#tbar .grp[aria-label="Index"]'), w = g.offsetWidth; document.querySelector('#chrome').classList.add('thin'); const w2 = g.offsetWidth; document.querySelector('#chrome').classList.remove('thin'); return w === w2; }));
+same('the groups in order', await pg.evaluate(() => [...document.querySelectorAll('#tbar > .grp')].map(g => g.getAttribute('aria-label'))), ['File', 'History', 'Text', 'Inspect', 'Lists', 'Insert', 'Notes', 'Index', 'Table']);
+same('Inspect holds the two buttons that look at the page without changing it; Text keeps the ones that change the text', await pg.evaluate(() => [[...document.querySelectorAll('#tbar .grp[aria-label="Inspect"] button')].map(x => x.dataset.a), [...document.querySelectorAll('#tbar .grp[aria-label="Text"] > *')].map(x => x.dataset.a || x.id)]), [['inspect', 'blocks'], ['s-block', 's-boxtype', 'bold', 'italic', 's-fmt', 'clear', 'paint']]);
 const tall = await state();
 
 /* in a table: the buttons by what they do, each set with its label */

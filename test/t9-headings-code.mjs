@@ -56,4 +56,8 @@ same('selection cleared across blocks; Q&A list splits', await pg.evaluate(() =>
   ['H1:T', 'P:Head bold', 'P:it <a href="#">ln</a> <span class="id">A1</span>', 'P:Q1', 'P:A1', 'DL.qa:2', 'TABLE:' + await pg.evaluate(() => document.querySelector('#doc table').innerHTML)]);
 await caretIn(pg, '#doc td'); await click(pg, 'clear'); await sleep(50);
 same('table cell keeps its cell, loses bold', await pg.evaluate(() => document.querySelector('#doc td').innerHTML), 'c');
+// heading sizes: a bold line under an H4 must not outrank it
+await load(pg, '<main><h1>T</h1><h3 id="x3">Three</h3><h4 id="x4">Four</h4><p id="xb"><b>Bold</b> text</p></main>');
+{ const f = await pg.evaluate(() => { const g = q => getComputedStyle(document.querySelector(q)); return { h3: parseFloat(g('#doc h3').fontSize), h4: parseFloat(g('#doc h4').fontSize), h4w: +g('#doc h4').fontWeight, b: parseFloat(g('#doc p b').fontSize), bw: +g('#doc p b').fontWeight, ink: g('#doc h4').color === g('#doc h3').color }; });
+  check('H4 is a step above bold paragraph text and as heavy, and H3 a step above H4, in the same ink', f.h4 > f.b && f.h4w >= f.bw && f.h3 > f.h4 && f.ink, f); }
 await b.close();

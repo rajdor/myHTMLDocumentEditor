@@ -21,7 +21,7 @@ const DOC = '<main><h1>T</h1><h2 id="h">Head</h2><h4 id="h4">Four</h4><p id="p">
 await load(pg, DOC); await caretIn(pg, '#e'); await paste(SRC); await sleep(100);
 const w = await weights();
 same('bold in a pasted heading is dropped (H3)', [w['H3 strong'], w['H3 span']], ['h3 700', 'h3 700']);
-same('bold in a pasted H4 is dropped', w['H4 span'], 'h4 600');
+same('bold in a pasted H4 is dropped', w['H4 span'], 'h4 700');
 same('bold in a pasted header cell is dropped, as a tag or as a styled span', [w['TH plain'], w['TH strong'], w['TH span']], ['th 600', 'th 600', 'th 600']);
 same('other formatting in a pasted header cell is kept', w['it'], 'th>i 600');
 same('bold in a paragraph, list item and body cell is kept at 700', [w['Para strong'], w['Item lead:'], w['TD strong'], w['TD span']], ['p>strong 700', 'li>strong 700', 'td>strong 700', 'td>b 700']);

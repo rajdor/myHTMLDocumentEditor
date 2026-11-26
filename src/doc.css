@@ -203,8 +203,8 @@ main { min-width: 0; }
 h1 { font: 400 40px/1.15 var(--font); color: var(--ink); margin: 0 0 4px; }
 .sub { color: var(--ink-soft); margin: 0 0 32px; }
 h2 { font: 400 28px/1.2 var(--font); color: var(--ink); margin: 56px 0 12px; padding-top: 12px; border-top: 1.5px dashed var(--dots); }
-h3 { font-size: 16px; color: var(--ink); margin: 28px 0 8px; }
-h4 { font-size: 14px; font-weight: 600; color: var(--ink-soft); margin: 20px 0 6px; }
+h3 { font-size: 19px; color: var(--ink); margin: 28px 0 8px; }
+h4 { font-size: 16px; font-weight: 700; color: var(--ink); margin: 20px 0 6px; }   /* a step above body text and as heavy as bold, so a bold line under it does not outrank it */
 .h2sub { color: var(--ink-soft); margin: -4px 0 18px; }
 pre { font: 13px/1.5 var(--mono); font-variant-ligatures: none; color: var(--ink); background: #f6f9fc; border: 1px solid var(--dots); border-radius: 3px; padding: 10px 12px; margin: 10px 0 16px; max-width: 900px; overflow-x: auto; white-space: pre; tab-size: 4; }
 p { margin: 8px 0; max-width: 900px; }

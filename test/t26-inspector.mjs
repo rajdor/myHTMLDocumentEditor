@@ -43,7 +43,7 @@ await inspectAt('#inbox'); same('a box is named with its type', await rows(), ['
 await inspectAt('#deep'); same('list items say what kind, inner and compact', await rows(), ['Bulleted list item, compact', 'Bulleted list item, in an inner list, compact']);
 await inspectAt('#sh'); same('table cells say what they are', await rows(), ['Table, set column widths', 'Sub header cell (header column)']);
 await inspectAt('#h4'); same('a heading inside a table cell is marked, with a way to make it a plain line', await rows(), ['Table, set column widths', 'Table cell', 'Heading 4 (H4) [!The toolbar cannot make a heading in a table cell] <Make a plain line>']);
-check('its style attributes show why it differs from bold: weight 600', /Weight: 600/.test(await pg.evaluate(() => document.getElementById('insp-look').textContent)));
+check('its style attributes show why it differs from bold text: size 16px, at the same weight 700', await pg.evaluate(() => { const t = document.getElementById('insp-look').textContent; return /Size: 16px/.test(t) && /Weight: 700/.test(t); }));
 // taking one format off
 check('the heading can be made a plain line from the popup', await act('Heading 4', 'Make a plain line')); await sleep(120);
 same('it becomes a plain line in the cell', await pg.evaluate(() => document.querySelector('#c').innerHTML), 'Asks<br><strong id="str">Strong</strong>');

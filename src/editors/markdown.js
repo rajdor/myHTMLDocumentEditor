@@ -10,8 +10,8 @@
 const MD = (() => {
   const KEEP_INLINE = ['sup', 'sub', 'u', 'mark', 'kbd'];
   /* commands and styles that make something Markdown cannot hold */
-  const OFF_ACTIONS = ['tag', 'diagram', 'note', 'margin', 'stage', 'mr', 'md', 'split', 'hr', 'sr', 'hc', 'sc', 'dense', 'ldense', 'qa', 'index', 'blocks'];   // index and blocks: a Markdown file has no index, and no containers from elsewhere
-  const OFF_STYLES = ['p.sub', 'p.h2sub', 'p.bluf', 'p.cap', 'dt', 'dd'], OFF_FORMATS = ['sup', 'sub'];
+  const OFF_ACTIONS = ['tag', 'diagram', 'note', 'margin', 'stage', 'mr', 'md', 'split', 'hr', 'sr', 'hc', 'sc', 'dense', 'tfmt', 'ldense', 'qa', 'index', 'blocks'];   // index and blocks: a Markdown file has no index, and no containers from elsewhere
+  const OFF_STYLES = ['p.sub', 'p.h2sub', 'p.bluf', 'p.cap', 'dt', 'dd'], OFF_FORMATS = ['sup', 'sub', 'pill', 'pillr'];
   const WHY = ' (not available in a Markdown file)';
   let on = false;
 

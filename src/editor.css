@@ -68,7 +68,7 @@ html.de-open, html.de-open body { overflow: hidden; }
 #tbar .grp:has(+ #status) { border-right: 0; padding-right: 0; }
 #tbar .tops { display: flex; gap: 1px; margin-left: 3px; }
 #tbar .tops[hidden] { display: none; }
-#s-boxtype { width: 62px; }
+#s-boxtype { width: 56px; }
 #chrome button.ic.lv em { position: absolute; right: -1px; bottom: 2px; font: 600 9px/1 system-ui, sans-serif; font-style: normal; color: #fff; background: #12355B; border-radius: 6px; padding: 1px 3px; }
 #chrome button.ic { width: 22px; padding: 0; display: inline-flex; align-items: center; justify-content: center; position: relative; border-color: transparent; background: none; }
 #chrome button.ic:hover { background: #EAF1F8; border-color: #CFDBE8; }
@@ -77,7 +77,7 @@ html.de-open, html.de-open body { overflow: hidden; }
 #chrome button.ic.rot svg { transform: rotate(-90deg); }
 #chrome button.ic.minus::after { content: ''; position: absolute; right: 3px; bottom: 4px; width: 8px; height: 2px; border-radius: 1px; background: #B23C0B; box-shadow: 0 0 0 1.5px #fff; }
 #chrome button.ic.t.dim, #chrome button.ic.dim, #chrome select.dim { opacity: .35; }
-#s-block { width: 100px; }
+#s-block { width: 90px; }
 #chrome button.ic.flip svg { transform: scaleX(-1); }
 #chrome button.ic.has::after { content: ''; position: absolute; right: 3px; top: 3px; width: 7px; height: 7px; border-radius: 50%; background: #F2B705; box-shadow: 0 0 0 1.5px #fff; }
 #doc.ed-paint, #doc.ed-paint * { cursor: copy; }
@@ -105,12 +105,53 @@ html.de-open, html.de-open body { overflow: hidden; }
 #s-fmt { width: 58px; }
 #tbar select { padding-left: 4px; padding-right: 2px; }
 #tbar .tops button.ic { width: 20px; }
+/* Labels under the toolbar groups. They take no width, so they never change what fits on a row; they go when the toolbar is set thin (the button right of Help) or wraps to a second row. */
+#tbar .tg { display: inline-flex; align-items: center; gap: 1px; }
+#tbar .grp > .tg { gap: 2px; }
+#chrome:not(.thin):not(.wrapped) #tbar { align-items: flex-start; }
+#chrome:not(.thin):not(.wrapped) #tbar .grp:not(.nol), #chrome:not(.thin):not(.wrapped) #tbar .tg { position: relative; padding-bottom: 13px; }
+#chrome:not(.thin):not(.wrapped) #tbar .grp:not(.nol)::after, #chrome:not(.thin):not(.wrapped) #tbar .tg::after { content: attr(aria-label); content: attr(aria-label) / ''; position: absolute; left: -12px; right: -12px; bottom: 0; text-align: center; font: 10px/12px system-ui, -apple-system, 'Segoe UI', sans-serif; color: #3D5A7A; white-space: nowrap; pointer-events: none; }
+#chrome:not(.thin):not(.wrapped) #tbar .tg::after { content: attr(data-l); content: attr(data-l) / ''; }
+#chrome:not(.thin):not(.wrapped) #tbar .tops { align-items: flex-start; }
+#chrome:not(.thin):not(.wrapped) #tbar .tops .tsep { height: 28px; }
+#chrome.thin #thin svg { transform: rotate(180deg); }
+#chrome #thin { width: 18px; }
+#chrome #thin svg { width: 14px; height: 14px; }
+#tbar .tops .tsep { width: 1px; height: 16px; background: #CFDBE8; }   /* between the table buttons that add, delete, set headers, merge and compact */
 /* emoji list: opened from the toolbar, under its button */
 #emoji { position: fixed; z-index: 60; display: grid; grid-template-columns: repeat(8, 30px); gap: 2px; padding: 6px; background: #fff; border: 1px solid #B8C2CE; border-radius: 4px; box-shadow: 0 4px 14px rgba(18, 53, 91, .18); }
 #emoji[hidden] { display: none; }
 #emoji button { width: 30px; height: 30px; padding: 0; border: 1px solid transparent; border-radius: 3px; background: none; font: 18px/1 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; cursor: pointer; }
 #emoji button:hover, #emoji button:focus-visible { background: #EAF1F8; border-color: #CFDBE8; outline: none; }
 @media print { #emoji { display: none !important; } }
+/* Table format: a bar under the toolbar, opened from the Table format button. It stays open while the page is worked on and covers nothing. */
+#chrome #tfmt { align-items: flex-start; gap: 6px 14px; background: #F6F9FC; border-top: 1px solid #CFDBE8; }
+#tfmt .tf-col { display: flex; flex-direction: column; gap: 4px; }
+#tfmt .tf-head { width: 104px; flex: none; gap: 3px; }
+#tfmt .tf-head span { color: #3D5A7A; font-size: 12px; min-height: 15px; }
+#tfmt .tf-head button { align-self: flex-start; margin-top: 2px; }
+#tfmt .tf-line { display: flex; align-items: center; gap: 4px; min-height: 26px; }
+#tfmt .tf-set { display: inline-flex; align-items: center; gap: 4px; width: 232px; }
+#tfmt .tf-set + .tf-set { width: auto; margin-left: 12px; }
+#tfmt > .sep { align-self: stretch; height: auto; margin: 0; }
+#tfmt .tf-head + .tf-col .tf-set .tf-l { width: 54px; }
+#tfmt .tf-head:has(#tf-fancy) { width: auto; min-width: 40px; max-width: 110px; }
+#tfmt .tf-l { width: 54px; flex: none; color: #3D5A7A; }
+#chrome #tfmt button { height: 24px; padding: 2px 8px; white-space: nowrap; flex: none; }
+#chrome #tfmt button.on, #chrome #tfmt button.go { background: #12355B; color: #fff; border-color: #12355B; }
+#chrome #tfmt button:disabled { opacity: .4; cursor: default; }
+#chrome #tfmt .tf-x { margin-left: auto; }
+#tf-pal { display: grid; grid-template-columns: repeat(13, 16px); gap: 2px; flex: none; padding-top: 1px; }
+#tf-recent { display: flex; flex-wrap: wrap; gap: 2px; min-width: 232px; color: #3D5A7A; font-size: 12px; }
+#chrome #tfmt button.tf-sw { width: 16px; height: 16px; padding: 0; border: 1px solid rgba(18, 53, 91, .3); border-radius: 2px; }
+#chrome #tfmt button.tf-sw:hover, #chrome #tfmt button.tf-sw:focus-visible { outline: 2px solid #12355B; outline-offset: 1px; }
+#chrome #tfmt button.tf-sw.on { outline: 2px solid #B23C0B; outline-offset: 1px; border-color: #fff; }
+#chrome #tf-color { width: 34px; flex: none; height: 24px; padding: 0 2px; border: 1px solid #B8C2CE; border-radius: 3px; background: #fff; }
+#chrome #tf-hex { width: 72px; height: 24px; box-sizing: border-box; padding: 2px 4px; font: 12px ui-monospace, Menlo, Consolas, monospace; }
+#tf-err { margin: 0; color: #B23C0B; font-size: 12px; max-width: 300px; }
+#tf-err:empty { display: none; }
+/* An empty cell in a table with spacing draws nothing on the saved page; while editing it keeps a faint outline, so it can be found and typed in */
+#doc td.mt { outline: 1px dashed #CFDBE8; outline-offset: -1px; }
 /* link form */
 :is(#linkdlg,#numdlg) { width: min(460px, calc(100vw - 32px)); padding: 16px 18px 14px; border: 1.5px solid var(--ink); border-radius: 3px; box-shadow: 4px 6px 0 var(--shadow); background: var(--paper); color: #1c2b3a; font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
 :is(#linkdlg,#numdlg)::backdrop { background: rgba(18, 53, 91, .35); }
@@ -132,8 +173,16 @@ html.de-open, html.de-open body { overflow: hidden; }
 #cbar { background: #FDF6EC; border-top: 1px solid #E9D3B0; }
 #cbar #ctname { font: 12px/1.3 ui-monospace, Menlo, Consolas, monospace; color: #7A4A0A; margin-right: 6px; max-width: 46%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #chrome .row button:disabled { opacity: .4; cursor: default; }
-#doc.ed-blocks :is(p,h1,h2,h3,h4,ul,ol,dl,pre,table) { outline: 1px dotted #B8C2CE; outline-offset: 1px; }
-#doc.ed-blocks :is(div,section,article,aside,header,footer,main,figure,figcaption,blockquote,address,center,details,summary,fieldset,hgroup):not(.dg,.fig,.box,.note,.note-body,.note-log,.note-entries,.tw,.ed-handle):not(:is(.dg,.fig,svg,.note-log) *) { outline: 1px dashed #B45309; outline-offset: -1px; position: relative; padding: 20px 6px 6px; margin-top: 4px; margin-bottom: 4px; min-height: 32px; }
+/* Three looks that cannot be taken for one another, or for a table's own grid: a text block has no outline, only a small grey
+   tag in the left margin; a table has a solid purple outline and a "table" tab; a container is amber, dashed and tinted. */
+#doc.ed-blocks :is(p,h1,h2,h3,h4,ul,ol,dl,pre):not(.ed-folded, .box-h, :is(.dg,.fig,svg,.note-log,.box,td,th,li,dt,dd) *) { position: relative; }
+#doc.ed-blocks :is(p,h1,h2,h3,h4,ul,ol,dl,pre):not(.ed-folded, .box-h, :is(.dg,.fig,svg,.note-log,.box,td,th,li,dt,dd) *)::after { content: var(--bt, ''); position: absolute; right: 100%; top: 3px; margin-right: 5px; font: 600 9px/13px ui-monospace, Menlo, Consolas, monospace; letter-spacing: 0; text-transform: none; white-space: nowrap; color: #5B6B7D; background: #E9EEF3; border-radius: 2px; padding: 0 3px; pointer-events: none; user-select: none; }
+#doc.ed-blocks p { --bt: 'p'; } #doc.ed-blocks h1 { --bt: 'h1'; } #doc.ed-blocks h2 { --bt: 'h2'; } #doc.ed-blocks h3 { --bt: 'h3'; } #doc.ed-blocks h4 { --bt: 'h4'; }
+#doc.ed-blocks ul { --bt: 'ul'; } #doc.ed-blocks ol { --bt: 'ol'; } #doc.ed-blocks dl { --bt: 'q&a'; } #doc.ed-blocks pre { --bt: 'pre'; }
+#doc.ed-blocks :is(.tw, table:not(.tw > table)):not(:is(.dg,.fig,svg,.note-log) *) { outline: 2px solid #6D28D9; outline-offset: 2px; }
+#doc.ed-blocks .tw:not(:is(.dg,.fig,svg,.note-log) *)::before { content: 'table'; display: block; width: max-content; margin: 0 0 3px; font: 600 10px/15px ui-monospace, Menlo, Consolas, monospace; letter-spacing: 0; color: #fff; background: #6D28D9; padding: 0 6px; border-radius: 0 0 4px 0; pointer-events: none; user-select: none; }
+#doc.ed-blocks table:not(.tw > table, :is(.dg,.fig,svg,.note-log) *)::before { content: 'table'; display: table-caption; text-align: left; font: 600 10px/15px ui-monospace, Menlo, Consolas, monospace; letter-spacing: 0; color: #fff; background: linear-gradient(#6D28D9, #6D28D9) left top / 42px 100% no-repeat; padding: 0 6px; pointer-events: none; user-select: none; }   /* a table with no wrapper: the tab is drawn as a caption */
+#doc.ed-blocks :is(div,section,article,aside,header,footer,main,figure,figcaption,blockquote,address,center,details,summary,fieldset,hgroup):not(.dg,.fig,.box,.note,.note-body,.note-log,.note-entries,.tw,.ed-handle):not(:is(.dg,.fig,svg,.note-log) *) { outline: 1.5px dashed #B45309; outline-offset: -1px; background-color: rgba(180, 83, 9, .05); position: relative; padding: 20px 6px 6px 30px; margin-top: 4px; margin-bottom: 4px; min-height: 32px; }
 #doc.ed-blocks :is(div,section,article,aside,header,footer,main,figure,figcaption,blockquote,address,center,details,summary,fieldset,hgroup):not(.dg,.fig,.box,.note,.note-body,.note-log,.note-entries,.tw,.ed-handle):not(:is(.dg,.fig,svg,.note-log) *)::before { content: var(--ct, 'container') ' ' attr(class); position: absolute; left: 0; top: 0; max-width: 100%; box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 10px/15px ui-monospace, Menlo, Consolas, monospace; letter-spacing: 0; text-transform: none; color: #fff; background: #B45309; padding: 0 6px; border-radius: 0 0 4px 0; pointer-events: none; user-select: none; }
 #doc.ed-blocks div { --ct: 'div'; }
 #doc.ed-blocks section { --ct: 'section'; }

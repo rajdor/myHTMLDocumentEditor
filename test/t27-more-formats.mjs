@@ -9,7 +9,7 @@ const pick = async (v) => { await pg.select('#s-fmt', v); await sleep(80); };
 const labels = () => pg.evaluate(() => [...document.querySelectorAll('#s-fmt option')].map(o => o.textContent));
 const DOC = '<main><h1>T</h1><p id="a">H2O and x2 and old and run it</p><p id="b">plain</p><pre id="pre">code block</pre><p id="c">one</p><p id="d">two</p></main>';
 await load(pg, DOC);
-same('the list offers the four formats', await labels(), ['More', 'Superscript', 'Subscript', 'Strike-through', 'Inline code']);
+same('the list offers the formats', await labels(), ['More', 'Superscript', 'Subscript', 'Strike-through', 'Inline code', 'Pill', 'Pill at right']);
 await selectText('#a', 1, 2); await pick('sub');
 same('Subscript', (await html('#a')).slice(0, 15), 'H<sub>2</sub>O ');
 same('the list goes back to its name, ready for the next choice', await pg.$eval('#s-fmt', s => s.value), '');
@@ -52,7 +52,7 @@ const paste = (h) => pg.evaluate((h) => { const dt = new DataTransfer(); dt.setD
 await load(pg, '<main><h1>T</h1><p id="a">x</p></main>'); await caretIn(pg, '#a');
 await paste('<span>keep <strike>one</strike> <del>two</del> <span style="text-decoration: line-through">three</span> <s style="color:red">four</s> <span style="text-decoration:underline">five</span></span>'); await sleep(150);
 same('pasted strike-through is kept, as <s>, whichever way it was written', await html('#a'), 'xkeep <s>one</s> <s>two</s> <s>three</s> <s>four</s> five');
-check('the toolbar is still one row with Help at the far right', await pg.evaluate(() => { const h = document.querySelector('[data-a="help"]').getBoundingClientRect(), tb = document.getElementById('tbar').getBoundingClientRect(); return tb.right - h.right < 20 && h.top - tb.top < 20; }));
+check('the toolbar is still one row with Help and Thin toolbar at the far right', await pg.evaluate(() => { const h = document.querySelector('[data-a="help"]').getBoundingClientRect(), tb = document.getElementById('tbar').getBoundingClientRect(); return tb.right - h.right < 45 && h.top - tb.top < 20; }));
 await load(pg, '<main><h1>T</h1><div class="tw"><table><tbody><tr><td id="a">x</td><td>y</td></tr></tbody></table></div></main>'); await caretIn(pg, '#a'); await sleep(200);
 check('and still one row with the table buttons showing', await pg.evaluate(() => { const bs = [...document.querySelectorAll('#tbar button, #tbar select')].filter(x => x.offsetParent); const tops = bs.map(x => Math.round(x.getBoundingClientRect().top / 20)); return !document.querySelector('#tbar .tops').hidden && new Set(tops).size === 1; }));
 same('no page errors', errors, []);

@@ -86,6 +86,6 @@ same('in a fancy table the label column shows as a header column', await lit(), 
 await caretCell(pg, 0, 1, 1); await click(pg, 'c+'); await sleep(60);
 same('a column added to a fancy table is ordinary below the heading', await kinds(), 'HHHH H... H...');
 await pg.screenshot({ path: path.join(ROOT, 'test', 'out', 'table-headers.png'), clip: { x: 0, y: 0, width: 1440, height: 330 } });
-check('the toolbar is still one row in a table, with Help at the far right', await pg.evaluate(() => { const h = document.querySelector('[data-a="help"]').getBoundingClientRect(), t = document.getElementById('tbar').getBoundingClientRect(); return t.right - h.right < 20 && h.top - t.top < 20; }));
+check('the toolbar is still one row in a table, with Help and Thin toolbar at the far right', await pg.evaluate(() => { const h = document.querySelector('[data-a="help"]').getBoundingClientRect(), t = document.getElementById('tbar').getBoundingClientRect(); return t.right - h.right < 45 && h.top - t.top < 20; }));
 same('no page errors', errors, []);
 await b.close();

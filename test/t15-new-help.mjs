@@ -39,8 +39,8 @@ await load(pg, '<main><h1>Opened</h1><p id="p">Text</p></main>', 'opened.html');
 check('New on an opened, changed document asks', (await asked()).length === 1 && (await text()) === 'OpenedText!');
 
 // Help
-same('Help is the last button in the toolbar', await pg.evaluate(() => { const k = [...document.querySelectorAll('#tbar button')]; return k[k.length - 1].dataset.a; }), 'help');
-check('Help sits at the far right', await pg.evaluate(() => { const h = document.querySelector('[data-a="help"]').getBoundingClientRect(), t = document.getElementById('tbar').getBoundingClientRect(); return t.right - h.right < 20 && h.top - t.top < 20; }));
+same('Help and Thin toolbar are the last buttons in the toolbar', await pg.evaluate(() => [...document.querySelectorAll('#tbar button')].slice(-2).map(x => x.dataset.a)), ['help', 'thin']);
+check('Help sits at the far right, with Thin toolbar beside it', await pg.evaluate(() => { const h = document.querySelector('[data-a="help"]').getBoundingClientRect(), t = document.getElementById('tbar').getBoundingClientRect(); return t.right - h.right < 45 && h.top - t.top < 20; }));
 check('the toolbar no longer shows the version or the document name', !/(Editor|notebook) v|opened\.html/.test(await pg.$eval('#tbar', t => t.textContent)), await pg.$eval('#status', t => t.textContent));
 same('unsaved changes show as a dot on Save, so the toolbar does not change height', await pg.evaluate(() => { const s = document.querySelector('[data-a="save"]'); return [s.classList.contains('has'), s.title, document.getElementById('status').textContent]; }), [true, 'Save (Ctrl+S): unsaved changes', '']);
 const before = await pg.evaluate(() => document.querySelector('.page').getBoundingClientRect().top);

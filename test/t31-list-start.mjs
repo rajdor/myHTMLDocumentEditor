@@ -92,6 +92,6 @@ check('Repeat names the number', await pg.evaluate(() => document.querySelector(
 // inspector
 await caretIn(pg, '#c li'); await sleep(60); await click(pg, 'inspect'); await sleep(120);
 check('Inspect formatting says where the list starts', await pg.evaluate(() => document.querySelector('#insp').textContent.includes('Numbered list item, list starts at 4')), await pg.evaluate(() => (document.querySelector('#insp') || {}).textContent));
-check('the toolbar is still one row with Help at the far right', await pg.evaluate(() => { const h = document.querySelector('[data-a="help"]').getBoundingClientRect(), t = document.getElementById('tbar').getBoundingClientRect(); return t.right - h.right < 20 && h.top - t.top < 20; }));
+check('the toolbar is still one row with Help and Thin toolbar at the far right', await pg.evaluate(() => { const h = document.querySelector('[data-a="help"]').getBoundingClientRect(), t = document.getElementById('tbar').getBoundingClientRect(); return t.right - h.right < 45 && h.top - t.top < 20; }));
 same('no page errors', errors, []);
 await b.close();

@@ -1,4 +1,4 @@
-// Show blocks: a view for pages from elsewhere. It outlines every block and labels the containers the page came with;
+// Show blocks: a view for pages from elsewhere. It tags the text blocks, outlines the tables and labels the containers the page came with;
 // the bar under the toolbar unwraps or deletes the container the cursor is in, and clears the empty ones. The view
 // and the mark on the chosen container are not saved, copied or kept in the history.
 import { open, check, same, load, sleep, caretIn, click } from './harness.mjs';
@@ -19,7 +19,9 @@ check('the bar is hidden and nothing is outlined to start with', (await bar()) =
 await caretIn(pg, '#top'); await click(pg, 'blocks'); await sleep(60);
 check('Show blocks turns the view on and lights its button', await q(() => document.querySelector('#doc').classList.contains('ed-blocks') && document.querySelector('[data-a="blocks"]').classList.contains('on') && document.querySelector('[data-a="blocks"]').getAttribute('aria-pressed') === 'true'));
 check('containers get a dashed outline and a label with their tag and class', await q(() => { const w = document.querySelector('#w'), s = getComputedStyle(w), l = getComputedStyle(w, '::before').content; return s.outlineStyle === 'dashed' && /div/.test(l) && getComputedStyle(document.querySelector('#e3'), '::before').content.includes('aside'); }), await q(() => getComputedStyle(document.querySelector('#w'), '::before').content));
-check('ordinary blocks get a dotted outline', await q(() => getComputedStyle(document.querySelector('#top')).outlineStyle === 'dotted'));
+check('a text block has no outline, only a tag in the margin that names it', await q(() => { const p = document.querySelector('#top'), t = getComputedStyle(p, '::after'); return getComputedStyle(p).outlineStyle === 'none' && t.content === '"p"' && t.position === 'absolute' && getComputedStyle(document.querySelector('#doc h1'), '::after').content === '"h1"'; }));
+check('a table has a solid outline and a table tab, in a colour of its own', await q(() => { const t = document.querySelector('#doc table'), w = t.closest('.tw') || t, s = getComputedStyle(w), c = getComputedStyle(document.querySelector('#w')); return s.outlineStyle === 'solid' && s.outlineColor !== c.outlineColor && getComputedStyle(w, '::before').content === '"table"'; }));
+check('a container is tinted as well as dashed', await q(() => getComputedStyle(document.querySelector('#w')).backgroundColor !== 'rgba(0, 0, 0, 0)'));
 check('the editor\'s own boxes, table wrappers and diagrams are not containers', await q(() => getComputedStyle(document.querySelector('.box')).outlineStyle !== 'dashed' && getComputedStyle(document.querySelector('.box'), '::before').content === 'none'));
 check('an empty container has height, so it can be clicked', await q(() => document.querySelector('#e1').getBoundingClientRect().height >= 30));
 let s = await bar();
@@ -64,7 +66,7 @@ await caretIn(pg, '#rp'); await sleep(60);
 const out = await q(() => FLE.build());
 check('the saved page holds no trace of the view', !/data-ed-ct|ed-blocks/.test(out) && /id="w"/.test(out));
 check('a copy holds no mark either', await q(() => { const r = document.createRange(); r.selectNodeContents(document.querySelector('#w')); const g = getSelection(); g.removeAllRanges(); g.addRange(r); let h = ''; const e = new ClipboardEvent('copy', { clipboardData: new DataTransfer(), bubbles: true, cancelable: true }); document.dispatchEvent(e); h = e.clipboardData.getData('text/html'); return h.length > 20 && !h.includes('data-ed-ct'); }));
-check('the toolbar is still one row with Help at the far right', await q(() => { const h = document.querySelector('[data-a="help"]').getBoundingClientRect(), t = document.getElementById('tbar').getBoundingClientRect(); return h.top - t.top < 20 && t.right - h.right < 40; }));
+check('the toolbar is still one row with Help and Thin toolbar at the far right', await q(() => { const h = document.querySelector('[data-a="help"]').getBoundingClientRect(), t = document.getElementById('tbar').getBoundingClientRect(); return h.top - t.top < 20 && t.right - h.right < 40; }));
 
 await click(pg, 'blocks'); await sleep(60);
 check('Show blocks again turns the view off: no bar, no outlines, no mark', (await bar()) === null && await q(() => !document.querySelector('#doc').classList.contains('ed-blocks') && !document.querySelector('[data-ed-ct]') && getComputedStyle(document.querySelector('#w')).outlineStyle === 'none' && document.querySelector('[data-a="blocks"]').getAttribute('aria-pressed') === 'false'));

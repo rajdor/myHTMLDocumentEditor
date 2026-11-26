@@ -36,7 +36,9 @@ const turndownJs = fs.readFileSync(path.join(__dirname, 'node_modules/turndown/l
 const codeMirror = fs.readFileSync(path.join(__dirname, 'vendor', 'codemirror.js'), 'utf8').replace(/<\/script/gi, '<\\/script').replace(/<!--/g, '<\\!--');
 
 const ICON_DIR = path.join(__dirname, 'node_modules/@phosphor-icons/core/assets/regular');
-const icon = (n, fill) => fs.readFileSync(path.join(ICON_DIR, fill ? '../fill' : '', n + (fill ? '-fill' : '') + '.svg'), 'utf8').replace(/\s*xmlns="[^"]*"/, '').replace('<svg', '<svg aria-hidden="true"').trim();
+// An icon drawn for the editor (src/icons/) is used before a Phosphor icon of the same name.
+const OWN_ICONS = path.join(__dirname, 'src', 'icons');
+const icon = (n, fill) => fs.readFileSync(!fill && fs.existsSync(path.join(OWN_ICONS, n + '.svg')) ? path.join(OWN_ICONS, n + '.svg') : path.join(ICON_DIR, fill ? '../fill' : '', n + (fill ? '-fill' : '') + '.svg'), 'utf8').replace(/\s*xmlns="[^"]*"/, '').replace('<svg', '<svg aria-hidden="true"').trim();
 
 function build(PRODUCT) {
 const app = "'use strict';\nconst VERSION = " + JSON.stringify(pkg.version) + ", PRODUCT = " + JSON.stringify({ id: PRODUCT.id, label: PRODUCT.label, key: PRODUCT.key }) + ", EMOJI = " + emojiJs + ";\n" + (PRODUCT.notebook ? markedJs + "\n" + turndownJs + "\n" : '')

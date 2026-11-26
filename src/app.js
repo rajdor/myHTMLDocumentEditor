@@ -109,7 +109,7 @@ function keepGoing(what) { return !dirty || confirm('This document has unsaved c
 let tidyQ = false;
 function touch() {
   if (!tidyQ) { tidyQ = true; queueMicrotask(() => { tidyQ = false; if (tidy()) styleUI(); }); }   // once the command that changed the page has finished
-  olTidy();
+  olTidy(); cellMarks();
   checkFix(doc); dirty = true; status(); clearTimeout(timer);
   timer = setTimeout(() => { histSnap(); if (NB.foreign()) return; try { localStorage.setItem(PRODUCT.key + '-draft', clean().innerHTML); } catch (e) { } }, 400);   // the browser's draft is for pages; a Markdown file's unsaved work is kept in its history
 }
@@ -139,7 +139,10 @@ doc.addEventListener('keydown', e => { if (!e.ctrlKey && !e.metaKey && (e.key ==
 doc.addEventListener('beforeinput', e => { if (e.inputType === 'historyUndo' || e.inputType === 'historyRedo') { e.preventDefault(); histGo(e.inputType === 'historyUndo' ? -1 : 1); } });
 window.addEventListener('resize', fit);
 window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
-function chromeHeight() { document.documentElement.style.setProperty('--ch', $('#chrome').offsetHeight + 'px'); }
+// The labels under the toolbar groups go when the toolbar wraps to a second row. They take no width, so showing or hiding them cannot change the wrapping.
+function tbarWrap() { const kids = [...$('#tbar').children].filter(x => x.offsetParent), top = kids.length ? kids[0].offsetTop : 0; $('#chrome').classList.toggle('wrapped', kids.some(x => x.offsetTop > top + 16)); }
+function thinUI(set) { let v; try { if (set !== undefined) localStorage.setItem(PRODUCT.key + '-thin', set ? '1' : ''); v = localStorage.getItem(PRODUCT.key + '-thin') === '1'; } catch (e) { v = !!set; } $('#chrome').classList.toggle('thin', v); const b = $('#thin'); b.setAttribute('aria-pressed', v ? 'true' : 'false'); b.title = v ? 'Thin toolbar is on: show the labels under the buttons' : 'Thin toolbar: hide the labels under the buttons'; }
+function chromeHeight() { tbarWrap(); document.documentElement.style.setProperty('--ch', $('#chrome').offsetHeight + 'px'); }
 new ResizeObserver(chromeHeight).observe($('#chrome'));
 
 /* ---------- text editing ---------- */
@@ -167,8 +170,9 @@ function styleUI() {
   const inTable = !!n.closest('td,th'); $$('#tbar button.t').forEach(x => x.classList.toggle('dim', !inTable));
   { const tc = n.closest('td,th'), hs = tc && !tc.closest('.fig') ? tHeaderState(tc) : {}; ['hr', 'sr', 'hc', 'sc'].forEach(a => $('[data-a="' + a + '"]').classList.toggle('on', !!hs[a])); }
   const tops = $('#tbar .tops'); if (tops.hidden === inTable) { tops.hidden = !inTable; chromeHeight(); } // the row, column and merge buttons show only in a table
+  tfSync(inTable);
   [['bold', 'bold'], ['italic', 'italic'], ['ul', 'insertUnorderedList'], ['ol', 'insertOrderedList']].forEach(([a, c]) => { let on = false; try { on = document.queryCommandState(c); } catch (e) { } $('[data-a="' + a + '"]').classList.toggle('on', on); });
-  const bx = boxAt(n); $('#s-boxtype').value = bx ? boxType(bx) : '';
+  const bx = boxAt(n); $('#s-boxtype').value = bx ? boxType(bx) : ''; { const io = $('#s-boxtype option[value="icon"]'); io.disabled = !bx; io.textContent = bx && bx.classList.contains('box-noicon') ? 'Show icon' : 'Hide icon'; }
   $$('#s-fmt option[value]').forEach(o => { if (FMT[o.value]) o.textContent = (fmtOn(o.value) ? '\u2713 ' : '') + FMT[o.value][0]; }); { const la = listAt(); $('[data-a="indent"]').classList.toggle('dim', !la); $('[data-a="outdent"]').classList.toggle('dim', !la); }
   { const q = qaItem(), noList = !!(q && q.tagName === 'DT'); ['ul', 'ol', 'check'].forEach(a => $('[data-a="' + a + '"]').classList.toggle('dim', noList)); $('[data-a="qa"]').classList.toggle('on', !!q); $('[data-a="qa"]').classList.toggle('dim', !q && !!n.closest('li,td,th,pre')); }
   { const lt = listTop(); $('[data-a="ldense"]').classList.toggle('on', !!(lt && lt.classList.contains('dense'))); $('[data-a="ldense"]').classList.toggle('dim', !lt); const o = olAt(); $('[data-a="olstart"]').classList.toggle('dim', !o); $('[data-a="olstart"]').classList.toggle('on', !!(o && o.hasAttribute('start'))); }
@@ -277,14 +281,23 @@ function selWeighted() { const s = getSelection(); if (!s.rangeCount || !doc.con
 function mdCellSel() { if (!document.documentElement.classList.contains('md-mode')) return false; const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode)) return false; const r = s.getRangeAt(0), c = n => { if (n.nodeType !== 1) n = n.parentElement; return !!(n && n.closest('td,th')); }; return c(r.startContainer) || c(r.endContainer) || $$('td,th', doc).some(x => r.intersectsNode(x)); }
 const MD_CELL_OFF = ['ul', 'ol', 'check'];
 const CODE_OFF = ['bold', 'italic', 'ul', 'ol', 'check', 'tag', 'qa', 'ldense', 'olstart', 'indent', 'outdent', 'link'];
-/* The caret as a count of characters from the start of the document, so it can be put back after tidy() moves nodes. */
-function caretGet() { const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode) || !doc.contains(s.focusNode)) return null; const at = (n, o) => { const r = document.createRange(); r.setStart(doc, 0); try { r.setEnd(n, o); } catch (e) { return -1; } return r.toString().length; }; return [at(s.anchorNode, s.anchorOffset), at(s.focusNode, s.focusOffset)]; }
+/* The caret, so it can be put back after tidy() moves nodes. It is held two ways: as a place in its own block (the block,
+   and a count of characters and line breaks from the block's start), which also tells an empty line from the end of the
+   line before it; and as a count of characters from the start of the document, for when that block is gone. */
+const CARET_BLOCK = 'p,h1,h2,h3,h4,li,td,th,dt,dd,pre,div';
+function caretGet() {
+  const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode) || !doc.contains(s.focusNode)) return null;
+  const at = (n, o) => { const r = document.createRange(); r.setStart(doc, 0); try { r.setEnd(n, o); } catch (e) { return -1; } return r.toString().length; };
+  const inBlock = (n, o) => { const e = n.nodeType === 1 ? n : n.parentElement, b = e && e.closest(CARET_BLOCK); if (!b || b === doc || !doc.contains(b)) return null; const r = document.createRange(); try { r.setStart(b, 0); r.setEnd(n, o); } catch (x) { return null; } return [b, r.toString().length + r.cloneContents().querySelectorAll('br').length]; };
+  return [at(s.anchorNode, s.anchorOffset), at(s.focusNode, s.focusOffset), inBlock(s.anchorNode, s.anchorOffset), inBlock(s.focusNode, s.focusOffset)];
+}
 function caretPut(c) {
   if (!c || c[0] < 0) return; const find = k => { const w = document.createTreeWalker(doc, NodeFilter.SHOW_TEXT); let n, last = null; while ((n = w.nextNode())) { if (n.parentElement.closest('.fig,.dg,.note-log')) continue; if (k <= n.length) return [n, k]; k -= n.length; last = n; } return last ? [last, last.length] : null; };
-  const a = find(c[0]), f = find(c[1]); if (!a || !f) return; try { getSelection().setBaseAndExtent(a[0], a[1], f[0], f[1]); lastRange = getSelection().getRangeAt(0).cloneRange(); } catch (e) { }
+  const inBlock = p => { if (!p || !doc.contains(p[0])) return null; let k = p[1], end = [p[0], 0], n; const w = document.createTreeWalker(p[0], NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT); while ((n = w.nextNode())) { if (n.nodeType === 3) { if (k <= n.length) return [n, k]; k -= n.length; end = [n, n.length]; } else if (n.nodeName === 'BR') { const i = [...n.parentNode.childNodes].indexOf(n); if (!k) return [n.parentNode, i]; k--; end = [n.parentNode, i + 1]; } } return end; };
+  const a = inBlock(c[2]) || find(c[0]), f = inBlock(c[3]) || find(c[1]); if (!a || !f) return; try { getSelection().setBaseAndExtent(a[0], a[1], f[0], f[1]); lastRange = getSelection().getRangeAt(0).cloneRange(); } catch (e) { }
 }
 const TIDY_INLINE = 'b,strong,i,em,a,code,sup,sub,s,strike,del,u,span,mark,kbd';
-const TIDY_Q = ['pre *:not(br)', 'span:not([class])', 'font', ':is(' + TIDY_INLINE + ',p,h1,h2,h3,h4,li,dt,dd)[style]', '[style=""]', ':is(p,h1,h2,h3,h4) > :is(ul,ol,dl,table,pre,div,hr,p,h1,h2,h3,h4)', 'li > :is(table,div.tw,pre,dl,div.box,hr,h1,h2,h3,h4)', 'li:not(ul > li, ol > li)', ':is(dt,dd):not(dl > *)', 'dl > :not(dt,dd)', ':is(ul,ol) > :not(li)', 'span.id span.id', ':is(b,strong,i,em,code,sup,sub,s,strike,del,u,mark,kbd,span.id,a:not(.link-card)):empty', ':is(i,em) :is(i,em)', ':is(b,strong) :is(b,strong)', ':is(s,strike,del) :is(s,strike,del)', 'sup sup', 'sub sub', 'code code', 'a a', ':is(b,strong,i,em,s,strike,del,sup,sub,code,u,mark) + :is(b,strong,i,em,s,strike,del,sup,sub,code,u,mark)',
+const TIDY_Q = ['pre *:not(br)', 'span:not([class])', 'font', ':is(' + TIDY_INLINE + ',p,h1,h2,h3,h4,li,dt,dd)[style]', '[style=""]', ':is(p,h1,h2,h3,h4) > :is(ul,ol,dl,table,pre,div,hr,p,h1,h2,h3,h4)', 'li > :is(table,div.tw,pre,dl,div.box,hr,h1,h2,h3,h4)', 'li:not(ul > li, ol > li)', ':is(dt,dd):not(dl > *)', 'dl > :not(dt,dd)', ':is(ul,ol) > :not(li)', 'span.id span.id', 'span.pill span.pill', ':is(b,strong,i,em,code,sup,sub,s,strike,del,u,mark,kbd,span.id,span.pill,a:not(.link-card)):empty', ':is(i,em) :is(i,em)', ':is(b,strong) :is(b,strong)', ':is(s,strike,del) :is(s,strike,del)', 'sup sup', 'sub sub', 'code code', 'a a', ':is(b,strong,i,em,s,strike,del,sup,sub,code,u,mark) + :is(b,strong,i,em,s,strike,del,sup,sub,code,u,mark)',
   ':is(table,thead,tbody,tfoot) > :not(thead,tbody,tfoot,tr,caption,colgroup,col)', 'tr > :not(td,th)'].join(',');
 function tidy() {
   const out = n => !!n.closest('.dg,.fig,.wb-board,.note-log,.link-card,svg') || !doc.contains(n);
@@ -318,13 +331,13 @@ function tidy() {
   all(':is(' + TIDY_INLINE + ',p,h1,h2,h3,h4,li,dt,dd)[style]').forEach(e => e.removeAttribute('style'));
   all('[style=""]').forEach(e => e.removeAttribute('style'));
   // an ID tag inside an ID tag is one tag; formatting with nothing in it goes (unless the cursor is in it, about to type)
-  all('span.id span.id').forEach(unwrap);
+  all('span.id span.id, span.pill span.pill').forEach(unwrap);
   // the same formatting twice side by side is one run of it
   all('b,strong,i,em,s,strike,del,sup,sub,code,u,mark').forEach(e => { const n = e.nextSibling; if (n && n.nodeType === 1 && n.tagName === e.tagName && !n.attributes.length && !e.attributes.length) { e.append(...n.childNodes); n.remove(); } });
   all(':is(i,em) :is(i,em), :is(b,strong) :is(b,strong), :is(s,strike,del) :is(s,strike,del), sup sup, sub sub, code code, a a').forEach(unwrap);   // the same formatting twice is once
   // in a table only rows and cells: anything else the browser put there gives up its content to the cells, or goes
   all(':is(table,thead,tbody,tfoot) > :not(thead,tbody,tfoot,tr,caption,colgroup,col), tr > :not(td,th)').reverse().forEach(x => { if (x.querySelector('td,th,tr')) unwrap(x); else x.remove(); });
-  { const s = getSelection(), a = s.rangeCount ? s.anchorNode : null; all(':is(b,strong,i,em,code,sup,sub,s,strike,del,u,mark,kbd,span.id,a:not(.link-card)):empty').forEach(e => { if (a !== e) e.remove(); }); }
+  { const s = getSelection(), a = s.rangeCount ? s.anchorNode : null; all(':is(b,strong,i,em,code,sup,sub,s,strike,del,u,mark,kbd,span.id,span.pill,a:not(.link-card)):empty').forEach(e => { if (a !== e) e.remove(); }); }
   // loose text at the top level becomes a paragraph
   let run = null; [...doc.childNodes].forEach(n => { const inline = n.nodeType === 3 ? !!n.data.trim() || !!run : n.nodeType === 1 && n.matches(TIDY_INLINE + ',br,img'); if (!inline) { run = null; return; } if (!run) { run = document.createElement('p'); n.before(run); } run.appendChild(n); });
   doc.normalize(); caretPut(c); return true;
@@ -752,29 +765,63 @@ function boxAt(n) { if (n && n.nodeType !== 1) n = n.parentElement; const b = n 
 function plainLabel(h) { h.classList.remove('box-h'); if (!h.getAttribute('class')) h.removeAttribute('class'); }
 /* Take the box away and leave what it held. The label goes too, unless it was given its own wording. */
 function unbox(b) { const h = boxLabel(b); if (h) { const t = h.textContent.trim(); if (!t || t === BOXES[boxType(b)]) h.remove(); else plainLabel(h); } b.replaceWith(...b.childNodes); }
+/* Text in a box sits in paragraphs, as it does in the page. Loose text in a box, and a plain div that holds only text
+   (both come with pages made elsewhere), become paragraphs, so Enter and the styles work there as anywhere else. */
+const BOX_BLOCK = /^(P|H[1-6]|UL|OL|DL|PRE|TABLE|DIV|DETAILS|HR|BLOCKQUOTE|SECTION|ARTICLE|ASIDE|FIGURE|HEADER|FOOTER|MAIN|NAV|FORM|FIELDSET)$/;
+function boxParas(b) {
+  const loose = n => n.nodeType === 3 || (n.nodeType === 1 && !BOX_BLOCK.test(n.nodeName));
+  const text = n => n.nodeType === 3 ? !!n.data.replace(/[\s\u200b]+/g, '') : n.nodeName !== 'BR';
+  const plain = d => d.nodeName === 'DIV' && !d.matches('.tw,.dg,.fig,.note,.note-body,.note-log,.note-entries,.box,.ed-handle,[class*="wb-"]') && !d.querySelector(BLOCKS + ',.dg,.fig,blockquote,section,article,aside,figure');
+  const kids = [...b.childNodes];
+  if (!kids.some(n => (loose(n) && text(n)) || (n.nodeType === 1 && plain(n)))) return;
+  // the cursor is kept: a place given as "child k of the box" is held as the node beside it
+  const s = getSelection(), ends = s.rangeCount && b.contains(s.anchorNode) && b.contains(s.focusNode) ? [[s.anchorNode, s.anchorOffset], [s.focusNode, s.focusOffset]].map(([n, o]) => n !== b ? { n, o } : o < kids.length ? { before: kids[o] } : kids.length ? { after: kids[kids.length - 1] } : { n, o }) : null;
+  let run = [];
+  const flush = () => { if (run.some(text)) { const q = document.createElement('p'); run[0].before(q); q.append(...run); } run = []; };
+  kids.forEach(n => { if (loose(n)) run.push(n); else { flush(); if (plain(n)) { if (hasContent(n)) { const q = rename(n, 'p'); [...n.attributes].forEach(a => { if (a.name === 'class' || a.name === 'id') q.setAttribute(a.name, a.value); }); ends && ends.forEach(e => { if (e.n === n) e.n = q; if (e.before === n) e.before = q; if (e.after === n) e.after = q; }); } else n.remove(); } } });
+  flush();
+  if (ends) { try { const at = e => { const r = document.createRange(); if (e.n) r.setStart(e.n, e.o); else if (e.before) r.setStartBefore(e.before); else r.setStartAfter(e.after); return [r.startContainer, r.startOffset]; }; s.setBaseAndExtent(...at(ends[0]), ...at(ends[1])); lastRange = s.getRangeAt(0).cloneRange(); } catch (e) { } }
+}
 function boxFix(root) {
   $$('.box', root).forEach(b => {
     if (b.closest('.fig,.dg')) return;
     if (b.parentNode.closest && b.parentNode.closest('.box')) { unbox(b); return; } // no box inside a box
+    boxParas(b);
     if (!b.hasAttribute('role')) b.setAttribute('role', 'note');
     if (![...b.children].some(c => !c.classList.contains('box-h') && (c.textContent.trim() || c.querySelector('img,svg,table,input') || c.matches('.dg,.fig,pre,p,ul,ol,dl,h2,h3,h4')))) { const s = getSelection(), here = s.rangeCount && b.contains(s.anchorNode), q = mk('p'); b.replaceWith(q); if (here) caret(q); }
   });
   $$('.box-h', root).forEach(h => { const p = h.parentNode; if (!(p.classList && p.classList.contains('box') && p.firstElementChild === h)) plainLabel(h); });
 }
-/* The Box list: outside a box it inserts a new, empty box after the current block, ready to type or paste into;
-   inside a box it changes the box's type; Remove box takes the box away and keeps what it held. */
+/* The whole blocks a selection reaches, side by side in the page (or in the container or margin note they share): what
+   the Box list puts in a new box. A list or table is taken whole. A block the selection only touches the edge of is left out. */
+const BOX_HOME = 'div:not(.tw,.box,.dg,.fig,.note,.note-log,.note-entries,.ed-handle),section,article,aside,header,footer,main,blockquote';
+function boxBlocks(r) {
+  let c = r.commonAncestorContainer; if (c.nodeType !== 1) c = c.parentElement;
+  while (c && c !== doc && !(c.matches(BOX_HOME) && !c.closest('.fig,.dg,.note-log,table,li,dl,.box'))) c = c.parentElement;
+  if (!c || !doc.contains(c)) return [];
+  const kids = [...c.children].filter(k => r.intersectsNode(k) && !k.matches('.ed-handle,.note-log')), part = (k, head) => { const x = document.createRange(); x.selectNodeContents(k); if (head) x.setStart(r.startContainer, r.startOffset); else x.setEnd(r.endContainer, r.endOffset); return x.collapsed || !hasContent(x.cloneContents()); };
+  if (kids.length > 1 && part(kids[kids.length - 1], false)) kids.pop();
+  if (kids.length > 1 && part(kids[0], true)) kids.shift();
+  return kids;
+}
+/* The Box list: with blocks selected it puts them in a new box; with no selection it inserts a new, empty box after the
+   current block, ready to type or paste into. Inside a box it changes the box's type, or hides or shows its icon;
+   Remove box takes the box away and keeps what it held. */
 function setBox(v) {
   live(); restore(); const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode)) return;
   const keep = [s.anchorNode, s.anchorOffset, s.focusNode, s.focusOffset];
   const done = () => { if (doc.contains(keep[0]) && doc.contains(keep[2])) { try { s.setBaseAndExtent(...keep); lastRange = s.getRangeAt(0).cloneRange(); } catch (e) { } } touch(); styleUI(); };
   const cur = boxAt(s.anchorNode);
   if (v === 'none') { if (cur) { unbox(cur); done(); } return; }
+  if (v === 'icon') { if (cur) { cur.classList.toggle('box-noicon'); done(); } return; }
   if (!BOXES[v]) return;
   if (cur) { // the label changes too, if it still says the old type
     const h = boxLabel(cur), was = BOXES[boxType(cur)]; Object.keys(BOXES).forEach(k => cur.classList.remove('box-' + k)); cur.classList.add('box-' + v);
     if (h && h.textContent.trim() === was && was !== BOXES[v]) { const inLabel = h.contains(keep[0]); h.textContent = BOXES[v]; if (inLabel) caret(h, true); }
     done(); return;
   }
+  const picked = s.isCollapsed ? [] : boxBlocks(s.getRangeAt(0));
+  if (picked.length) { const b2 = el('<div class="box box-' + v + '" role="note"><p class="box-h"></p></div>'); b2.firstChild.textContent = BOXES[v]; picked[0].before(b2); b2.append(...picked); done(); return; }
   const box = el('<div class="box box-' + v + '" role="note"><p class="box-h"></p><p><br></p></div>'); box.firstChild.textContent = BOXES[v];
   placeBlock(box);
   caret(box.lastChild); touch(); styleUI();
@@ -782,17 +829,20 @@ function setBox(v) {
 /* ---------- more formats ----------
    Superscript, subscript, strike-through and inline code share one toolbar list. Choosing one switches it on or off
    for the selected text; the list marks the ones that are on where the cursor is. */
-const FMT = { sup: ['Superscript', 'sup', 'superscript'], sub: ['Subscript', 'sub', 'subscript'], strike: ['Strike-through', 's,strike,del', 'strikeThrough'], code: ['Inline code', 'code'] };
+const FMT = { sup: ['Superscript', 'sup', 'superscript'], sub: ['Subscript', 'sub', 'subscript'], strike: ['Strike-through', 's,strike,del', 'strikeThrough'], code: ['Inline code', 'code'], pill: ['Pill', 'span.pill:not(.r)'], pillr: ['Pill at right', 'span.pill.r'] };
+// The formats made by hand, not by the browser's own commands: [tag, class, what counts as the same kind of format, how the message starts]. A pill is a short label in a rounded tag; a pill at right sits at the right-hand edge of its line.
+const FMT_WRAP = { code: ['code', '', 'code', 'Inline code is'], pill: ['span', 'pill', 'span.pill', 'A pill is'], pillr: ['span', 'pill r', 'span.pill', 'A pill is'] };
 function fmtOn(k) { const s = getSelection(); let n = s.rangeCount ? s.anchorNode : null; if (n && n.nodeType !== 1) n = n.parentElement; const e = n && n.closest(FMT[k][1]); return !!(e && doc.contains(e) && !e.closest('pre,.fig,.dg')); }
 function setFmt(k, want) {
   restore(); const s = getSelection(); if (!s.rangeCount) return; let n = s.anchorNode; if (n && n.nodeType !== 1) n = n.parentElement; if (!n || !doc.contains(n) || n.closest('pre,.fig,.dg')) return;
   const on = fmtOn(k); if (want === undefined) want = !on;
-  if (k !== 'code') { if (on !== want || (!want && !s.isCollapsed && $$(FMT[k][1], doc).some(e => s.getRangeAt(0).intersectsNode(e)))) { document.execCommand(FMT[k][2]); if (!want && fmtOn(k)) document.execCommand(FMT[k][2]); } touch(); return; }
-  const r = s.getRangeAt(0), inside = n.closest('code');
-  if (!want) { const hit = inside ? [inside] : $$('code', doc).filter(c => !c.closest('pre,.fig,.dg') && r.intersectsNode(c)); if (!hit.length) return; const keep = [s.anchorNode, s.anchorOffset, s.focusNode, s.focusOffset]; hit.forEach(c => c.replaceWith(...c.childNodes)); try { s.setBaseAndExtent(...keep); } catch (e) { } touch(); return; }
-  if (inside || r.collapsed) return; const B = 'p,h1,h2,h3,h4,dt,dd,li,td,th', at = x => (x.nodeType === 1 ? x : x.parentElement).closest(B);
-  if (at(r.startContainer) !== at(r.endContainer)) { alert('Inline code is for text inside one paragraph. For several lines use a code block.'); return; }
-  const c = document.createElement('code'); c.appendChild(r.extractContents()); $$('code', c).forEach(x => x.replaceWith(...x.childNodes)); r.insertNode(c); c.parentNode.normalize();
+  if (!FMT_WRAP[k]) { if (on !== want || (!want && !s.isCollapsed && $$(FMT[k][1], doc).some(e => s.getRangeAt(0).intersectsNode(e)))) { document.execCommand(FMT[k][2]); if (!want && fmtOn(k)) document.execCommand(FMT[k][2]); } touch(); return; }
+  const [wTag, wCls, wKind, wMsg] = FMT_WRAP[k], r = s.getRangeAt(0), inside = n.closest(wKind);
+  if (!want) { const hit = inside ? [inside] : $$(wKind, doc).filter(c => !c.closest('pre,.fig,.dg') && r.intersectsNode(c)); if (!hit.length) return; const keep = [s.anchorNode, s.anchorOffset, s.focusNode, s.focusOffset]; hit.forEach(c => c.replaceWith(...c.childNodes)); try { s.setBaseAndExtent(...keep); } catch (e) { } touch(); return; }
+  if (inside) { if (wCls && inside.className !== wCls) { inside.className = wCls; touch(); } return; }   // in a pill of the other kind: it becomes this kind
+  if (r.collapsed) return; const B = 'p,h1,h2,h3,h4,dt,dd,li,td,th', at = x => (x.nodeType === 1 ? x : x.parentElement).closest(B);
+  if (at(r.startContainer) !== at(r.endContainer)) { alert(wMsg + ' for text inside one paragraph.' + (k === 'code' ? ' For several lines use a code block.' : '')); return; }
+  const c = document.createElement(wTag); if (wCls) c.className = wCls; c.appendChild(r.extractContents()); $$(wKind, c).forEach(x => x.replaceWith(...x.childNodes)); r.insertNode(c); c.parentNode.normalize();
   const nr = document.createRange(); nr.selectNodeContents(c); s.removeAllRanges(); s.addRange(nr); lastRange = nr.cloneRange(); touch();
 }
 /* ---------- list indent and outdent ----------
@@ -923,6 +973,15 @@ function lineBreak() {
   if (!nx || (nx.nodeType === 1 && nx.matches('ul,ol'))) br.after(document.createElement('br')); // a break at the end of a block needs a second one for the new line to show
   const r = document.createRange(); r.setStartAfter(br); r.collapse(true); const s = getSelection(); s.removeAllRanges(); s.addRange(r); lastRange = r.cloneRange();
 }
+/* A double-click selects one word. Where no space character lies between an ID tag and the word beside it (the gap seen
+   is the tag's own margin) the browser takes the two as one word, so the selection is cut back to the side that was clicked. */
+doc.addEventListener('dblclick', e => {
+  const s = getSelection(); if (board || !s.rangeCount || s.isCollapsed || !e.target.closest || e.target.closest('.fig,.dg,.note-log')) return;
+  const r = s.getRangeAt(0), hit = e.target.closest('span.id'), was = r.toString();
+  if (hit) { const t = document.createRange(); t.selectNodeContents(hit); if (r.compareBoundaryPoints(Range.START_TO_START, t) < 0) r.setStart(t.startContainer, t.startOffset); if (r.compareBoundaryPoints(Range.END_TO_END, t) > 0) r.setEnd(t.endContainer, t.endOffset); }
+  else { const at = document.caretRangeFromPoint ? document.caretRangeFromPoint(e.clientX, e.clientY) : null; if (!at) return; $$('span.id', doc).filter(t => r.intersectsNode(t) && !t.closest('.fig,.dg')).forEach(t => { const tr = document.createRange(); tr.selectNode(t); const side = tr.comparePoint(at.startContainer, at.startOffset); if (side > 0) { if (r.comparePoint(tr.endContainer, tr.endOffset) === 0) r.setStartAfter(t); } else if (side < 0 && r.comparePoint(tr.startContainer, tr.startOffset) === 0) r.setEndBefore(t); }); }
+  if (r.toString() !== was && !r.collapsed) { s.removeAllRanges(); s.addRange(r); lastRange = r.cloneRange(); styleUI(); }
+});
 /* Enter at the end of a block that ends with a tag: the next block starts plain. */
 function enterAfterTag() {
   const e = tagEdge(); if (!e || e.before) return false;
@@ -1337,7 +1396,7 @@ function inspectOne(e) {
   const t = e.tagName, c = e.classList, host = e.parentNode.closest('td,th,li'), where = host ? (host.tagName === 'LI' ? 'a list item' : 'a table cell') : '';
   if (c.contains('box')) return { name: BOXES[boxType(e)] + ' box' };
   if (c.contains('note') && !c.contains('note-body')) return { name: 'Margin note' };
-  if (t === 'TABLE') return { name: (c.contains('lop') || c.contains('spine') ? 'Fancy table' : 'Table') + (c.contains('dense') ? ', compact' : '') + (c.contains('cw') ? ', set column widths' : '') };
+  if (t === 'TABLE') return { name: (c.contains('lop') || c.contains('spine') ? 'Fancy table' : 'Table') + (c.contains('dense') ? ', compact' : '') + (c.contains('cw') ? ', set column widths' : '') + Object.keys(TF).map(k => { const v = tfGet(e, k); return v ? ', ' + TF_NAME[k].toLowerCase() + ' ' + TF[k][v].toLowerCase() : ''; }).join('') };
   if (t === 'TD') return { name: 'Table cell' };
   if (t === 'TH') return { name: (c.contains('sub') ? 'Sub header cell' : 'Header cell') + (e.getAttribute('scope') === 'row' ? ' (header column)' : e.getAttribute('scope') === 'col' ? ' (header row)' : '') };
   if (t === 'LI') { const l = e.parentNode, top = e.closest('ul.dense, ol.dense'); return { name: (l.classList.contains('check') ? 'Checklist item' : l.tagName === 'OL' ? 'Numbered list item' + (l.hasAttribute('start') ? ', list starts at ' + olFirst(l) : '') : 'Bulleted list item') + (l.parentNode.closest('li') ? ', in an inner list' : '') + (top ? ', compact' : '') }; }
@@ -1347,6 +1406,7 @@ function inspectOne(e) {
   if (t === 'P') { const k = Object.keys(INSPECT_PARA).find(x => c.contains(x)); return { name: k ? INSPECT_PARA[k] : 'Paragraph', odd: where ? 'The toolbar cannot make a paragraph in ' + where : '', line: !!where }; }
   if (t === 'A') return { name: 'Link: ' + (e.getAttribute('href') || ''), inline: true, off: 'Remove link' };
   if (t === 'SPAN' && c.contains('id')) return { name: 'ID tag', inline: true, off: 'Remove tag' };
+  if (t === 'SPAN' && c.contains('pill')) return { name: c.contains('r') ? 'Pill at right' : 'Pill', inline: true, off: 'Remove' };
   if (INSPECT_INLINE[t]) return { name: INSPECT_INLINE[t], inline: true, off: 'Remove', odd: /^(B|STRONG|I|EM|SUP|SUB|S|STRIKE|DEL|CODE)$/.test(t) ? '' : 'No toolbar button for this' };
   if (t === 'SPAN') return e.getAttribute('style') ? null : { name: 'Plain wrapper (no effect)', inline: true, off: 'Remove' };
   if (/^(DIV|THEAD|TBODY|TFOOT|TR|UL|OL|DL|DETAILS|SUMMARY)$/.test(t)) return null; // structure the rows above and below already describe
@@ -1363,7 +1423,7 @@ function inspect() {
   const d = $('#insp'); if (d.open) { d.close(); return; }
   live(); const e = inspectTarget(); if (!e) { alert('Place the cursor in the text, or select a word, first.'); return; }
   const chain = []; for (let x = e; x && x !== doc; x = x.parentElement) chain.unshift(x);
-  const rows = []; chain.forEach(x => { const st = x.getAttribute('style'); const one = inspectOne(x); if (one) rows.push(Object.assign(one, { e: x })); if (st && !x.closest('.fig,.dg') && !x.matches('col')) rows.push({ name: 'Pasted styling: ' + st.trim().slice(0, 90), odd: 'Not a toolbar style', inline: true, off: 'Remove', e: x, style: true }); });
+  const rows = []; chain.forEach(x => { const st = x.getAttribute('style'); const one = inspectOne(x); if (one) rows.push(Object.assign(one, { e: x })); if (st && x.matches('td,th') && cellBg(x) && /^background-color:#[0-9A-Fa-f]{6}(;color:#FFFFFF)?$/.test(st)) rows.push({ name: 'Cell colour ' + cellBg(x), inline: true, off: 'Remove colour', e: x, style: true }); else if (st && !x.closest('.fig,.dg') && !x.matches('col')) rows.push({ name: 'Pasted styling: ' + st.trim().slice(0, 90), odd: 'Not a toolbar style', inline: true, off: 'Remove', e: x, style: true }); });
   const cs = getComputedStyle(e), hex = v => { const m = v.match(/[\d.]+/g); return m ? '#' + m.slice(0, 3).map(n => Math.round(+n).toString(16).padStart(2, '0')).join('').toUpperCase() : v; };
   const sel = lastRange.collapsed ? '' : lastRange.toString().trim().slice(0, 60), list = $('#insp-list'); list.textContent = '';
   $('#insp-what').textContent = sel ? 'At the start of “' + sel + '”' : 'At the cursor';
@@ -1403,8 +1463,8 @@ function cellSelInfo() {
 }
 function cellSelPaint() {
   $$('.ed-cell', doc).forEach(x => { x.classList.remove('ed-cell'); if (!x.getAttribute('class')) x.removeAttribute('class'); });
-  const info = cellSelInfo(); if (!info) { cellSel = null; doc.classList.remove('ed-cells'); return; }
-  info.cells.forEach(x => x.classList.add('ed-cell')); doc.classList.add('ed-cells');
+  const info = cellSelInfo(); if (!info) { cellSel = null; doc.classList.remove('ed-cells'); tfUI(); return; }
+  info.cells.forEach(x => x.classList.add('ed-cell')); doc.classList.add('ed-cells'); tfUI();
 }
 function cellSelSet(a, b) { const t = a.closest('table'), T = tMatrix(t), p = tPos(T, a), q = tPos(T, b); if (!p || !q) return; cellSel = { t, a: p, b: q }; cellSelPaint(); }
 function cellSelClear() { if (!cellSel && !doc.classList.contains('ed-cells')) return; cellSel = null; cellSelPaint(); }
@@ -2244,7 +2304,7 @@ function build(opts) {
 function prepView() { dgSel = null; ctSelect(null); $('#gbar').hidden = true; $$('.dg, .fig', doc).forEach(f => f.classList.remove('ed-dsel')); fit(); chromeHeight(); }
 function prep() {
   inspectClose(); cellSel = null; doc.classList.remove('ed-cells'); $$('.ed-cell', doc).forEach(x => x.classList.remove('ed-cell'));
-  checkFix(doc); migrateGrids(doc);
+  checkFix(doc); migrateGrids(doc); cellMarks();
   dgSelect(null); ctSelect(null); $$('.dg, .fig', doc).forEach(f => { f.setAttribute('contenteditable', 'false'); f.setAttribute('title', 'Double-click to edit'); });
   $$('.wb-board', doc).forEach(b => { if (!b.parentNode.classList.contains('fig')) { const f = el('<div class="fig"></div>'); b.replaceWith(f); f.appendChild(b); } });
   $$('.fig', doc).forEach(f => f.setAttribute('contenteditable', 'false'));
@@ -2364,15 +2424,97 @@ document.addEventListener('mousedown', e => { if (!emojiBox.hidden && !e.target.
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !emojiBox.hidden) { e.stopPropagation(); emojiShow(false); restore(); } }, true);
 window.addEventListener('resize', () => { if (!emojiBox.hidden) emojiShow(false); });
 
+/* ---------- table format ----------
+   A bar under the toolbar, opened from the Table format button while the cursor is in a table. It covers nothing and
+   stays open while the page is worked on, so several things can be set one after another; it closes with its button,
+   Close or Escape, or when the cursor leaves the table.
+   Cell colour is set on the cell the cursor is in, or on the cells selected with Shift+click, in any table. It is saved
+   on the cell as style="background-color:#RRGGBB", with color:#FFFFFF added when white text reads better on that
+   colour than the page's ink does. Links keep the browser's own blue.
+   Spacing, padding, borders and corners are set for a whole table and saved as classes on it (gap-s, gap-m; pad-s,
+   pad-l; noline; round). A fancy table keeps its own. Corners can only be round where cells stand apart, so Rounded
+   turns Small spacing on and no spacing turns Rounded off. In a table with spacing, a cell with no text and no colour
+   is marked (td.mt) and draws nothing, so a short row does not end in empty boxes. */
+const TF = { gap: { '': 'None', s: 'Small', m: 'Medium' }, pad: { s: 'Small', '': 'Normal', l: 'Large' }, line: { '': 'Grid', none: 'None' }, corner: { '': 'Square', round: 'Rounded' } };
+const TF_NAME = { gap: 'Spacing', pad: 'Padding', line: 'Borders', corner: 'Corners' };
+const TF_CLASS = { gap: v => 'gap-' + v, pad: v => 'pad-' + v, line: () => 'noline', corner: () => 'round' };
+const tfFancy = t => t.classList.contains('lop') || t.classList.contains('spine');
+function tfGet(t, k) { return Object.keys(TF[k]).find(v => v && t.classList.contains(TF_CLASS[k](v))) || ''; }
+function tfPut(t, k, v) { Object.keys(TF[k]).forEach(x => { if (x) t.classList.remove(TF_CLASS[k](x)); }); if (v) t.classList.add(TF_CLASS[k](v)); }
+function tfSet(k, v) {
+  live(); const c = cell(); if (!c) return; const t = c.closest('table'); if (tfFancy(t)) return;
+  tfPut(t, k, v);
+  if (k === 'corner' && v && !tfGet(t, 'gap')) tfPut(t, 'gap', 's');
+  if (k === 'gap' && !v) tfPut(t, 'corner', '');
+  if (!t.getAttribute('class')) t.removeAttribute('class');
+  touch(); tfUI();
+}
+const HEX = /^#[0-9a-f]{6}$/i, CELL_BG = /(?:^|;)\s*background-color\s*:\s*(#[0-9a-f]{6})\s*(?:;|$)/i, PAGE_INK = '#1C2B3A';
+function lum(hex) { const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; }
+const whiteInk = hex => 1.05 / (lum(hex) + 0.05) > (lum(hex) + 0.05) / (lum(PAGE_INK) + 0.05);   // which reads better on this colour: white, or the page's ink
+function cellBg(x) { const m = (x.getAttribute('style') || '').match(CELL_BG); return m ? m[1].toUpperCase() : ''; }
+function cellBgPut(x, hex) {
+  const rest = (x.getAttribute('style') || '').split(';').map(d => d.trim()).filter(d => d && !/^(background(-color)?|color)\s*:/i.test(d));
+  if (hex) { rest.push('background-color:' + hex.toUpperCase()); if (whiteInk(hex)) rest.push('color:#FFFFFF'); }
+  if (rest.length) x.setAttribute('style', rest.join(';')); else x.removeAttribute('style');
+}
+function cellTargets() { const info = cellSelInfo(); if (info) return info.cells; live(); const c = cell(); return c ? [c] : []; }
+function setCellBg(hex) { const cs = cellTargets(); if (!cs.length) return false; cs.forEach(x => cellBgPut(x, hex)); touch(); tfUI(); return true; }
+function cellMarks() {
+  $$('td.mt', doc).forEach(x => { const t = x.closest('table'); if (!t.matches('.gap-s,.gap-m') || hasContent(x) || cellBg(x)) { x.classList.remove('mt'); if (!x.getAttribute('class')) x.removeAttribute('class'); } });
+  $$('table.gap-s td:not(.mt), table.gap-m td:not(.mt)', doc).forEach(x => { if (!x.closest('.fig,.dg') && !hasContent(x) && !cellBg(x)) x.classList.add('mt'); });
+}
+function hslHex(h, s, l) { s /= 100; l /= 100; const k = n => (n + h / 30) % 12, q = s * Math.min(l, 1 - l), f = n => l - q * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1))); return '#' + [f(0), f(8), f(4)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('').toUpperCase(); }
+const tfBox = $('#tfmt'), tfBtn = $('[data-a="tfmt"]'), TF_KEY = PRODUCT.key + '-cellcolours';
+const tfSwatch = hex => { const b = document.createElement('button'); b.type = 'button'; b.className = 'tf-sw'; b.dataset.c = hex; b.style.background = hex; b.title = hex; b.setAttribute('aria-label', 'Cell colour ' + hex); return b; };
+function tfRecent(add) {
+  let a = []; try { a = JSON.parse(localStorage.getItem(TF_KEY) || '[]'); } catch (e) { } a = (Array.isArray(a) ? a : []).filter(x => HEX.test(x)).map(x => x.toUpperCase());
+  if (add) { a = [add.toUpperCase(), ...a.filter(x => x !== add.toUpperCase())].slice(0, 13); try { localStorage.setItem(TF_KEY, JSON.stringify(a)); } catch (e) { } }
+  const box = $('#tf-recent'); box.textContent = ''; a.forEach(x => box.appendChild(tfSwatch(x))); if (!a.length) box.textContent = 'None yet';
+  return a;
+}
+function tfCustom(hex) { $('#tf-hex').value = hex; $('#tf-color').value = hex.toLowerCase(); $('#tf-err').textContent = ''; }
+function tfUI() {
+  if (tfBox.hidden) return; live(); const c = cell(); if (!c) return;
+  const t = c.closest('table'), fancy = tfFancy(t), info = cellSelInfo(), cur = cellBg(info ? info.cells[0] : c);
+  $('#tf-scope').textContent = info ? info.cells.length + ' selected cells' : 'The cell the cursor is in';
+  $$('#tf-pal button, #tf-recent button').forEach(b => b.classList.toggle('on', b.dataset.c === cur));
+  if (!tfBox.contains(document.activeElement)) tfCustom(cur || '#FFFFFF');
+  $('#tf-fancy').hidden = !fancy;
+  $$('#tfmt button[data-k]').forEach(b => { b.disabled = fancy; const on = !fancy && tfGet(t, b.dataset.k) === b.dataset.v; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+}
+function tfShow(on) {
+  if (on && !$('#tf-pal').firstChild) { const pal = $('#tf-pal'); [88, 76, 62, 46].forEach(l => { pal.appendChild(tfSwatch(hslHex(210, 25, l))); for (let i = 0; i < 12; i++) pal.appendChild(tfSwatch(hslHex(i * 30, 60, l))); }); }
+  tfBox.hidden = !on; tfBtn.classList.toggle('on', on); tfBtn.setAttribute('aria-expanded', on ? 'true' : 'false');
+  if (on) { tfRecent(); tfUI(); } chromeHeight();
+}
+function tfSync(inTable) { if (tfBox.hidden) return; if (inTable) tfUI(); else tfShow(false); }   // from styleUI: follows the cursor, and closes when it leaves the table
+function tfColour(hex) { clearTimeout(timer); histSnap(); if (!setCellBg(hex)) return; if (hex) tfRecent(hex); repSet(hex ? 'Cell colour ' + hex.toUpperCase() : 'Cell colour off', () => setCellBg(hex)); tfUI(); }
+tfBox.addEventListener('mousedown', e => { if (!e.target.closest('input')) e.preventDefault(); });   // the cursor and the selected cells stay as they are
+tfBox.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.c) { tfColour(b.dataset.c); return; }
+  if (b.dataset.k) { const k = b.dataset.k, v = b.dataset.v; clearTimeout(timer); histSnap(); tfSet(k, v); repSet('Table ' + TF_NAME[k].toLowerCase() + ': ' + TF[k][v].toLowerCase(), () => tfSet(k, v)); return; }
+  const a = b.dataset.tf;
+  if (a === 'close') { tfShow(false); restore(); }
+  if (a === 'clear') tfColour('');
+  if (a === 'cancel') { const info = cellSelInfo(), c = info ? info.cells[0] : cell(); tfCustom((c && cellBg(c)) || '#FFFFFF'); restore(); }
+  if (a === 'ok') { let v = $('#tf-hex').value.trim(); if (/^[0-9a-f]{6}$/i.test(v)) v = '#' + v; if (!HEX.test(v)) { $('#tf-err').textContent = 'A colour is # and six characters, 0 to 9 and A to F, such as #EAF1F8'; $('#tf-hex').focus(); return; } tfCustom(v.toUpperCase()); restore(); tfColour(v.toUpperCase()); }
+});
+$('#tf-color').addEventListener('input', e => { $('#tf-hex').value = e.target.value.toUpperCase(); $('#tf-err').textContent = ''; });
+$('#tf-hex').addEventListener('input', e => { const v = e.target.value.trim(); $('#tf-err').textContent = ''; if (HEX.test(v)) $('#tf-color').value = v.toLowerCase(); });
+$('#tf-hex').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#tfmt [data-tf="ok"]').click(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !tfBox.hidden && !(cellSel && doc.contains(e.target))) { e.stopPropagation(); tfShow(false); restore(); } }, true);   // with cells selected, Escape ends that selection first
+
 /* ---------- toolbar wiring ---------- */
 const ACT = {
   new: fresh, open: open, nbwarnx: () => NB.warnOff(), save: () => save(false), saveas: () => save(true),
   bold: () => plainWeight(() => cmd('bold')), italic: () => cmd('italic'), ul: () => { if (qaList('ul')) return; const l = listAt(); if (l && l.matches('ul.check')) { l.classList.remove('check'); if (!l.getAttribute('class')) l.removeAttribute('class'); touch(); } else { listCmd('insertUnorderedList'); touch(); } }, ol: () => { if (qaList('ol')) return; listCmd('insertOrderedList'); touch(); }, check: checkList, ldense: listDense, indent: () => { listShift(1); }, outdent: () => { listShift(-1); },
   undo: () => histGo(-1), redo: () => histGo(1),
-  code: addCode, divider: addDivider, clear: clearFormat, paint: () => { if (paint) paintStop(); else paintPick(false); }, note: addNote, margin: toggleNotes, who: () => initials(true), saveclean: saveClean, repeat: repeatLast, nosaved: () => { $('#savedbar').hidden = true; chromeHeight(); }, noclean: () => { $('#cleanbar').hidden = true; chromeHeight(); },
+  code: addCode, divider: addDivider, clear: clearFormat, paint: () => { if (paint) paintStop(); else paintPick(false); }, note: addNote, margin: toggleNotes, who: () => initials(true), thin: () => { thinUI(!$('#chrome').classList.contains('thin')); chromeHeight(); }, saveclean: saveClean, repeat: repeatLast, nosaved: () => { $('#savedbar').hidden = true; chromeHeight(); }, noclean: () => { $('#cleanbar').hidden = true; chromeHeight(); },
   blocks: () => blocksSet(!showBlocks), ctunwrap: () => ctUnwrap(ctSel), ctdel: () => ctDelete(ctSel), ctempty: ctDeleteEmpties,
   print: () => window.print(),
-  inspect: inspect, emoji: () => emojiShow(emojiBox.hidden), link: editLink, olstart: editStart, index: () => { idxDepth = idxDepth % 3 + 1; rebuild(); touch(); }, // steps 1, 2, 3 and back to 1
+  inspect: inspect, emoji: () => emojiShow(emojiBox.hidden), tfmt: () => tfShow(tfBox.hidden), link: editLink, olstart: editStart, index: () => { idxDepth = idxDepth % 3 + 1; rebuild(); touch(); }, // steps 1, 2, 3 and back to 1
   tag: () => { // put in by hand: the browser's own insert drops the tag in a list item and adds styles to it elsewhere
     restore(); const s = getSelection(); if (!s.rangeCount || !doc.contains(s.anchorNode)) return; const none = !s.toString(), t = s.toString() || 'ID', r = s.getRangeAt(0), blk = x => (x.nodeType === 1 ? x : x.parentElement).closest(TEXT_BLOCK);
     { const sb = blk(r.startContainer); if (sb && blk(r.endContainer) !== sb) { r.setEnd(sb, sb.childNodes.length); s.removeAllRanges(); s.addRange(r); return ACT.tag(); } }   // an ID tag stays within one block
@@ -2393,11 +2535,11 @@ const ACT = {
   dismiss: () => { try { localStorage.removeItem(PRODUCT.key + '-draft'); } catch (e) { } $('#draft').hidden = true; chromeHeight(); },
 };
 $('#chrome').addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
-$('#chrome').addEventListener('click', e => { const b = e.target.closest('button[data-a]'); if (!b) return; const a = b.dataset.a; if (!board && ((CODE_OFF.includes(a) && selCode()) || (MD_CELL_OFF.includes(a) && mdCellSel()))) { restore(); return; } if (!board && !['undo', 'redo', 'help', 'inspect', 'new', 'open', 'save', 'saveas', 'who', 'saveclean', 'noclean', 'nosaved', 'margin', 'paint', 'repeat', 'nbwarnx', 'emoji', 'blocks', 'print'].includes(a)) { clearTimeout(timer); histSnap(); } if (cellSel && (a === 'bold' || a === 'italic' || a === 'clear')) cellFormat(a); else if (ACT[a]) { ACT[a](); if (!board) repNote(a); } else if (ADD[a] && board) ADD[a](); });
+$('#chrome').addEventListener('click', e => { const b = e.target.closest('button[data-a]'); if (!b) return; const a = b.dataset.a; if (!board && ((CODE_OFF.includes(a) && selCode()) || (MD_CELL_OFF.includes(a) && mdCellSel()))) { restore(); return; } if (!board && !['undo', 'redo', 'help', 'inspect', 'new', 'open', 'save', 'saveas', 'who', 'saveclean', 'noclean', 'nosaved', 'margin', 'paint', 'repeat', 'nbwarnx', 'emoji', 'tfmt', 'blocks', 'print'].includes(a)) { clearTimeout(timer); histSnap(); } if (cellSel && (a === 'bold' || a === 'italic' || a === 'clear')) cellFormat(a); else if (ACT[a]) { ACT[a](); if (!board) repNote(a); } else if (ADD[a] && board) ADD[a](); });
 $('#help').addEventListener('click', e => { if (e.target === e.currentTarget || e.target.closest('[data-a="helpclose"]')) e.currentTarget.close(); });
 $('#s-block').addEventListener('change', e => { const v = e.target.value; if (v) { const label = e.target.selectedOptions[0].textContent; clearTimeout(timer); histSnap(); setBlock(v); repSet(label, () => setBlock(v)); } styleUI(); });
 $('#s-fmt').addEventListener('change', e => { const v = e.target.value; e.target.value = ''; if (selCode()) { restore(); styleUI(); return; } if (v && FMT[v]) { clearTimeout(timer); histSnap(); restore(); const want = !fmtOn(v); setFmt(v, want); repSet(FMT[v][0] + (want ? '' : ' off'), () => setFmt(v, want)); } styleUI(); });
-$('#s-boxtype').addEventListener('change', e => { const v = e.target.value; if (v) { clearTimeout(timer); histSnap(); setBox(v); repSet(v === 'none' ? 'Remove box' : BOXES[v] + ' box', () => setBox(v)); } styleUI(); });
+$('#s-boxtype').addEventListener('change', e => { const v = e.target.value; if (v) { clearTimeout(timer); histSnap(); setBox(v); repSet(v === 'none' ? 'Remove box' : v === 'icon' ? 'Box icon on or off' : BOXES[v] + ' box', () => setBox(v)); } styleUI(); });
 /* The cursor stays in the document: once a toolbar list has been opened and closes, with or without a choice, focus goes
    back to the text, so the arrow keys move the cursor and do not change the list. A list reached with Tab and never
    opened keeps the focus, so it can still be worked from the keyboard. */
@@ -2420,7 +2562,7 @@ $('#s-state').innerHTML = STATES.map(s => '<option value="' + s + '">' + s + '</
 /*NOTEBOOK*/
 
 /* ---------- start ---------- */
-doc.innerHTML = STARTER; prep(); histReset(); status(); whoUI(); chromeHeight(); $$('#tbar button.t').forEach(x => x.classList.add('dim'));
+doc.innerHTML = STARTER; prep(); histReset(); status(); whoUI(); thinUI(); chromeHeight(); $$('#tbar button.t').forEach(x => x.classList.add('dim'));
 try { const d = localStorage.getItem(PRODUCT.key + '-draft'); if (d && d !== clean().innerHTML) $('#draft').hidden = false; } catch (e) { }
 chromeHeight();
 NB.init();

@@ -79,5 +79,5 @@ await caretIn(pg, '#a'); await sleep(60);
 same('outside a table only the two insert buttons show, in the last group; notes have their own group', await bar(), { table: true, fancy: true, rows: false, merge: false, compact: false, last: 'Table', notes: ['note', 'margin'] });
 await caretCell(pg, 0, 1, 0); await sleep(60);
 const inT = await bar(); check('in a table the row, column, merge and compact buttons appear', inT.table && inT.fancy && inT.rows && inT.merge && inT.compact, inT);
-check('and the toolbar is still one row with Help at the far right', await pg.evaluate(() => { const h = document.querySelector('[data-a="help"]').getBoundingClientRect(), t = document.getElementById('tbar').getBoundingClientRect(); return t.right - h.right < 20 && h.top - t.top < 20; }));
+check('and the toolbar is still one row with Help and Thin toolbar at the far right', await pg.evaluate(() => { const h = document.querySelector('[data-a="help"]').getBoundingClientRect(), t = document.getElementById('tbar').getBoundingClientRect(); return t.right - h.right < 45 && h.top - t.top < 20; }));
 await b.close();

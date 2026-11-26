@@ -38,6 +38,6 @@ await load(pg, saved); check('and open compact', (await gap('#doc ol')) < o0 - 2
 // repeat
 await load(pg, DOC); await caretIn(pg, '#u li'); await click(pg, 'ldense'); await sleep(60); await caretIn(pg, '#o li'); await click(pg, 'repeat'); await sleep(80); await click(pg, 'repeat'); await sleep(80);
 same('Repeat makes the next list compact, and sets rather than toggles', await pg.evaluate(() => [document.querySelector('#u').className, document.querySelector('#o').className]), ['dense', 'dense']);
-check('the toolbar is still one row with Help at the far right', await pg.evaluate(() => { const h = document.querySelector('[data-a="help"]').getBoundingClientRect(), t = document.getElementById('tbar').getBoundingClientRect(); return t.right - h.right < 20 && h.top - t.top < 20; }));
+check('the toolbar is still one row with Help and Thin toolbar at the far right', await pg.evaluate(() => { const h = document.querySelector('[data-a="help"]').getBoundingClientRect(), t = document.getElementById('tbar').getBoundingClientRect(); return t.right - h.right < 45 && h.top - t.top < 20; }));
 same('no page errors', errors, []);
 await b.close();

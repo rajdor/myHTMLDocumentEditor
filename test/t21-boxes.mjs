@@ -1,6 +1,7 @@
 // Boxes for the reader: Note, Information, Tip, Warning and Critical. A box holds whole blocks, which keep their own
 // styles; its label starts as the type's name and can be retyped. A box is inserted empty from the Box list, then typed
-// or pasted into; the list also changes a box's type and removes it.
+// or pasted into, or the list puts the selected blocks in a new box; the list also changes a box's type, hides or shows
+// its icon and removes it. (t51 has the icon and more of the selection.)
 import { open, check, same, caretIn, sleep, load, click, ROOT } from './harness.mjs';
 import path from 'path';
 const { b, pg, errors } = await open();
@@ -14,7 +15,7 @@ const span = (a, b2) => pg.evaluate((a, b2) => { const x = document.querySelecto
 const DOC = '<main><h1 id="t">T</h1><p id="a">Alpha</p><h3 id="h">Head</h3><p class="bluf" id="lead">Lead</p><ul id="l"><li>one</li><li>two</li></ul><p id="z">Zed</p><div class="tw"><table><thead><tr><th>H</th></tr></thead><tbody><tr><td id="cell">c1</td></tr></tbody></table></div><p id="e">End</p></main>';
 
 await load(pg, DOC);
-same('the Box list offers the five types and Remove box', await pg.evaluate(() => [...document.querySelector('#s-boxtype').options].map(o => o.textContent)), ['Box', 'Note', 'Information', 'Tip', 'Warning', 'Critical', 'Remove box']);
+same('the Box list offers the five types, Hide icon and Remove box', await pg.evaluate(() => [...document.querySelector('#s-boxtype').options].map(o => o.textContent)), ['Box', 'Note', 'Information', 'Tip', 'Warning', 'Critical', 'Hide icon', 'Remove box']);
 // insert an empty box after the current block; the cursor goes into it
 await textCaret('#a'); await boxAs('warning');
 same('the Box list inserts an empty box after the current block, with the type name as its label', await pg.evaluate(() => [...document.getElementById('doc').children].slice(1, 4).map(c => c.outerHTML)), ['<p id="a">Alpha</p>', '<div class="box box-warning" role="note"><p class="box-h">Warning</p><p><br></p></div>', '<h3 id="head">Head</h3>']);
@@ -25,7 +26,7 @@ same('typing goes into the box', await outer('#doc .box'), '<div class="box box-
 same('the Box list shows the type while the cursor is in the box', await shown(), 'warning');
 await textCaret('#z'); await sleep(40); same('and shows nothing outside a box', await shown(), '');
 await span('#doc h3', '#l li:last-child'); await boxAs('note');
-check('a selection is not boxed: the new box goes after the block the selection starts in, empty', await pg.evaluate(() => { const h = document.querySelector('#doc h3'), bx = h.nextElementSibling; return bx.matches('.box.box-note') && bx.children.length === 2 && !bx.textContent.replace('Note', '').trim() && !document.querySelector('#doc .box ul') && !document.querySelector('#doc .box .bluf'); }), await html());
+check('a selection is boxed: the blocks it reaches go in the new box whole, in order, under the label', await pg.evaluate(() => { const bx = document.querySelector('#doc .box.box-note'); return !!bx && [...bx.children].map(c => c.tagName).join() === 'P,H3,P,UL' && bx.querySelector('.bluf').textContent === 'Lead' && bx.querySelectorAll('li').length === 2; }), await html());
 await load(pg, '<main><h1>T</h1><p id="a">Alpha</p><p id="e"><br></p><p id="z">Zed</p></main>'); await caretIn(pg, '#e'); await boxAs('tip');
 same('on an empty paragraph the box takes its place', await pg.evaluate(() => [...document.getElementById('doc').children].map(c => c.tagName + (c.className ? '.' + c.className.replace(/ /g, '.') : '') + ':' + c.textContent)), ['H1:T', 'P:Alpha', 'DIV.box.box-tip:Tip', 'P:Zed']);
 await textCaret('#a'); await boxAs('warning');

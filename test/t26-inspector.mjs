@@ -60,6 +60,6 @@ same('with a word selected it describes the selected word', [await pg.evaluate((
 // nothing is saved; the toolbar still fits
 const saved = await pg.evaluate(() => FLE.build());
 check('nothing of the inspector is saved', !/insp/.test(saved.replace(/<style>[\s\S]*?<\/style>/, '')));
-check('the toolbar is still one row with Help at the far right', await pg.evaluate(() => { const h = document.querySelector('[data-a="help"]').getBoundingClientRect(), t = document.getElementById('tbar').getBoundingClientRect(); return t.right - h.right < 20 && h.top - t.top < 20; }));
+check('the toolbar is still one row with Help and Thin toolbar at the far right', await pg.evaluate(() => { const h = document.querySelector('[data-a="help"]').getBoundingClientRect(), t = document.getElementById('tbar').getBoundingClientRect(); return t.right - h.right < 45 && h.top - t.top < 20; }));
 same('no page errors', errors, []);
 await b.close();

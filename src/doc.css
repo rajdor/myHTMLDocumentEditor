@@ -229,6 +229,9 @@ ul.dense, ol.dense { line-height: 1.25; }
 .box > p.box-h + * { margin-top: 0; }
 .box > p.box-h { position: relative; min-height: 22px; padding-left: 24px; margin: 0 0 2px; font-weight: 600; color: var(--c); }
 .box > p.box-h::before { content: ""; position: absolute; left: 0; top: 2px; width: 18px; height: 18px; background: var(--c); -webkit-mask: var(--i) center / contain no-repeat; mask-image: var(--i); mask-position: center; mask-size: contain; mask-repeat: no-repeat; }
+/* A box with its icon hidden keeps its colours and its label. */
+.box.box-noicon > p.box-h { padding-left: 0; min-height: 0; }
+.box.box-noicon > p.box-h::before { content: none; }
 /* Checklist: a real checkbox starts each item, so the boxes can be ticked with no script. */
 ul.check { list-style: none; }
 ul.check > li { position: relative; }
@@ -240,6 +243,16 @@ table { border-collapse: collapse; width: 100%; font-size: 14px; }
 table.dense { font-size: 12.5px; line-height: 1.4; }
 th { text-align: left; font-weight: 600; color: var(--ink); background: var(--fill); border: 1px solid var(--dots); padding: 6px 8px; vertical-align: bottom; }
 td { border: 1px solid var(--dots); padding: 6px 8px; vertical-align: top; }
+/* Table format, set for a whole table: space between the cells, padding in them, the grid lines and round corners. A colour is set on a cell. */
+table.gap-s { border-collapse: separate; border-spacing: 6px; }
+table.gap-m { border-collapse: separate; border-spacing: 12px; }
+table.pad-s :is(th, td) { padding: 3px 6px; }
+table.pad-l :is(th, td) { padding: 10px 12px; }
+table.noline :is(th, td) { border-color: transparent; }
+table.round:is(.gap-s, .gap-m) :is(th, td) { border-radius: 8px; }
+table:is(.gap-s, .gap-m) td.mt { border-color: transparent; background: none; }   /* a cell with no text and no colour draws nothing */
+:is(td, th)[style*="background-color"] { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+:is(td, th)[style*="background-color"] .pill { background: rgba(255, 255, 255, .6); color: #141A24; }
 /* Column widths set by dragging a border: the table is laid out to them exactly. */
 table.cw { table-layout: fixed; }
 table.cw th, table.cw td { overflow-wrap: anywhere; }
@@ -250,6 +263,9 @@ tr.grp td { background: #f6f9fc; font-weight: 600; color: var(--ink-soft); font-
 :not(pre) > code { font: .9em var(--mono); font-variant-ligatures: none; background: #f6f9fc; border-radius: 3px; padding: 1px 4px; }
 s { text-decoration: line-through; }
 .id { display: inline-block; font: 600 11px/1.5 var(--mono); font-variant-ligatures: none; color: var(--ink); background: var(--fill); border-radius: 3px; padding: 0 4px; margin-right: 2px; white-space: nowrap; }
+/* Pill: a short label in a rounded tag, such as a level or a status. A pill at right sits at the right-hand edge of its line. */
+.pill { display: inline-block; font: 500 11px/1.5 var(--mono); font-variant-ligatures: none; color: var(--ink); background: var(--fill); border-radius: 999px; padding: 0 7px; white-space: nowrap; }
+.pill.r { float: right; margin-left: 8px; }
 .src { color: #6b7d92; font-size: .92em; }
 table.matrix { table-layout: fixed; min-width: 980px; }
 table.matrix th:first-child { width: 230px; }

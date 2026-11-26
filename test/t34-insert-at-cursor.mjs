@@ -72,6 +72,6 @@ await doc(TWO); await caretIn(pg, '#a'); await click(pg, 'qa'); await sleep(500)
 same('undo puts the paragraph back', await kids(), ['P:Alpha beta', 'P:Zed']);
 await doc(TWO); await caretIn(pg, '#a'); await click(pg, 'qa'); await sleep(80); await caretIn(pg, '#z'); await click(pg, 'repeat'); await sleep(80); await click(pg, 'repeat'); await sleep(80);
 same('Repeat makes the next paragraph a question, and sets rather than toggles', await kids(), ['DL.qa:Alpha betaZed']);
-check('the toolbar is still one row with Help at the far right', await pg.evaluate(() => { const h = document.querySelector('[data-a="help"]').getBoundingClientRect(), t = document.getElementById('tbar').getBoundingClientRect(); return t.right - h.right < 20 && h.top - t.top < 20; }));
+check('the toolbar is still one row with Help and Thin toolbar at the far right', await pg.evaluate(() => { const h = document.querySelector('[data-a="help"]').getBoundingClientRect(), t = document.getElementById('tbar').getBoundingClientRect(); return t.right - h.right < 45 && h.top - t.top < 20; }));
 same('no page errors', errors, []);
 await b.close();

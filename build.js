@@ -7,6 +7,7 @@
 //   markdown  Markdown files in the WYSIWYG editor, saved back as Markdown (marked to read, Turndown to write)
 //   node build.js
 // vendor/diagram-editor.html is the built diagram editor (myDiagramer). Copy in a new build of it to update.
+// vendor/data-model-studio.html is Data Model Studio (myEntityModeller), a single file. Copy in a new copy of it to update.
 const fs = require('fs');
 const crypto = require('crypto');
 const path = require('path');
@@ -20,6 +21,7 @@ const src = (f) => fs.readFileSync(path.join(__dirname, 'src', f), 'utf8');
 
 const fontB64 = fs.readFileSync(path.join(__dirname, 'node_modules/@fontsource/architects-daughter/files/architects-daughter-latin-400-normal.woff2')).toString('base64');
 const diagramEditor = fs.readFileSync(path.join(__dirname, 'vendor', 'diagram-editor.html'));
+const dataModelStudio = fs.readFileSync(path.join(__dirname, 'vendor', 'data-model-studio.html'));
 const icons = JSON.parse(src('icons.json'));
 // The emoji list on the toolbar. Written into the program as \u codes, so the list reads the same whatever encoding the file is opened with.
 const emoji = JSON.parse(src('emoji.default.json')).emojis.map(e => { if (!e.char || !e.tooltip) throw new Error('An emoji needs a char and a tooltip: ' + JSON.stringify(e)); return { char: e.char, code: e.code, tooltip: e.tooltip }; });
@@ -51,6 +53,7 @@ let html = src('index.html')
   .replace('/*DOC_CSS*/', () => src('doc.css').replace('/*FONT_B64*/', fontB64).replace(/\/\*FONTFILE:([@\w./-]+)\*\//g, (m, f) => fs.readFileSync(path.join(__dirname, 'node_modules', f)).toString('base64')).replace(/\/\*ICONURL:([a-z0-9-]+)\*\//g, (m, n) => 'url("data:image/svg+xml,' + encodeURIComponent(icon(n).replace(' aria-hidden="true"', ' xmlns="http://www.w3.org/2000/svg"')) + '")'))
   .replace('/*ED_CSS*/', () => src('editor.css') + (PRODUCT.notebook ? src('notebook/notebook.css') : ''))
   .replace('/*DIAGRAM_EDITOR_B64*/', () => diagramEditor.toString('base64'))
+  .replace('/*DATA_MODEL_STUDIO_B64*/', () => dataModelStudio.toString('base64'))
   .replace('/*CODEMIRROR*/', () => codeMirror)
   .replace('/*ICONS*/', () => JSON.stringify(icons))
   .replace('/*APP*/', () => app.replace(/<\/script/gi, '<\\/script'));
@@ -59,7 +62,7 @@ let html = src('index.html')
 // so a script, event handler or javascript: link that gets into an opened document is blocked by the browser.
 const sha = (t) => "'sha256-" + crypto.createHash('sha256').update(t, 'utf8').digest('base64') + "'";
 const scripts = (h) => [...h.matchAll(/<script(\s[^>]*)?>([\s\S]*?)<\/script>/gi)].filter(m => !/type\s*=\s*["']?text\/plain/i.test(m[1] || '')).map(m => m[2]);
-const allowed = [...scripts(html), ...scripts(diagramEditor.toString('utf8')), ...(PRODUCT.notebook ? [codeMirror] : [])].map(sha);
+const allowed = [...scripts(html), ...scripts(diagramEditor.toString('utf8')), ...scripts(dataModelStudio.toString('utf8')), ...(PRODUCT.notebook ? [codeMirror] : [])].map(sha);
 const csp = "default-src 'none'; script-src " + allowed.join(' ') + "; style-src 'unsafe-inline' data:; img-src data: blob:; font-src data:; connect-src data: blob:; frame-src 'self' blob: data:; child-src 'self' blob: data:; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'";
 html = html.replace('/*CSP*/', csp);
 if (scripts(html).length !== 2) throw new Error('Expected two runnable scripts in ' + PRODUCT.file + ' (icons and app)');
@@ -68,6 +71,6 @@ if (/\{\{(nb|icf?):[a-z0-9-]+\}\}|\{\{product\}\}/.test(html)) throw new Error('
 for (const ch of ['—', '–']) if (html.includes(ch)) throw new Error('Dash character found in ' + PRODUCT.file);
 const out = path.join(__dirname, PRODUCT.file);
 fs.writeFileSync(out, html);
-console.log('Built', out, 'v' + pkg.version, (html.length / 1024).toFixed(1) + ' KB (diagram editor ' + (diagramEditor.length / 1024).toFixed(0) + ' KB)');
+console.log('Built', out, 'v' + pkg.version, (html.length / 1024).toFixed(1) + ' KB (diagram editor ' + (diagramEditor.length / 1024).toFixed(0) + ' KB, data model studio ' + (dataModelStudio.length / 1024).toFixed(0) + ' KB)');
 }
 PRODUCTS.forEach(build);

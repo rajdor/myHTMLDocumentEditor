@@ -477,7 +477,7 @@ doc.addEventListener('click', e => {
   if (open) { const { list } = noteParts(note); const last = list.lastElementChild; if (last) caret(last, true); }
 }, true);
 doc.addEventListener('mousedown', e => { if (e.target.closest && e.target.closest('.note-log > summary')) e.preventDefault(); });
-document.addEventListener('pointerdown', e => { if (dgSel && e.target.closest && !e.target.closest('#chrome, #de-overlay') && !doc.contains(e.target)) dgSelect(null); }, true);   // a click beside the page, not only on it
+document.addEventListener('pointerdown', e => { if (dgSel && e.target.closest && !e.target.closest('#chrome, #de-overlay, #dm-overlay') && !doc.contains(e.target)) dgSelect(null); }, true);   // a click beside the page, not only on it
 document.addEventListener('pointerdown', e => { if (!e.target.closest || e.target.closest('.note-log') || e.target.closest('#chrome')) return; if ($('.note-log[open]', doc)) openLog(null, false); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('.note-log[open]', doc)) { const s = getSelection(); let n = s.anchorNode; if (n && n.nodeType !== 1) n = n.parentElement; const note = n && n.closest('.note'); openLog(null, false); if (note) caret(noteParts(note).body.firstElementChild || noteParts(note).body, false); } });
 window.addEventListener('beforeprint', () => $$('.note-log', doc).forEach(d => d.setAttribute('open', '')));
@@ -2065,7 +2065,7 @@ function cellArrow(c, down) {
    A diagram is stored in the document as <div class="dg" data-drawio="draw.io XML">inline SVG</div>.
    Editing opens the diagram editor (vendor/diagram-editor.html, base64 in #de-src) in an iframe overlay
    and talks to it with the embed messages: de:ready, de:init, de:save, de:cancel, de:dirty. */
-const DE = { frame: null, ready: false, pending: null, target: null, open: false, src: null, queue: [], jobs: new Map(), seq: 0 };
+const DE = { frame: null, ready: false, pending: null, target: null, open: false, kind: null, src: null, queue: [], jobs: new Map(), seq: 0 };
 let dgSel = null, mmSel = null;
 function deSource() {
   if (DE.src) return DE.src;
@@ -2082,16 +2082,26 @@ function dgTitle(fig) {
   if (cap) return cap.replace(/^Figure\s*\d*\.?\s*/i, '').slice(0, 200) || 'Diagram';
   const h = fig && fig.querySelector('svg title'); return h ? h.textContent.trim() : 'Diagram';
 }
+/* What the diagram editor says when a picture or a Mermaid definition was converted to open it: where it came from, that
+   the look may differ, that nothing changes until Done, and what was recognised. */
+function convNotice(fig, conv) {
+  const r = conv.report || {}, pic = fig.matches('svg'), n = (k, w) => (k || 0) + ' ' + w + (k === 1 ? '' : 's');
+  const got = pic ? n((r.boxes || 0) + (r.diamonds || 0) + (r.ellipses || 0), 'shape') + ' and ' + n((r.arrows || 0) + (r.lines || 0), 'line') + ' recognised' + (r.skipped ? ', ' + n(r.skipped, 'part') + ' skipped' : '')
+    : n(r.shapes, 'shape') + ' and ' + n(r.links, 'link') + ' recognised';
+  return 'Converted from ' + (pic ? 'a picture' : 'a Mermaid definition') + '. Layout and text formatting may differ from the original. The page is unchanged until you click Done; Cancel keeps the ' + (pic ? 'picture' : 'definition') + '. (' + got + ')';
+}
 function openDiagram(fig) {
+  if (fig && fig.classList.contains('dm')) return openDataModel(fig);   // a data model opens in Data Model Studio
   if (DE.open) return;
   /* a picture or a Mermaid definition from elsewhere is converted first; if nothing in it is recognised it is left as it is */
   const conv = fig && !fig.matches('.dg, .fig') ? drawingToDrawio(fig) : null;
   if (conv && conv.error) { alert(conv.error); return; }
   deactivate(); dgSelect(null);
-  DE.target = fig || null; DE.open = true;
+  DE.target = fig || null; DE.open = true; DE.kind = 'de';
   const board = fig && fig.querySelector('.wb-board');
   const xml = !fig ? '' : conv ? conv.xml : board ? boardToDrawio(board) : (fig.getAttribute('data-drawio') || '');
   const msg = { type: 'de:init', xml, title: conv ? conv.name : dgTitle(fig), mode: 'blueprint' };
+  if (conv) msg.notice = convNotice(fig, conv);   // a conversion says so, in a bar above the diagram, so a different look is not taken for lost formatting
   $('#de-overlay').classList.remove('de-quiet'); $('#de-overlay').hidden = false; document.documentElement.classList.add('de-open');
   deFrame(); deFocus();
   if (DE.ready) DE.frame.contentWindow.postMessage(msg, '*'); else DE.pending = msg;
@@ -2109,7 +2119,7 @@ function deRender(xml, title) {
   });
 }
 function deQuiet() { const o = $('#de-overlay'); if (!DE.jobs.size && o.classList.contains('de-quiet')) { o.classList.remove('de-quiet'); if (!DE.open) o.hidden = true; } }
-function closeDiagram() { DE.open = false; DE.target = null; $('#de-overlay').hidden = true; document.documentElement.classList.remove('de-open'); restore(); }
+function closeDiagram() { DE.open = false; DE.kind = null; DE.target = null; $('#de-overlay').hidden = true; $('#dm-overlay').hidden = true; document.documentElement.classList.remove('de-open'); restore(); }
 function dgApply(m) {
   if (typeof m.svg !== 'string' || !/^\s*<svg[\s>]/i.test(m.svg)) { alert('The diagram editor returned no picture; the document was not changed.'); return; }
   const tmp = document.createElement('div'); tmp.innerHTML = m.svg; const svg = tmp.querySelector('svg'); if (!svg) return;
@@ -2135,13 +2145,60 @@ window.addEventListener('message', e => {
   else if (m.type === 'de:save' && DE.open) { dgApply(m); closeDiagram(); }
   else if (m.type === 'de:cancel' && DE.open) closeDiagram();
 });
+/* ---------- data models: the built-in Data Model Studio ----------
+   A data model is stored as <div class="dg dm" data-dms="Data Model Studio file (.dms.json)">inline SVG</div>, so it is
+   selected, copied, captioned and deleted like a diagram. Editing opens Data Model Studio (vendor/data-model-studio.html,
+   base64 in #dm-src) in its own overlay and talks to it with its embed messages: dm:ready, dm:init, dm:save, dm:cancel, dm:dirty.
+   It shares DE.open and DE.target with the diagram editor, so everything that keeps the page still while an editor is open applies. */
+const DM = { frame: null, ready: false, pending: null, src: null };
+function dmSource() {
+  if (DM.src) return DM.src;
+  const bin = atob($('#dm-src').textContent.trim()), u = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  return (DM.src = new TextDecoder().decode(u));
+}
+function dmFrame() { if (DM.frame) return DM.frame; DM.frame = $('#dm-frame'); DM.frame.srcdoc = dmSource(); return DM.frame; }
+function dmFocus() { const a = document.activeElement; if (a && a !== document.body && a.blur) a.blur(); getSelection().removeAllRanges(); try { DM.frame.focus(); DM.frame.contentWindow.focus(); } catch (e) { } }
+function openDataModel(fig) {
+  if (DE.open) return;
+  deactivate(); dgSelect(null);
+  DE.target = fig || null; DE.open = true; DE.kind = 'dm';
+  const msg = { type: 'dm:init', model: fig ? (fig.getAttribute('data-dms') || '') : '', title: fig ? dgTitle(fig) : 'Data model', theme: 'blueprint' };
+  $('#dm-overlay').hidden = false; document.documentElement.classList.add('de-open');
+  dmFrame(); dmFocus();
+  if (DM.ready) DM.frame.contentWindow.postMessage(msg, '*'); else DM.pending = msg;
+}
+function dmApply(m) {
+  if (typeof m.svg !== 'string' || !/^\s*<svg[\s>]/i.test(m.svg) || typeof m.model !== 'string' || !m.model) { alert('Data Model Studio returned no picture (an empty model has nothing to show); the document was not changed.'); return; }
+  const tmp = document.createElement('div'); tmp.innerHTML = m.svg; const svg = tmp.querySelector('svg'); if (!svg) return;
+  sanitize(tmp); cardify(tmp);
+  let fig = DE.target && doc.contains(DE.target) ? DE.target : null;
+  if (fig && m.model === fig.getAttribute('data-dms')) return;   // Done with nothing changed: the page is not changed either
+  if (!fig) {
+    fig = document.createElement('div'); fig.className = 'dg dm';
+    placeBlock(fig);
+    const cap = el('<p class="cap">Figure. Caption</p>'); fig.after(cap);
+  }
+  fig.setAttribute('contenteditable', 'false'); fig.setAttribute('title', 'Double-click to edit');
+  fig.setAttribute('data-dms', m.model);
+  fig.replaceChildren(svg);
+  touch(); fig.scrollIntoView({ block: 'nearest' });
+}
+window.addEventListener('message', e => {
+  if (!DM.frame || e.source !== DM.frame.contentWindow) return;
+  const m = e.data; if (!m || typeof m !== 'object') return;
+  if (m.type === 'dm:ready') { DM.ready = true; if (DM.pending) { DM.frame.contentWindow.postMessage(DM.pending, '*'); DM.pending = null; } if (DE.open && DE.kind === 'dm') dmFocus(); }
+  else if (m.type === 'dm:save' && DE.open && DE.kind === 'dm') { dmApply(m); closeDiagram(); }
+  else if (m.type === 'dm:cancel' && DE.open && DE.kind === 'dm') closeDiagram();
+});
 function dgSelect(f) { $$('.ed-dsel', doc).forEach(n => n.classList.remove('ed-dsel')); dgSel = f; if (f) { f.classList.add('ed-dsel'); const s = getSelection(); if (s.rangeCount && doc.contains(s.anchorNode)) s.removeAllRanges(); } gbarUI(); }
 /* The bar under the toolbar: for a selected diagram, Edit and Delete; for a selected picture from elsewhere, or with the
    cursor in a Mermaid definition, the offer to make it a diagram. */
 function gbarUI() {
   const f = dgSel, pic = !!f && !f.matches('.dg, .fig'), mm = !f && mmSel && doc.contains(mmSel) ? mmSel : null, bar = $('#gbar'), was = bar.hidden;
-  bar.hidden = !(f || mm); $('b', bar).textContent = pic ? 'Picture' : mm ? 'Mermaid definition' : 'Diagram';
-  $('[data-a="dgedit"]').hidden = !f || pic; $('[data-a="dgconv"]').hidden = !(pic || mm); $('[data-a="dgdel"]').hidden = !f; $('[data-a="dgcopy"]').hidden = !f; $('[data-a="dgcut"]').hidden = !f; if (!f) $('#gbar .dgsaid').textContent = ''; $('[data-a="dgdel"]').textContent = pic ? 'Delete picture' : 'Delete diagram';
+  const dmf = !!f && f.classList.contains('dm');
+  bar.hidden = !(f || mm); $('b', bar).textContent = pic ? 'Picture' : mm ? 'Mermaid definition' : dmf ? 'Data model' : 'Diagram'; $('[data-a="dgedit"]').textContent = dmf ? 'Edit data model' : 'Edit diagram';
+  $('[data-a="dgedit"]').hidden = !f || pic; $('[data-a="dgconv"]').hidden = !(pic || mm); $('[data-a="dgdel"]').hidden = !f; $('[data-a="dgcopy"]').hidden = !f; $('[data-a="dgcut"]').hidden = !f; if (!f) $('#gbar .dgsaid').textContent = ''; $('[data-a="dgdel"]').textContent = pic ? 'Delete picture' : dmf ? 'Delete data model' : 'Delete diagram';
   if (was !== bar.hidden) chromeHeight();
 }
 function mmUI(n) { const b = dgSel ? null : mmBlock(n); if (b !== mmSel) { mmSel = b; gbarUI(); } }
@@ -2529,7 +2586,7 @@ const ACT = {
     s.removeAllRanges(); s.addRange(c); lastRange = c.cloneRange(); touch();
   },
   table: addTable, stage: addStage, mr: () => tableOp('mr'), md: () => tableOp('md'), split: () => tableOp('split'), qa: addQa, 'r+': () => tableOp('r+'), ra: () => tableOp('ra'), cl: () => tableOp('cl'), 'r-': () => tableOp('r-'), 'c+': () => tableOp('c+'), 'c-': () => tableOp('c-'), dense: () => tableOp('dense'), hr: () => tableOp('hr'), sr: () => tableOp('sr'), hc: () => tableOp('hc'), sc: () => tableOp('sc'),
-  diagram: () => openDiagram(null), dgedit: () => dgSel && openDiagram(dgSel), dgcopy: () => dgCopy(false), dgcut: () => dgCopy(true), dgconv: () => { const t = dgSel || mmSel; if (t) openDiagram(t); }, dgdel: dgDelete, help: () => { const h = $('#help'); if (h.open) h.close(); else { helpInfo(); h.showModal(); } },
+  diagram: () => openDiagram(null), datamodel: () => openDataModel(null), dgedit: () => dgSel && openDiagram(dgSel), dgcopy: () => dgCopy(false), dgcut: () => dgCopy(true), dgconv: () => { const t = dgSel || mmSel; if (t) openDiagram(t); }, dgdel: dgDelete, help: () => { const h = $('#help'); if (h.open) h.close(); else { helpInfo(); h.showModal(); } },
   connect: () => setMode(mode === 'connect' ? null : 'connect'), del: remove, dup: duplicate, deldiagram: deleteDiagram,
   restore: () => { try { const d = localStorage.getItem(PRODUCT.key + '-draft'); if (d) { const t = new DOMParser().parseFromString('<main>' + d + '</main>', 'text/html'); sanitize(t.querySelector('main')); cardify(t.querySelector('main')); doc.innerHTML = t.querySelector('main').innerHTML; prep(); histReset(); dirty = true; status(); } } catch (e) { } $('#draft').hidden = true; chromeHeight(); },
   dismiss: () => { try { localStorage.removeItem(PRODUCT.key + '-draft'); } catch (e) { } $('#draft').hidden = true; chromeHeight(); },

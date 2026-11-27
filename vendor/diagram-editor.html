@@ -78,7 +78,14 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .dragGhost { position: fixed; z-index: 60; pointer-events: none; opacity: .75; }
 
 /* centre column: page tabs sit on top of the page; the active tab opens into the rulers and canvas below it */
-#center { display: grid; grid-template-rows: 30px 1fr; min-width: 0; min-height: 0; }
+#center { display: grid; grid-template-rows: 30px auto 1fr; min-width: 0; min-height: 0; }
+#center > #pagebar { grid-row: 1; } #center > #stage { grid-row: 3; }
+/* embed mode: what the host says about the diagram it opened (a conversion), in a bar above the canvas that covers nothing */
+#embedNotice { grid-row: 2; display: flex; align-items: center; gap: 10px; padding: 6px 8px 6px 12px; background: #FEF3C7; color: #78350F; border: 1px solid #F59E0B; border-bottom-width: 2px; font-size: 13px; line-height: 1.4; position: relative; z-index: 1; }
+#embedNotice[hidden] { display: none; }
+#embedNotice span { flex: 1; }
+#embedNotice button { background: none; border: 0; color: inherit; font-size: 18px; line-height: 1; padding: 2px 6px; border-radius: 4px; cursor: pointer; }
+#embedNotice button:hover { background: rgba(120, 53, 15, .12); }
 #stage { position: relative; overflow: hidden; background: var(--canvas); border: 1px solid var(--line); border-radius: 0 var(--radiusSm) 0 0; }
 #rulerTop { position: absolute; left: 20px; top: 0; height: 20px; width: calc(100% - 20px); background: var(--rulerBg); cursor: s-resize; }
 #rulerLeft { position: absolute; left: 0; top: 20px; width: 20px; height: calc(100% - 20px); background: var(--rulerBg); cursor: e-resize; }
@@ -257,6 +264,7 @@ kbd { background: var(--chrome); border: 1px solid var(--line); border-bottom-wi
     <aside id="palette"></aside>
     <div id="center">
     <nav id="pagebar"><div id="tabs"></div><button id="addPage" title="Add page">+</button><div id="statusText"></div></nav>
+    <div id="embedNotice" role="status" hidden><span></span><button type="button" title="Dismiss" aria-label="Dismiss">&times;</button></div>
     <div id="stage">
       <canvas id="rulerTop"></canvas>
       <canvas id="rulerLeft"></canvas>
@@ -581,16 +589,29 @@ function safeUrl(u) {
   return !m || ['http', 'https', 'mailto', 'tel'].includes(m[1].toLowerCase());
 }
 // Inline CSS in labels: keep plain declarations; drop anything that can load a resource, run code or escape the label box.
-function safeCss(css) {
+function safeCss(css, inTable) {
   return String(css || '').split(';').map(d => d.trim()).filter(d => {
     if (!d) return false;
     const i = d.indexOf(':'); if (i < 1) return false;
     const prop = d.slice(0, i).trim().toLowerCase(), val = d.slice(i + 1).toLowerCase();
     if (!/^-?[a-z-]+$/.test(prop) || /^(position|behavior|-moz-binding|content|cursor|mask|filter)/.test(prop)) return false;
-    if (prop === 'line-height' || prop === 'text-align' || prop === 'text-align-last') return false; // the label's alignment is the shape's (the Position grid), as the exported picture draws it; alignment pasted in with the text used to override it // a label's lines are always 1.2 of their own text size, as the exported picture draws them; a fixed line height (often pasted in) made larger words overlap
+    if (prop === 'line-height') return false; // a label's lines are always 1.2 of their own text size, as the exported picture draws them; a fixed line height (often pasted in) made larger words overlap
+    if ((prop === 'text-align' || prop === 'text-align-last') && !inTable) return false; // the label's alignment is the shape's (the Position grid), as the exported picture draws it; alignment pasted in with the text used to override it. In a table it sets out columns (a draw.io entity's types to the right), so it stays there
     return !/url\s*\(|expression|image-set|@import|javascript:|[<>{}\\]/.test(val); // a backslash could hide any of these as a CSS escape
   }).join(';');
 }
+// Attributes kept inside a table in a label, each with the values it may take (the layout attributes draw.io's own labels use)
+const TABLE_ATTRS = {
+  align: (v, t) => /^(left|center|right|justify)$/i.test(v) && t !== 'TABLE',   // on a table, align floats it out of the label
+  valign: (v) => /^(top|middle|bottom|baseline)$/i.test(v),
+  colspan: (v, t) => /^\d{1,3}$/.test(v) && (t === 'TD' || t === 'TH'),
+  rowspan: (v, t) => /^\d{1,3}$/.test(v) && (t === 'TD' || t === 'TH'),
+  width: (v, t) => /^\d{1,4}(\.\d+)?%?$/.test(v) && /^(TABLE|TD|TH)$/.test(t),
+  bgcolor: (v, t) => safeColour(v) && /^(TABLE|TR|TD|TH)$/.test(t),
+  cellpadding: (v, t) => /^\d{1,2}$/.test(v) && t === 'TABLE',
+  cellspacing: (v, t) => /^\d{1,2}$/.test(v) && t === 'TABLE',
+  border: (v, t) => /^\d$/.test(v) && t === 'TABLE'
+};
 function sanitizeHtml(html) {
   if (!html) return '';
   let out = sanitizeOnce(html);
@@ -607,11 +628,13 @@ function sanitizeOnce(html) {
           if (['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'LINK', 'META'].includes(ch.tagName)) { ch.remove(); continue; }
           walk(ch); while (ch.firstChild) el.insertBefore(ch.firstChild, ch); ch.remove(); continue;
         }
+        const inTable = !!ch.closest('table');   // a table in a label sets out its own rows and columns (a draw.io entity); see safeCss
         for (const a of Array.from(ch.attributes)) {
           const n = a.name.toLowerCase();
+          if (inTable && TABLE_ATTRS[n]) { if (!TABLE_ATTRS[n](String(a.value).trim(), ch.tagName)) ch.removeAttribute(a.name); continue; }
           if (!['style', 'color', 'face', 'size', 'href'].includes(n)) ch.removeAttribute(a.name);   // align too: see safeCss
           else if (n === 'href' && (ch.tagName !== 'A' || !safeUrl(a.value))) ch.removeAttribute(a.name);
-          else if (n === 'style') { const v = safeCss(a.value); if (v) ch.setAttribute('style', v); else ch.removeAttribute('style'); }
+          else if (n === 'style') { const v = safeCss(a.value, inTable); if (v) ch.setAttribute('style', v); else ch.removeAttribute('style'); }
           else if (n === 'color' && !safeColour(a.value)) ch.removeAttribute(a.name);
           else if (n === 'face' && /[<>{};\\]/.test(a.value)) ch.removeAttribute(a.name);
         }
@@ -2745,7 +2768,7 @@ function parseRich(html, base) {
       if (css) {
         if (css.color) ns.color = css.color;
         if (css.fontSize) { const v = parseFloat(css.fontSize); if (!isNaN(v)) ns.size = /em$/.test(css.fontSize) ? v * s.size : v; }
-        if (css.fontWeight && (css.fontWeight === 'bold' || +css.fontWeight >= 600)) ns.b = true;
+        if (css.fontWeight) { if (css.fontWeight === 'bold' || css.fontWeight === 'bolder' || +css.fontWeight >= 600) ns.b = true; else if (css.fontWeight === 'normal' || css.fontWeight === 'lighter' || +css.fontWeight < 600) ns.b = false; }   // normal inside bold is not bold, as on the canvas
         if (css.fontStyle === 'italic') ns.i = true;
         if (/underline/.test(css.textDecoration || css.textDecorationLine || '')) ns.u = true;
         if (css.fontFamily) ns.family = css.fontFamily.replace(/["']/g, '').split(',')[0];
@@ -2806,9 +2829,57 @@ function drawRichText(g, lines, box, align, valign) {
 }
 function exportLabel(c, g) {
   const html = labelHtml(c); if (!html) return;
+  if (/<table[\s>]/i.test(html) && exportTableLabel(c, g, html)) return;
   const st = c.style, b = labelBox(c);
   const lines = layoutRich(html, st, b.w, sv(st, 'whiteSpace', '') === 'wrap');
   drawRichText(g, lines, b, sv(st, 'align', 'center'), sv(st, 'verticalAlign', 'middle'));
+}
+/* A label holding a table (a draw.io entity: name, key and type columns) is set out by the browser, as on the canvas,
+   and copied into the picture as plain shapes: each cell's fill and borders as rectangles and lines, and each line of
+   words as text at the place, font and colour the browser gave it. The picture needs no HTML and no script. */
+function exportTableLabel(c, g, html) {
+  const st = c.style, b = labelBox(c), va = sv(st, 'verticalAlign', 'middle');
+  const host = document.createElement('div');
+  host.style.cssText = 'position:absolute;left:-99999px;top:0;visibility:hidden;pointer-events:none';
+  const outer = document.createElement('div');
+  outer.style.cssText = 'width:' + b.w + 'px;height:' + b.h + 'px;display:flex;flex-direction:column;justify-content:' + (va === 'top' ? 'flex-start' : va === 'bottom' ? 'flex-end' : 'center');
+  const inner = document.createElement('div');
+  inner.setAttribute('style', textCss(st) + 'text-align:' + alignCss(st) + ';white-space:' + (sv(st, 'whiteSpace', '') === 'wrap' ? 'normal' : 'nowrap') + ';overflow-wrap:break-word;word-break:normal;');
+  inner.innerHTML = html; outer.appendChild(inner); host.appendChild(outer); document.body.appendChild(host);
+  const tg = el('g', null);
+  try {
+    const o = outer.getBoundingClientRect(), X = (v) => round2(b.x + v - o.left), Y = (v) => round2(b.y + v - o.top);
+    const seen = (col) => col && !/^(transparent|rgba\([^)]*,\s*0\))$/.test(col);
+    for (const e of inner.querySelectorAll('*')) {
+      const cs = getComputedStyle(e), r = e.getBoundingClientRect(); if (!r.width || !r.height) continue;
+      if (seen(cs.backgroundColor)) el('rect', { x: X(r.left), y: Y(r.top), width: round2(r.width), height: round2(r.height), fill: cs.backgroundColor }, tg);
+      for (const [side, x1, y1, x2, y2] of [['Top', r.left, r.top, r.right, r.top], ['Bottom', r.left, r.bottom, r.right, r.bottom], ['Left', r.left, r.top, r.left, r.bottom], ['Right', r.right, r.top, r.right, r.bottom]]) {
+        const w = parseFloat(cs['border' + side + 'Width']); if (!w || cs['border' + side + 'Style'] === 'none' || !seen(cs['border' + side + 'Color'])) continue;
+        const h = w / 2, dx = side === 'Left' ? h : side === 'Right' ? -h : 0, dy = side === 'Top' ? h : side === 'Bottom' ? -h : 0;
+        el('line', { x1: X(x1 + dx), y1: Y(y1 + dy), x2: X(x2 + dx), y2: Y(y2 + dy), stroke: cs['border' + side + 'Color'], 'stroke-width': w }, tg);
+      }
+    }
+    const walk = document.createTreeWalker(inner, NodeFilter.SHOW_TEXT), rg = document.createRange();
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+      const t = n.data; if (!t.trim()) continue;
+      const cs = getComputedStyle(n.parentElement), size = parseFloat(cs.fontSize) || 12, deco = cs.textDecorationLine || '';
+      const attrs = { 'font-family': fontCss(cs.fontFamily.split(',')[0].replace(/["']/g, '').trim()), 'font-size': round2(size), fill: cs.color,
+        'font-weight': parseInt(cs.fontWeight, 10) >= 600 ? 'bold' : null, 'font-style': cs.fontStyle === 'italic' ? 'italic' : null,
+        'text-decoration': /underline/.test(deco) ? 'underline' : /line-through/.test(deco) ? 'line-through' : null };
+      // the words of this piece of text, grouped by the line the browser put them on
+      const lines = []; const re = /\S+/g; let m;
+      while ((m = re.exec(t))) {
+        rg.setStart(n, m.index); rg.setEnd(n, m.index + m[0].length); const r = rg.getBoundingClientRect(); if (!r.width) continue;
+        const last = lines[lines.length - 1];
+        if (last && Math.abs(last.top - r.top) < size * 0.5) { last.end = m.index + m[0].length; } else lines.push({ top: r.top, bottom: r.bottom, left: r.left, start: m.index, end: m.index + m[0].length });
+      }
+      for (const l of lines) {
+        const txt = el('text', Object.assign({ x: X(l.left), y: Y(l.top + (l.bottom - l.top) / 2 + size * 0.35) }, attrs), tg);
+        txt.setAttribute('xml:space', 'preserve'); txt.textContent = t.slice(l.start, l.end).replace(/\s+/g, ' ');
+      }
+    }
+    g.appendChild(tg); return true;
+  } catch (e) { return false; } finally { host.remove(); }
 }
 function exportEdgeLabel(label, pos, g) {
   const html = labelHtml(label); if (!html || !htmlToPlain(html).trim()) return;
@@ -6158,7 +6229,9 @@ window.DiagramEditor = { contrastRun, contrastPass, toneFix, textFix, wcagRatio,
 /* ===== Embed mode: a host page opens the editor in an iframe, passes it a diagram and gets the result back =====
    postMessage only, nothing touches the network. Messages:
      editor -> host  { type: 'de:ready' }                                   once, on start-up inside an iframe
-     host -> editor  { type: 'de:init', xml, title, mode }                  load this diagram (empty xml: a new one in `mode`)
+     host -> editor  { type: 'de:init', xml, title, mode, notice }          load this diagram (empty xml: a new one in `mode`);
+                                                                           notice: optional text shown in a bar above the canvas until
+                                                                           dismissed or the next de:init (e.g. the diagram was converted)
      editor -> host  { type: 'de:save', xml, svg, width, height, title }    Done
      editor -> host  { type: 'de:cancel' }                                  Cancel
      editor -> host  { type: 'de:dirty', dirty }                            unsaved-change flag changed
@@ -6172,6 +6245,7 @@ function embedPost(msg) { try { window.parent.postMessage(msg, '*'); } catch (e)
 function embedStart() {
   if (!EMBED.inFrame) return;
   window.addEventListener('message', onEmbedMessage);
+  const nb = $('#embedNotice button'); if (nb) nb.onclick = () => embedNotice('');
   embedPost({ type: 'de:ready' });
 }
 function onEmbedMessage(ev) {
@@ -6199,6 +6273,7 @@ async function embedLoad(m) {
   const firstTime = !S.embed;
   S.embed = true; EMBED.title = title; EMBED.lastDirty = null;
   document.body.classList.add('embed');
+  embedNotice(typeof m.notice === 'string' ? m.notice : '');   // before loading, so the diagram is fitted to the space left
   if (firstTime) { buildToolbar(); closeMenus(); }
   const xml = typeof m.xml === 'string' ? m.xml : '';
   const name = (title || 'Diagram').replace(/[\\/:*?"<>|]+/g, ' ').trim() + '.drawio';
@@ -6211,6 +6286,13 @@ async function embedLoad(m) {
   }
   buildPalette(); updateTitle();
   embedDirty();
+}
+// The host's notice about this diagram, as plain text; an empty one hides the bar.
+function embedNotice(t) {
+  const bar = $('#embedNotice'); if (!bar) return;
+  const text = String(t || '').replace(/\s+/g, ' ').trim().slice(0, 500);
+  bar.querySelector('span').textContent = text; bar.hidden = !text;
+  requestRender();
 }
 function embedDirty() {
   if (!S.embed || EMBED.lastDirty === !!S.dirty) return;
@@ -6245,7 +6327,7 @@ function prefixSvgIds(svg, p) {
 }
 COMMANDS.embedDone = embedDone;
 COMMANDS.embedCancel = embedCancel;
-Object.assign(window.DiagramEditor, { embedDone, embedCancel, prefixSvgIds, EMBED, pasteXml, pasteXmlText, drawioXmlFrom, shapeKind, copyStyle, pasteStyle });
+Object.assign(window.DiagramEditor, { embedDone, embedCancel, embedNotice, prefixSvgIds, EMBED, pasteXml, pasteXmlText, drawioXmlFrom, shapeKind, copyStyle, pasteStyle });
 
 })();
 </script>

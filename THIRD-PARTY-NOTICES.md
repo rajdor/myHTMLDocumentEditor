@@ -14,7 +14,7 @@ The two Fine Line programs, the document editor and the notebook, include the co
 | Rough.js 4.6.6 | Hand-drawn rendering in the diagram editor | Inside `vendor/diagram-editor.html`, built into `fine-line-editor.html` and `fine-line-notebook.html` | MIT |
 | mxGraph 4.2.2, orthogonal line routing (port of mxEdgeStyle) | Line routing in the diagram editor | Inside `vendor/diagram-editor.html`, built into `fine-line-editor.html` and `fine-line-notebook.html` | Apache License 2.0 |
 
-The fonts are the Latin subsets packaged by Fontsource. The diagram editor also uses Phosphor Icons and Architects Daughter, under the same licences as above.
+The fonts are the Latin subsets packaged by Fontsource. The diagram editor also uses Phosphor Icons and Architects Daughter, under the same licences as above, and so does Data Model Studio.
 
 ## Phosphor Icons
 

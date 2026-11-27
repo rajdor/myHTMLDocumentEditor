@@ -51,9 +51,11 @@ nav { top: calc(var(--ch, 0px) + 16px) !important; max-height: calc(100vh - var(
 .wb-divider { padding: 6px 0; margin-top: -6px; background-clip: content-box; }
 .ed-handle { position: absolute; width: 10px; height: 10px; background: #1F5FA8; border: 1.5px solid #fff; cursor: nwse-resize !important; z-index: 5; box-sizing: border-box; }
 @media print { #chrome { display: none; } }
-#de-overlay { position: fixed; inset: 0; z-index: 1000; background: #fff; }
-#de-overlay[hidden] { display: none; }
-#de-frame { display: block; width: 100%; height: 100%; border: 0; }
+/* Data model shares the full toolbar row: while the table buttons show (the cursor is in a table) it steps aside so the row does not wrap */
+#chrome:has(.tops:not([hidden])) button[data-a="datamodel"] { display: none; }
+#de-overlay, #dm-overlay { position: fixed; inset: 0; z-index: 1000; background: #fff; }
+#de-overlay[hidden], #dm-overlay[hidden] { display: none; }
+#de-frame, #dm-frame { display: block; width: 100%; height: 100%; border: 0; }
 html.de-open, html.de-open body { overflow: hidden; }
 #gbar { background: #F6F9FC; border-top: 1px solid #CFDBE8; }
 .dg, .fig { cursor: pointer; user-select: none; }

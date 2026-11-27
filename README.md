@@ -7,7 +7,7 @@ Two offline, single-file programs built from one source:
 | `fine-line-editor.html` | The Fine Line document editor: open, write and save one HTML document at a time |
 | `fine-line-notebook.html` | Fine Line notebook: the same editor with an explorer panel that turns a folder into a notebook of pages |
 
-Documents are written in the Fine Line Blueprint style: what you see while editing is what the saved document looks like. Diagrams are drawn in the built-in diagram editor (myDiagramer). Both programs write the same page format and open each other's pages.
+Documents are written in the Fine Line Blueprint style: what you see while editing is what the saved document looks like. Diagrams are drawn in the built-in diagram editor (myDiagramer), and data models in the built-in Data Model Studio (myEntityModeller). Both programs write the same page format and open each other's pages.
 
 Open either file in Chrome or Edge. Nothing is loaded from the network.
 
@@ -33,6 +33,7 @@ Everything outside `src/notebook/` is shared, so a change to the editor reaches 
 - Table format: a bar under the toolbar, opened from the Table format button, that stays open while you work and covers nothing. Cell colour goes on the cell the cursor is in, or on the cells selected with Shift+click, in any table: a palette of four steps of a grey and of twelve colours, the colours used recently, and a custom colour typed or picked and then set with OK (Cancel leaves the cell alone); No colour takes it off. A cell with a dark colour takes white text; links keep the browser's own blue. Spacing (none, small, medium), Padding (small, normal, large), Borders (grid, none) and Corners (square, rounded) are for the whole table; a fancy table keeps its own. Corners can only be round where cells stand apart, so Rounded turns Small spacing on and no spacing turns Rounded off. In a table with spacing, a cell with no text and no colour draws nothing on the saved page (in the editor it keeps a faint dashed outline). Saved as `style="background-color:#RRGGBB"` on the cell and as classes on the table (`gap-s`, `gap-m`, `pad-s`, `pad-l`, `noline`, `round`). Repeat last toolbar command and Inspect formatting cover both; not available in a Markdown file.
 - Pill and Pill at right, in the More list: a short label in a rounded tag, such as a level or a status, on or off for the selected text; Pill at right sits at the right-hand edge of its line, so a code can sit at the left of a line and a pill at the right. Choosing one kind on the other changes it. Clear format takes a pill off; Inspect formatting names it. Not available in a Markdown file.
 - Diagrams: Diagram opens the diagram editor in front of the document; Done places the diagram, Cancel discards changes. Double-click a diagram, or select it and press Enter, to edit it again.
+- Data models: Data model opens Data Model Studio in front of the document, in its Blueprint theme. Build the model guided by questions or on your own (Fly solo); Done places a picture of the visible tab, Cancel discards changes. The whole model (every tab) is kept with the picture, so double-click it, or select it and press Enter, to carry on where you left off. Claude-assisted mode is not offered here, because the editor allows no network access. While the cursor is in a table the table buttons take the room on the toolbar and Data model steps aside.
 - Pictures and Mermaid from other pages: a sketch-style or plain SVG picture, or a Mermaid flowchart definition, can be made into a diagram for the diagram editor (Convert to editable diagram on the bar under the toolbar). SVG pictures styled by their page's style sheet keep their look when the page is opened. Diagrams drawn with HTML boxes (CSS grid and flexbox) are made into diagrams as the page opens, and pages saved as a bundle are unpacked.
 - Notes: a margin with a bar and icon beside each noted block; the icon opens a dated log of initialled comments. The margin is hidden by default; the Notes margin button shows or hides it, and the choice is saved with the document. A clean copy without notes is offered after Save.
 - Links: shown in the browser's own style (blue, underlined). Web images, video and audio become link cards, so nothing is downloaded on open. Ctrl or Cmd + click opens a link.
@@ -55,6 +56,14 @@ Everything outside `src/notebook/` is shared, so a change to the editor reaches 
 ```
 
 The SVG is what readers see: it scales, prints and keeps its text searchable. The `data-drawio` source is what the diagram editor re-opens. Every id in the SVG carries a unique prefix, so several diagrams share one page safely.
+
+A data model is stored the same way, with the Data Model Studio file in place of the draw.io source. The `dg` class means it is selected, copied, captioned and deleted like a diagram; `dm` sends Edit to Data Model Studio. Its SVG has every style written on its own elements and carries no ids, classes or style block, so nothing in it reaches the rest of the page.
+
+```html
+<div class="dg dm" data-dms="...Data Model Studio file (.dms.json)...">
+  <svg viewBox="..."> ...the picture... </svg>
+</div>
+```
 
 ## Project layout
 
@@ -82,6 +91,7 @@ The SVG is what readers see: it scales, prints and keeps its text searchable. Th
 | `src/icons.json` | Phosphor state icons used in diagrams |
 | `src/emoji.default.json` | The emoji on the toolbar's Emoji list, in order: the character, a short code and the tooltip |
 | `vendor/diagram-editor.html` | The built diagram editor from myDiagramer, embedded at build time |
+| `vendor/data-model-studio.html` | Data Model Studio from myEntityModeller (a single file, no build), embedded at build time |
 | `docs/notebook-explorer-spec.md` | Specification for the notebook explorer |
 | `spike/folder-spike.html` | Throwaway page used to confirm folder access from a `file://` page |
 | `build.js` | Builds `fine-line-editor.html` and `fine-line-notebook.html`; each program's `editors` list says which editors in `src/editors/` it carries |
@@ -139,7 +149,7 @@ Tests use puppeteer-core with a local Chrome or Edge (or `CHROME_PATH`). `npm te
 | t37-cell-paste | A block of cells pasted into a table: one cell to one cell from the cursor, Undo, asking before replacing filled cells and before leaving out rows or columns that do not fit, Cancel, blocks of several columns, empty cells, header cells, cells from another program, a single cell and a paste outside a table unchanged |
 | t38-fonts-on-demand | A saved page carries the italic font and the code font only when it uses them: italics by tag, nesting or inline style, code blocks, inline code, ID tags, Q&A labels; the font follows the page as it changes; the editor always has every font |
 | t39-emoji | The Emoji list: the default set, inserting at the cursor, over a selection, in a table cell and in a code block, Repeat, Undo, saved as HTML codes and re-opened, closing the list |
-| t40-convert-drawings | Pictures and Mermaid from other pages: a plain SVG picture keeps its page's colours and converts to shapes with attached lines, a sketch-style picture converts in the Sketch style, a Mermaid flowchart is parsed and laid out, Cancel changes nothing, anything not recognised says so and stays |
+| t40-convert-drawings | Pictures and Mermaid from other pages: a plain SVG picture keeps its page's colours and converts to shapes with attached lines, a sketch-style picture converts in the Sketch style, a Mermaid flowchart is parsed and laid out, Cancel changes nothing, anything not recognised says so and stays, the diagram editor says when it opens a conversion, an entity's rows and columns become a table label |
 | t41-box-diagrams | Diagrams drawn with HTML boxes: each discrete diagram in a page becomes a diagram on opening, labels, colours, corners, dashes, ellipses and one-sided borders are read, prose, tables and cards of running text are left alone, and a bundled page is unpacked without running its scripts |
 | t42-show-blocks | Show blocks: outlines and labels, the bar and its counts, choosing a container by cursor or click, Unwrap in the page, in a table cell and for words alone, Delete with and without asking, Delete empty containers, undo, nothing saved or copied, one toolbar row |
 | t43-paste-drawio | Paste from draw.io XML in the built-in diagram editor: the Edit menu command, shapes and lines from clipboard text with a code fence, Done places the diagram, the box to paste into when the clipboard cannot be read |
@@ -154,6 +164,7 @@ Tests use puppeteer-core with a local Chrome or Edge (or `CHROME_PATH`). `npm te
 | t52-toolbar-labels | The toolbar: a name under each group, taking no width; the table buttons in sets (Add, Delete, Header, Merge, Format) with a line between them; the header icons drawn for the editor; Thin toolbar to the right of Help hides the names, is remembered and changes nothing in the page; the names go when the toolbar wraps and come back when it fits |
 | t53-pill | Pill and Pill at right in the More list: on and off, the look, at the right-hand edge of its line in a cell, one kind made into the other, refused over several paragraphs, list items, Repeat, Inspect formatting, Clear format, undo, saved and re-opened, the code font carried only when a pill needs it, empty and nested pills tidied |
 | t54-table-format | Table format: the bar under the toolbar and what closes it; cell colour from the palette, Recent, a custom colour with OK and Cancel, No colour, white text on a dark colour, links left in the browser's blue, a block of selected cells, Repeat, undo; spacing, padding, borders and corners and how Rounded and spacing go together; empty cells in a table with spacing; the other table buttons and column dragging in such a table; Inspect formatting; saved and re-opened; fancy tables |
+| t55-data-model | Data Model Studio overlay in Blueprint with Done and Cancel and no Claude-assisted mode, Done places the picture with its model, nothing in the picture leaks styles or ids, edit with the whole model, Cancel and Done without changes change nothing, save and re-open, delete, the three card views (Conceptual placed on Done and remembered) |
 | nb1-notebook | Notebook explorer on an in-memory folder (`test/mockfs.mjs`): the tab and panel, landing, tree order, hidden files and settings, opening pages, the Save, Discard, Cancel prompt, first save named from the H1, name clashes, rename, new folder, move by drag, trash and restore, changes made outside the editor, HTML made elsewhere saved under its own name, Markdown and plain text, copy where the browser cannot move, read-only mode, the notice for browsers without folder access |
 | nb2-history | Notebook history: no copy when nothing changed, copies of unsaved work, the replaced version kept on save, no duplicates, Page history and Restore, recovery of unsaved work, history following rename and move, status line and thresholds, clean-up of history and trash, none of it in read-only mode |
 | nb3-sort-favourites | Notebook sort and favourites: the four sorts and both directions, a folder's own sort, the notebook sort clearing it, favourite pages by star and by menu, the block above the tree, favourites following rename and move, greyed when the page has gone, all kept in the settings |
@@ -168,6 +179,10 @@ Tests use puppeteer-core with a local Chrome or Edge (or `CHROME_PATH`). `npm te
 ## Updating the diagram editor
 
 Build myDiagramer, copy its `diagram-editor.html` into `vendor/`, then `npm run build` and `npm test`. The document editor relies only on the embed messages in myDiagramer's `docs/EMBED.md`: `de:ready`, `de:init`, `de:save`, `de:cancel`, `de:dirty`.
+
+## Updating Data Model Studio
+
+Copy `data-model-studio.html` from myEntityModeller into `vendor/`, then `npm run build` and `npm test`. The document editor relies only on its embed messages: `dm:ready`, `dm:init` (`model`, `title`, `theme`), `dm:save` (`model`, `svg`, `width`, `height`, `title`), `dm:cancel` and `dm:dirty`. Done with nothing changed answers `dm:cancel`.
 
 ## Credits
 

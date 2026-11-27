@@ -101,7 +101,7 @@ function readShapes(svg, D) {
   for (const e of svg.querySelectorAll('rect, circle, ellipse, polygon, line, polyline, path, text')) {
     if (e.closest(skipIn)) continue; const tag = e.tagName.toLowerCase();
     let b; try { b = box(e); } catch (x) { continue; }
-    if (tag === 'text') { const s = getComputedStyle(e), t = e.textContent.replace(/\s+/g, ' ').trim(); if (t && s.display !== 'none') D.texts.push({ t, x: b.x, y: b.y, w: b.w, h: b.h, size: Math.round(num(s.fontSize)) || 14, color: col(s.fill) === 'none' ? '#000000' : col(s.fill), bold: num(s.fontWeight) >= 600 }); continue; }
+    if (tag === 'text') { const s = getComputedStyle(e), t = e.textContent.replace(/\s+/g, ' ').trim(); if (t && s.display !== 'none') D.texts.push({ t, x: b.x, y: b.y, w: b.w, h: b.h, size: Math.round(num(s.fontSize)) || 14, color: col(s.fill) === 'none' ? '#000000' : col(s.fill), bold: num(s.fontWeight) >= 600, italic: s.fontStyle === 'italic', anchor: s.textAnchor }); continue; }
     const L = look(e); if (!L.op || (L.fill === 'none' && L.stroke === 'none')) continue;
     const shape = (kind, r, extra) => D.add(Object.assign({ kind, r, stroke: L.stroke, sw: L.stroke === 'none' ? 0 : L.sw, fill: L.fill, fillStyle: '', dash: L.dash, fop: L.fop }, extra));
     if (tag === 'rect') { if (b.w >= W * 0.97 && b.h >= H * 0.97) continue; if (b.w < 1 || b.h < 1) continue; shape('rect', b, { round: num(e.getAttribute('rx')) || num(e.getAttribute('ry')) }); continue; }
@@ -158,6 +158,41 @@ function writeDrawio(D, o) {
   for (const t of texts) { if (t.free) { free.push(t); continue; } const host = shapes.filter(s => inside(s, t.cx, t.cy)).sort((a, b) => a.r.w * a.r.h - b.r.w * b.r.h)[0]; if (host && t.w < host.r.w * 1.3) host.lines.push(t); else free.push(t); }
   const rich = lines => { const f = lines[0]; let out = '', prev = null; for (const l of lines) { if (prev) out += l.y - (prev.y + prev.h) > prev.h * 0.6 ? '<br><br>' : '<br>'; const plain = l.size === f.size && l.color === f.color && !!l.bold === !!f.bold; let s = xa(l.t); if (l.bold && !f.bold) s = '<b>' + s + '</b>'; out += plain ? s : '<font color="' + l.color + '" style="font-size:' + l.size + 'px' + (f.bold && !l.bold ? ';font-weight:normal' : '') + '">' + s + '</font>'; prev = l; } return out; };
 
+  /* a box whose text is set out in rows and columns (a data model entity: key, name and type on each row) becomes a table
+     label, so each row stays one row and each column keeps its side; null when the text is not like that (at least two
+     rows with two or more pieces side by side), and the label is written line by line as before */
+  const tabular = (L, r) => {
+    if (L.length < 4) return null;
+    const rows = []; for (const l of L.slice().sort((a, b) => a.y - b.y || a.x - b.x)) { const k = rows.find(w => Math.abs(w.y - l.y) < Math.max(3, l.h * 0.4)); if (k) k.p.push(l); else rows.push({ y: l.y, p: [l] }); }
+    if (rows.filter(w => w.p.length > 1).length < 2) return null;
+    rows.forEach(w => w.p.sort((a, b) => a.x - b.x));
+    const side = l => l.anchor === 'end' ? 'right' : l.anchor === 'middle' ? 'center' : 'left', ax = l => side(l) === 'right' ? l.x + l.w : side(l) === 'center' ? l.x + l.w / 2 : l.x;
+    // columns: where the pieces of the rows with several pieces line up
+    const cols = [];
+    for (const w of rows) if (w.p.length > 1) for (const l of w.p) { const a = ax(l), c = cols.find(c => c.side === side(l) && Math.abs(c.a - a) < 8); if (c) { c.n++; c.left = Math.min(c.left, l.x); c.right = Math.max(c.right, l.x + l.w); } else cols.push({ a, side: side(l), n: 1, left: l.x, right: l.x + l.w }); }
+    cols.sort((a, b) => a.left - b.left);
+    const at = l => cols.findIndex(c => c.side === side(l) && Math.abs(c.a - ax(l)) < 8);
+    const all = rows.flatMap(w => w.p), freq = new Map(); all.forEach(l => { const k = l.size + '|' + l.color + '|' + !!l.bold; freq.set(k, (freq.get(k) || 0) + 1); });
+    const [bs, bc, bb] = [...freq.entries()].sort((a, b) => b[1] - a[1])[0][0].split('|'), base = { size: +bs, color: bc, bold: bb === 'true' };
+    const piece = l => { let t = xa(l.t); if (l.italic) t = '<i>' + t + '</i>'; if (l.bold && !base.bold) t = '<b>' + t + '</b>';
+      return l.size === base.size && l.color === base.color && !!l.bold === base.bold ? t : '<font color="' + l.color + '" style="font-size:' + l.size + 'px' + (base.bold && !l.bold ? ';font-weight:normal' : '') + '">' + t + '</font>'; };
+    const padL = Math.max(0, Math.round(cols[0].left - r.x)), padR = Math.max(0, Math.round(r.x + r.w - Math.max(...cols.map(c => c.right)))), top = rows[0].y - r.y;
+    const width = c => { const i = cols.indexOf(c), next = cols[i + 1]; return next ? Math.max(1, Math.round(next.left - c.left)) : 0; };
+    let html = '<table style="width:100%;border-collapse:collapse" cellpadding="0" cellspacing="0">';
+    rows.forEach((w, i) => {
+      const h = Math.round(i + 1 < rows.length ? rows[i + 1].y - w.y : w.p[0].h * 1.2);
+      html += '<tr style="height:' + h + 'px">';
+      const slots = cols.map(() => []), loose = [];
+      for (const l of w.p) { const k = at(l); if (k < 0) loose.push(l); else slots[k].push(l); }
+      if (loose.length && w.p.length === loose.length) { const l = loose[0]; html += '<td colspan="' + cols.length + '"' + (side(l) === 'left' ? '' : ' align="' + side(l) + '"') + ' valign="baseline">' + w.p.map(piece).join(' ') + '</td>'; }
+      else { loose.forEach(l => { const k = cols.reduce((m, c, j) => Math.abs(c.left - l.x) < Math.abs(cols[m].left - l.x) ? j : m, 0); slots[k].push(l); });
+        cols.forEach((c, j) => { const wd = width(c); html += '<td' + (wd && i === 0 ? ' width="' + wd + '"' : '') + (c.side === 'left' ? '' : ' align="' + c.side + '"') + ' valign="baseline">' + slots[j].map(piece).join(' ') + '</td>'; }); }
+      html += '</tr>';
+    });
+    html += '</table>';
+    return { html, base, style: 'fontSize=' + base.size + ';fontColor=' + base.color + ';' + (base.bold ? 'fontStyle=1;' : '') + 'align=left;spacingLeft=' + padL + ';spacingRight=' + padR + ';verticalAlign=top;spacingTop=' + Math.max(0, Math.round(top - 2)) + ';spacing=0;' };
+  };
+
   /* where a line end meets a shape: the attachment, as a fraction of the shape's width and height */
   const meet = pt => {
     let best = null;
@@ -177,9 +212,10 @@ function writeDrawio(D, o) {
     if (o.r) {
       const L = o.lines.sort((a, b) => a.y - b.y), f = L[0], top = f ? f.y - o.r.y : 0, block = f ? L[L.length - 1].y + L[L.length - 1].h - f.y : 0, centred = f && Math.abs(top + block / 2 - o.r.h / 2) < 5;
       const left = f && Math.abs(f.cx - (o.r.x + o.r.w / 2)) > Math.max(4, o.r.w * 0.04) && L.every(l => Math.abs(l.x - f.x) < 3);
+      const tab = f ? tabular(L, o.r) : null;
       const style = (o.kind === 'rect' ? (o.round ? 'rounded=1;absoluteArcSize=1;arcSize=' + Math.round(o.round * 2) + ';' : 'rounded=0;') : o.kind + ';') + 'html=1;fillColor=' + o.fill + ';' + (o.fillStyle ? 'fillStyle=' + o.fillStyle + ';' + (o.fillStyle === 'hachure' ? 'hachureGap=5;fillWeight=1;' : '') : '') +
-        'strokeColor=' + o.stroke + ';strokeWidth=' + n(o.sw) + ';' + (o.dash ? 'dashed=1;' : '') + (o.fop < 100 && o.fill !== 'none' ? 'fillOpacity=' + o.fop + ';' : '') + (f ? 'fontSize=' + f.size + ';fontColor=' + f.color + ';' + (f.bold ? 'fontStyle=1;' : '') + (left ? 'align=left;spacingLeft=' + Math.max(0, Math.round(f.x - o.r.x)) + ';' + (o.pad ? 'spacingRight=' + Math.round(o.pad) + ';' : '') : 'align=center;' + (o.pad ? 'spacingLeft=' + Math.round(o.pad) + ';spacingRight=' + Math.round(o.pad) + ';' : '')) + WRAP + (centred ? 'verticalAlign=middle;' : 'verticalAlign=top;spacingTop=' + Math.max(0, Math.round(top - 2)) + ';') + 'spacing=0;' : '') + TF + SK;
-      cells.push('<mxCell id="' + o.id + '" value="' + xa(f ? rich(L) : '') + '" style="' + xa(style) + '" vertex="1" parent="1">' + geo(o.r) + '</mxCell>'); if (f) report.labels++;
+        'strokeColor=' + o.stroke + ';strokeWidth=' + n(o.sw) + ';' + (o.dash ? 'dashed=1;' : '') + (o.fop < 100 && o.fill !== 'none' ? 'fillOpacity=' + o.fop + ';' : '') + (tab ? tab.style : '') + (f && !tab ? 'fontSize=' + f.size + ';fontColor=' + f.color + ';' + (f.bold ? 'fontStyle=1;' : '') + (left ? 'align=left;spacingLeft=' + Math.max(0, Math.round(f.x - o.r.x)) + ';' + (o.pad ? 'spacingRight=' + Math.round(o.pad) + ';' : '') : 'align=center;' + (o.pad ? 'spacingLeft=' + Math.round(o.pad) + ';spacingRight=' + Math.round(o.pad) + ';' : '')) + WRAP + (centred ? 'verticalAlign=middle;' : 'verticalAlign=top;spacingTop=' + Math.max(0, Math.round(top - 2)) + ';') + 'spacing=0;' : '') + TF + SK;
+      cells.push('<mxCell id="' + o.id + '" value="' + xa(tab ? tab.html : f ? rich(L) : '') + '" style="' + xa(style) + '" vertex="1" parent="1">' + geo(o.r) + '</mxCell>'); if (f) report.labels++;
     } else {
       const s = meet(o.p), t = meet(o.q), head = o.block ? 'block;endFill=1' : 'open', tail = o.block ? 'block;startFill=1' : 'open'; report.attached += (s ? 1 : 0) + (t ? 1 : 0);
       const style = 'edgeStyle=none;html=1;rounded=0;' + (o.curved && o.via.length ? 'curved=1;' : '') + 'startArrow=' + (o.heads.p ? tail : 'none') + ';endArrow=' + (o.heads.q ? head : 'none') + ';startSize=' + (o.block ? 6 : 10) + ';endSize=' + (o.block ? 6 : 10) + ';strokeColor=' + o.stroke + ';strokeWidth=' + n(o.sw) + ';' + (o.dash ? 'dashed=1;' : '') +

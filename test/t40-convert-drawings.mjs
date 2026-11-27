@@ -10,6 +10,8 @@ const cells = async () => { for (let i = 0; i < 80; i++) { const f = frame(); if
 const done = async () => { await sleep(300); await frame().evaluate(() => DiagramEditor.embedDone()); await closed(); await sleep(150); };
 const cancel = async () => { await sleep(300); await frame().evaluate(() => DiagramEditor.embedCancel()); await closed(); await sleep(150); };
 const bar = () => pg.evaluate(() => { const g = document.querySelector('#gbar'); return g.hidden ? null : [g.querySelector('b').textContent, ...[...g.querySelectorAll('button')].filter(x => !x.hidden).map(x => x.textContent)]; });
+// the diagram editor's notice bar: its text, or null when hidden
+const notice = () => frame().evaluate(() => { const n = document.querySelector('#embedNotice'); return !n || n.hidden ? null : n.querySelector('span').textContent; });
 const count = (sel) => pg.evaluate((sel) => document.querySelectorAll(sel).length, sel);
 const openPage = async (html) => { await pg.evaluate(async (t) => FLE.load(await FLE.withPictures(t), 'other.html'), html); await sleep(300); };
 
@@ -29,6 +31,8 @@ let c = await cells();
 check('the diagram editor opens with the picture as shapes, lines and text', !!c && c.mode === 'outline', c);
 same('boxes and the circle carry their text as labels; the diamond is a diamond', c.cells.filter(x => !x.e).map(x => [x.v, x.style]), [['Alpha', ''], ['Beta', ''], ['Gamma', 'ellipse'], ['', 'rhombus'], ['a note under it all', '']]);
 same('colours come across', c.cells.find(x => x.v === 'Alpha').fill.toUpperCase(), '#EEEDFE');
+const pn = await notice();
+check('the diagram editor says it was converted from a picture, that the look may differ, and what was recognised', /^Converted from a picture\. Layout and text formatting may differ from the original\. The page is unchanged until you click Done; Cancel keeps the picture\. \(4 shapes and 2 lines recognised(, \d+ parts? skipped)?\)$/.test(pn || ''), pn);
 const ln = c.cells.filter(x => x.e);
 check('the arrow is attached to both boxes and keeps its head', ln.length === 2 && ln[0].s && ln[0].t && ln[0].end === 'block', ln);
 check('the elbow line is attached at both ends, dashed, with no head', ln[1].s && ln[1].t && ln[1].style.includes('dashed') && ln[1].end === 'none', ln);
@@ -38,7 +42,8 @@ await pg.evaluate(() => document.querySelector('#doc svg rect').dispatchEvent(ne
 same('Done puts the diagram where the picture was', [await count('#doc svg#plain'), await count('#doc .dg svg'), await pg.evaluate(() => /<mxfile/.test(document.querySelector('#doc .dg').getAttribute('data-drawio')))], [0, 1, true]);
 check('the saved page holds the diagram and its source', await pg.evaluate(() => { const o = FLE.build(); return o.includes('class="dg"') && o.includes('data-drawio='); }));
 await pg.evaluate(() => document.querySelector('#doc .dg').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))); c = await cells();
-check('it opens again as the same diagram', !!c && c.cells.some(x => x.v === 'Gamma')); await cancel();
+check('it opens again as the same diagram', !!c && c.cells.some(x => x.v === 'Gamma'));
+check('a diagram that is already a diagram opens with no notice', await notice() === null); await cancel();
 
 /* ----- a sketch-style picture: every shape is strokes ----- */
 const two = (x1, y1, x2, y2) => [0, 1].map(k => 'M' + (x1 + k) + ' ' + (y1 + k) + ' C' + (x1 + (x2 - x1) / 3) + ' ' + (y1 + (y2 - y1) / 3 + k) + ', ' + (x1 + 2 * (x2 - x1) / 3) + ' ' + (y1 + 2 * (y2 - y1) / 3) + ', ' + (x2 - k) + ' ' + (y2 + k)).join(' ');
@@ -59,6 +64,20 @@ await openPage('<!doctype html><html><body><h1>Chart</h1><svg id="ch" viewBox="0
 dialogs.length = 0; await pg.click('#doc svg text'); await sleep(100); await pg.click('[data-a="dgconv"]'); await sleep(300);
 check('a picture with no shapes says so and stays a picture', dialogs.length === 1 && /stays as a picture/.test(dialogs[0]) && await count('#doc svg#ch') === 1 && await pg.$eval('#de-overlay', e => e.hidden), dialogs);
 
+/* ----- a data model picture: entities whose text is set out in rows and columns ----- */
+const ent = (x, t, rows) => '<rect x="' + x + '" y="20" width="300" height="' + (60 + rows.length * 24) + '" rx="6" fill="#ffffff" stroke="#1E3A5F"/><rect x="' + x + '" y="20" width="300" height="40" rx="6" fill="#1E3A5F"/><text x="' + (x + 150) + '" y="45" font-size="15" font-weight="700" fill="#FFFFFF" text-anchor="middle">' + t + '</text>' +
+  rows.map(([k, n, ty], i) => (k ? '<text x="' + (x + 10) + '" y="' + (84 + i * 24) + '" font-size="11" fill="#475569">' + k + '</text>' : '') + '<text x="' + (x + 60) + '" y="' + (84 + i * 24) + '" font-size="13" fill="#1E293B"' + (k === 'FK' ? ' font-style="italic"' : '') + '>' + n + '</text><text x="' + (x + 290) + '" y="' + (84 + i * 24) + '" font-size="11" fill="#94A3B8" text-anchor="end">' + ty + '</text>').join('');
+await openPage('<!doctype html><html><body><h1>Model</h1><svg id="er" viewBox="0 0 720 220">' + ent(20, 'SOURCE_REGISTRATION', [['PK', 'registration_id', 'uuid'], ['', 'source_location', 'text'], ['FK', 'proposed_home_node_id', '→ NODE']]) + ent(400, 'PARTY', [['PK', 'party_id', 'uuid'], ['', 'name', 'text']]) + '<path d="M320 90H400" stroke="#334155" fill="none"/></svg></body></html>');
+await pg.evaluate(() => document.querySelector('#doc svg#er rect').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))); c = await cells();
+const body = c && c.cells.find(x => /registration_id/.test(x.v)), head = c && c.cells.find(x => /SOURCE_REGISTRATION/.test(x.v));
+check('an entity\'s rows become a table in its label, the title stays in its header band', !!body && /<table/.test(body.v) && !!head && head !== body && !/registration_id/.test(head.v), c && c.cells.map(x => x.v.slice(0, 60)));
+const row = body ? await pg.evaluate((v) => [...new DOMParser().parseFromString(v, 'text/html').querySelectorAll('tr')[0].cells].map(td => [td.textContent, td.getAttribute('align') || 'left']), body.v) : null;
+same('each row keeps key, name and type side by side, the type to the right', row, [['PK', 'left'], ['registration_id', 'left'], ['uuid', 'right']]);
+check('each piece keeps its own look: the key grey, a foreign key italic', /<font color="#475569"[^>]*>PK<\/font>/i.test(body.v) && /<i>proposed_home_node_id<\/i>/.test(body.v), body && body.v);
+const plainBox = await pg.evaluate(() => { const h = document.createElement('div'); h.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 120" width="300" height="120"><rect x="10" y="10" width="200" height="100" fill="#fff" stroke="#000"/><text x="20" y="40">One</text><text x="20" y="60">Two</text><text x="20" y="80">Three</text><text x="20" y="100">Four</text></svg>'; document.body.appendChild(h); try { return FLE.svgToDrawio(h.firstChild, true).xml; } finally { h.remove(); } });
+check('text that is not in rows and columns stays line by line', !/&lt;table/.test(plainBox) && /One&lt;br&gt;Two/.test(plainBox), plainBox.slice(0, 300));
+await cancel();
+
 /* ----- a Mermaid flowchart definition ----- */
 const MM = '%%{init: {"flowchart": {"curve": "basis"}}}%%\nflowchart TD\n  A[Decision needed] --> B{Owner can convene<br/>or outranks?}\n  B -- Yes --> C[Owner decides]\n  B -->|No| D([Escalate])\n  subgraph S1 [Follow up]\n    D -.-> E((Log)) & F[(Store)]\n  end\n  C ==> G[Done]:::good\n  classDef good fill:#E3F4EA,stroke:#1E6B45,color:#1E6B45\n  %% a comment\n  E --- G';
 await openPage('<!doctype html><html><body><h1>Flow</h1><p id="p">Before</p><pre class="mermaid">' + MM.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</pre><pre class="mermaid">sequenceDiagram\n  A->>B: hello</pre><script src="https://example.com/mermaid.min.js"></script></body></html>');
@@ -75,6 +94,8 @@ same('every link, attached at both ends', [mlinks.length, mlinks.every(x => x.s 
 same('link text in both spellings, as labels on the links', nodes.map(x => x.v).filter(v => v === 'Yes' || v === 'No').sort(), ['No', 'Yes']);
 check('a dotted link is dashed and a plain line has no arrowhead', mlinks.filter(x => x.style.includes('dashed')).length === 2 && mlinks.filter(x => x.end === 'none').length === 1, mlinks);
 same('colours from classDef', c.cells.find(x => x.v === 'Done').fill.toUpperCase(), '#E3F4EA');
+const mn = await notice();
+check('the diagram editor says it was converted from a Mermaid definition', /^Converted from a Mermaid definition\. .*Cancel keeps the definition\. \(\d+ shapes and 7 links recognised\)$/.test(mn || ''), mn);
 await done();
 same('Done puts the diagram where the definition was', [await count('#doc pre'), await count('#doc .dg svg')], [1, 1]);
 dialogs.length = 0; await caretIn(pg, '#doc pre', false); await pg.evaluate(() => document.dispatchEvent(new Event('selectionchange'))); await sleep(100); await pg.click('[data-a="dgconv"]'); await sleep(300);

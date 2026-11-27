@@ -2100,7 +2100,7 @@ function openDiagram(fig) {
   DE.target = fig || null; DE.open = true; DE.kind = 'de';
   const board = fig && fig.querySelector('.wb-board');
   const xml = !fig ? '' : conv ? conv.xml : board ? boardToDrawio(board) : (fig.getAttribute('data-drawio') || '');
-  const msg = { type: 'de:init', xml, title: conv ? conv.name : dgTitle(fig), mode: 'blueprint' };
+  const msg = { type: 'de:init', xml, title: conv ? conv.name : dgTitle(fig), mode: 'blueprint', appTheme: appTheme() };
   if (conv) msg.notice = convNotice(fig, conv);   // a conversion says so, in a bar above the diagram, so a different look is not taken for lost formatting
   $('#de-overlay').classList.remove('de-quiet'); $('#de-overlay').hidden = false; document.documentElement.classList.add('de-open');
   deFrame(); deFocus();
@@ -2163,7 +2163,7 @@ function openDataModel(fig) {
   if (DE.open) return;
   deactivate(); dgSelect(null);
   DE.target = fig || null; DE.open = true; DE.kind = 'dm';
-  const msg = { type: 'dm:init', model: fig ? (fig.getAttribute('data-dms') || '') : '', title: fig ? dgTitle(fig) : 'Data model', theme: 'blueprint' };
+  const msg = { type: 'dm:init', model: fig ? (fig.getAttribute('data-dms') || '') : '', title: fig ? dgTitle(fig) : 'Data model', theme: 'blueprint', appTheme: appTheme() };
   $('#dm-overlay').hidden = false; document.documentElement.classList.add('de-open');
   dmFrame(); dmFocus();
   if (DM.ready) DM.frame.contentWindow.postMessage(msg, '*'); else DM.pending = msg;
@@ -2564,6 +2564,32 @@ $('#tf-hex').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preve
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !tfBox.hidden && !(cellSel && doc.contains(e.target))) { e.stopPropagation(); tfShow(false); restore(); } }, true);   // with cells selected, Escape ends that selection first
 
 /* ---------- toolbar wiring ---------- */
+/* App theme: how the editor's own controls look (toolbar, bars, notebook panel, menus); the document keeps the Fine Line style.
+   The same themes as the diagram editor and Data Model Studio, which open in the editor's theme. Material Design unless chosen;
+   the choice is kept in this browser. */
+const APP_THEMES = [['system', 'Follow system'], ['studio-light', 'Studio light'], ['studio-dark', 'Studio dark'], ['classic', 'Classic'], ['flat-minimal', 'Flat / Minimal'], ['material', 'Material Design'], ['neumorphism', 'Neumorphism'], ['midnight', 'Midnight'], ['high-contrast', 'High contrast'], ['blueprint', 'Blueprint (Fine Line)']];
+const APP_THEME_KEY = 'fl-app-theme', DEFAULT_APP_THEME = 'material';
+const appTheme = () => document.documentElement.dataset.appTheme || 'blueprint';
+function applyAppTheme(id, keep) {
+  if (!APP_THEMES.some(t => t[0] === id)) id = DEFAULT_APP_THEME;
+  if (id === 'blueprint') delete document.documentElement.dataset.appTheme; else document.documentElement.dataset.appTheme = id;
+  if (keep !== false) try { localStorage.setItem(APP_THEME_KEY, id); } catch (e) { }
+}
+function appThemeMenu(btn) {
+  let pop = $('#apptheme-pop'); if (pop) { pop.remove(); return; }
+  pop = document.createElement('div'); pop.id = 'apptheme-pop'; pop.setAttribute('role', 'menu');
+  const h = document.createElement('div'); h.className = 'h'; h.textContent = 'App theme'; pop.appendChild(h);
+  for (const [id, label] of APP_THEMES) {
+    const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'menuitemradio'); b.setAttribute('aria-checked', String(appTheme() === id));
+    b.innerHTML = '<span class="chk">' + (appTheme() === id ? '\u2713' : '') + '</span>' + esc(label);
+    b.onclick = () => { applyAppTheme(id); pop.remove(); };
+    pop.appendChild(b);
+  }
+  (btn.closest('dialog') || document.body).appendChild(pop);   // inside Help, which sits above the page
+  const r = btn.getBoundingClientRect(); pop.style.top = (r.bottom + 4) + 'px'; pop.style.left = Math.max(8, Math.min(window.innerWidth - pop.offsetWidth - 8, r.right - pop.offsetWidth)) + 'px';
+  setTimeout(() => document.addEventListener('mousedown', function off(e) { if (!e.target.closest('#apptheme-pop, [data-a="apptheme"]')) { pop.remove(); document.removeEventListener('mousedown', off); } }), 0);
+}
+try { applyAppTheme(localStorage.getItem(APP_THEME_KEY) || DEFAULT_APP_THEME, false); } catch (e) { applyAppTheme(DEFAULT_APP_THEME, false); }
 const ACT = {
   new: fresh, open: open, nbwarnx: () => NB.warnOff(), save: () => save(false), saveas: () => save(true),
   bold: () => plainWeight(() => cmd('bold')), italic: () => cmd('italic'), ul: () => { if (qaList('ul')) return; const l = listAt(); if (l && l.matches('ul.check')) { l.classList.remove('check'); if (!l.getAttribute('class')) l.removeAttribute('class'); touch(); } else { listCmd('insertUnorderedList'); touch(); } }, ol: () => { if (qaList('ol')) return; listCmd('insertOrderedList'); touch(); }, check: checkList, ldense: listDense, indent: () => { listShift(1); }, outdent: () => { listShift(-1); },
@@ -2593,7 +2619,7 @@ const ACT = {
 };
 $('#chrome').addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
 $('#chrome').addEventListener('click', e => { const b = e.target.closest('button[data-a]'); if (!b) return; const a = b.dataset.a; if (!board && ((CODE_OFF.includes(a) && selCode()) || (MD_CELL_OFF.includes(a) && mdCellSel()))) { restore(); return; } if (!board && !['undo', 'redo', 'help', 'inspect', 'new', 'open', 'save', 'saveas', 'who', 'saveclean', 'noclean', 'nosaved', 'margin', 'paint', 'repeat', 'nbwarnx', 'emoji', 'tfmt', 'blocks', 'print'].includes(a)) { clearTimeout(timer); histSnap(); } if (cellSel && (a === 'bold' || a === 'italic' || a === 'clear')) cellFormat(a); else if (ACT[a]) { ACT[a](); if (!board) repNote(a); } else if (ADD[a] && board) ADD[a](); });
-$('#help').addEventListener('click', e => { if (e.target === e.currentTarget || e.target.closest('[data-a="helpclose"]')) e.currentTarget.close(); });
+$('#help').addEventListener('click', e => { const t = e.target.closest('[data-a="apptheme"]'); if (t) { appThemeMenu(t); return; } if (e.target === e.currentTarget || e.target.closest('[data-a="helpclose"]')) e.currentTarget.close(); });
 $('#s-block').addEventListener('change', e => { const v = e.target.value; if (v) { const label = e.target.selectedOptions[0].textContent; clearTimeout(timer); histSnap(); setBlock(v); repSet(label, () => setBlock(v)); } styleUI(); });
 $('#s-fmt').addEventListener('change', e => { const v = e.target.value; e.target.value = ''; if (selCode()) { restore(); styleUI(); return; } if (v && FMT[v]) { clearTimeout(timer); histSnap(); restore(); const want = !fmtOn(v); setFmt(v, want); repSet(FMT[v][0] + (want ? '' : ' off'), () => setFmt(v, want)); } styleUI(); });
 $('#s-boxtype').addEventListener('change', e => { const v = e.target.value; if (v) { clearTimeout(timer); histSnap(); setBox(v); repSet(v === 'none' ? 'Remove box' : v === 'icon' ? 'Box icon on or off' : BOXES[v] + ' box', () => setBox(v)); } styleUI(); });

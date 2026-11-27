@@ -1,16 +1,35 @@
-#chrome { position: sticky; top: 0; z-index: 50; background: #fff; border-bottom: 1.5px solid #CFDBE8; font: 13px/1.2 system-ui, -apple-system, 'Segoe UI', sans-serif; color: #12355B; box-shadow: 0 2px 0 rgba(18,53,91,.06); }
+/* ===== App themes: how the editor's own controls look (toolbar, bars, panels, menus), never the document. The same themes as
+   the diagram editor and Data Model Studio. Blueprint is the Fine Line look the editor always had; Material Design is the default. ===== */
+:root { --ui-surface: #fff; --ui-bar: #F6F9FC; --ui-line: #CFDBE8; --ui-line2: #B8C2CE; --ui-ink: #12355B; --ui-ink2: #3D5A7A; --ui-hover: #EAF1F8; --ui-sel: #DCE8F5; --ui-faint: #8A9BB0; --ui-active: #12355B; --ui-on: #fff; --ui-radius: 3px; --ui-font: system-ui, -apple-system, 'Segoe UI', sans-serif; }
+html[data-app-theme="material"] { --ui-surface: #ffffff; --ui-bar: #f4f6fa; --ui-line: #e3e8f0; --ui-line2: #cdd5e2; --ui-ink: #1a2433; --ui-ink2: #4f5b6e; --ui-hover: #e8eef8; --ui-sel: #dfe7fa; --ui-faint: #7a8496; --ui-active: #3568d4; --ui-on: #ffffff; --ui-radius: 8px; --ui-font: Inter, Roboto, 'Segoe UI', -apple-system, sans-serif; }
+html[data-app-theme="classic"] { --ui-surface: #ffffff; --ui-bar: #f3f4f6; --ui-line: #d1d5db; --ui-line2: #b8bec8; --ui-ink: #1f2937; --ui-ink2: #4b5563; --ui-hover: #e5e7eb; --ui-sel: #dbeafe; --ui-faint: #6b7280; --ui-active: #2563eb; --ui-on: #ffffff; --ui-radius: 6px; --ui-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+html[data-app-theme="flat-minimal"] { --ui-surface: #ffffff; --ui-bar: #f7f9fc; --ui-line: #e0e7ef; --ui-line2: #c9d3df; --ui-ink: #172b4d; --ui-ink2: #52627a; --ui-hover: #eef3f8; --ui-sel: #e3eef8; --ui-faint: #6b7a90; --ui-active: #1769aa; --ui-on: #ffffff; --ui-radius: 5px; --ui-font: Inter, 'Segoe UI', -apple-system, sans-serif; }
+html[data-app-theme="neumorphism"] { --ui-surface: #e7ebf0; --ui-bar: #e7ebf0; --ui-line: #d3d9e1; --ui-line2: #c4cbd5; --ui-ink: #354052; --ui-ink2: #4f5969; --ui-hover: #dfe4eb; --ui-sel: #dbe3ee; --ui-faint: #646d7c; --ui-active: #456c9d; --ui-on: #ffffff; --ui-radius: 12px; --ui-font: Inter, 'Segoe UI', -apple-system, sans-serif; }
+html[data-app-theme="studio-light"], html[data-app-theme="system"] { --ui-surface: #faf9f5; --ui-bar: #f1efe8; --ui-line: #dedad0; --ui-line2: #cbc6b8; --ui-ink: #1c2230; --ui-ink2: #555c6b; --ui-hover: #ecebe5; --ui-sel: #e5ebfb; --ui-faint: #6f7684; --ui-active: #2d55c8; --ui-on: #ffffff; --ui-radius: 6px; }
+html[data-app-theme="studio-dark"] { --ui-surface: #16191f; --ui-bar: #1e222a; --ui-line: #2c323d; --ui-line2: #3b414d; --ui-ink: #e7e9ee; --ui-ink2: #b0b7c3; --ui-hover: #252a34; --ui-sel: #222b44; --ui-faint: #8d95a3; --ui-active: #7f9cff; --ui-on: #0c1120; --ui-radius: 6px; }
+@media (prefers-color-scheme: dark) { html[data-app-theme="system"] { --ui-surface: #16191f; --ui-bar: #1e222a; --ui-line: #2c323d; --ui-line2: #3b414d; --ui-ink: #e7e9ee; --ui-ink2: #b0b7c3; --ui-hover: #252a34; --ui-sel: #222b44; --ui-faint: #8d95a3; --ui-active: #7f9cff; --ui-on: #0c1120; } }
+html[data-app-theme="midnight"] { --ui-surface: #111833; --ui-bar: #18213f; --ui-line: #2a345a; --ui-line2: #3a4677; --ui-ink: #e6eaf5; --ui-ink2: #aeb6cf; --ui-hover: #1f2b52; --ui-sel: #24305c; --ui-faint: #8a94b0; --ui-active: #8fb0ff; --ui-on: #0b1020; --ui-radius: 6px; }
+html[data-app-theme="high-contrast"] { --ui-surface: #ffffff; --ui-bar: #ffffff; --ui-line: #000000; --ui-line2: #000000; --ui-ink: #000000; --ui-ink2: #222222; --ui-hover: #d6e2ff; --ui-sel: #d6e2ff; --ui-faint: #333333; --ui-active: #0040c0; --ui-on: #ffffff; --ui-radius: 3px; }
+html:is([data-app-theme="studio-dark"], [data-app-theme="midnight"]) :is(#chrome, #nb, #nb-tab, #apptheme-pop) { color-scheme: dark; }   /* native lists and scroll bars in the controls go dark too */
+@media (prefers-color-scheme: dark) { html[data-app-theme="system"] :is(#chrome, #nb, #nb-tab, #apptheme-pop) { color-scheme: dark; } }
+#apptheme-pop { position: fixed; z-index: 60; min-width: 200px; padding: 4px 0; background: var(--ui-surface); color: var(--ui-ink); border: 1px solid var(--ui-line2); border-radius: 6px; box-shadow: 0 6px 18px rgba(0, 0, 0, .18); font: 13px/1.2 var(--ui-font); }
+#apptheme-pop .h { padding: 6px 12px 4px; font-size: 12px; font-weight: 600; color: var(--ui-ink2); }
+#apptheme-pop button { display: flex; gap: 8px; width: 100%; border: 0; background: none; color: inherit; font: inherit; text-align: left; padding: 6px 12px; cursor: pointer; }
+#apptheme-pop button:hover, #apptheme-pop button:focus-visible { background: var(--ui-hover); outline: none; }
+#apptheme-pop .chk { width: 12px; flex: none; }
+#chrome { position: sticky; top: 0; z-index: 50; background: var(--ui-surface); border-bottom: 1.5px solid var(--ui-line); font: 13px/1.2 var(--ui-font); color: var(--ui-ink); box-shadow: 0 2px 0 rgba(18,53,91,.06); }
 #chrome .row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 6px 12px; }
-#dbar { background: #F6F9FC; border-top: 1px solid #CFDBE8; }
-#chrome button, #chrome select, #chrome input[type=text], #chrome input[type=number] { font: inherit; color: inherit; background: #fff; border: 1px solid #B8C2CE; border-radius: 3px; padding: 4px 8px; height: 28px; }
+#dbar { background: var(--ui-bar); border-top: 1px solid var(--ui-line); }
+#chrome button, #chrome select, #chrome input[type=text], #chrome input[type=number] { font: inherit; color: inherit; background: var(--ui-surface); border: 1px solid var(--ui-line2); border-radius: var(--ui-radius); padding: 4px 8px; height: 28px; }
 #chrome button { cursor: pointer; }
-#chrome button:hover { background: #EAF1F8; }
-#chrome button.on { background: #12355B; color: #fff; }
-#chrome .sep { width: 1px; height: 20px; background: #CFDBE8; margin: 0 4px; }
+#chrome button:hover { background: var(--ui-hover); }
+#chrome button.on { background: var(--ui-active); color: var(--ui-on); }
+#chrome .sep { width: 1px; height: 20px; background: var(--ui-line); margin: 0 4px; }
 #chrome .grp { display: flex; align-items: center; gap: 4px; }
 #chrome .grp[hidden], #chrome .row[hidden] { display: none; }
-#chrome label { display: flex; align-items: center; gap: 4px; color: #3D5A7A; }
+#chrome label { display: flex; align-items: center; gap: 4px; color: var(--ui-ink2); }
 #chrome input[type=number] { width: 72px; }
-#status { color: #3D5A7A; }
+#status { color: var(--ui-ink2); }
 #tbar .ends { display: flex; gap: 2px; margin-left: auto; }
 #status:empty { display: none; }
 #cleanbar { background: #FFF6B8; border-top: 1px solid #E0B400; }
@@ -25,6 +44,8 @@
 #help .help-top button { width: 30px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 3px; background: none; color: var(--ink); cursor: pointer; }
 #help .help-top button:hover { background: var(--fill); border-color: var(--dots); }
 #help .help-top svg { width: 18px; height: 18px; }
+#help .help-acts { display: flex; align-items: center; gap: 6px; }
+#help .help-top button.ht-theme { width: auto; gap: 6px; padding: 0 10px; border-color: var(--dots); font: 13px/1 var(--ui-font); color: var(--ink); cursor: pointer; }
 #help-info { margin: 0; padding: 0 22px 12px; border-bottom: 1.5px dashed var(--dots); color: var(--ink-soft); font-size: 13px; max-width: none; }
 #help .help-body { overflow-y: auto; padding: 20px 22px 8px; columns: 320px 3; column-gap: 18px; background-color: var(--paper); background-image: radial-gradient(var(--dots) 1.2px, transparent 1.2px); background-size: 20px 20px; }
 #help .hc { break-inside: avoid; margin: 0 0 18px; background: var(--fill-plain); border: 1.5px solid var(--ink); border-radius: 3px; box-shadow: 2px 3px 0 var(--shadow); }
@@ -53,11 +74,11 @@ nav { top: calc(var(--ch, 0px) + 16px) !important; max-height: calc(100vh - var(
 @media print { #chrome { display: none; } }
 /* Data model shares the full toolbar row: while the table buttons show (the cursor is in a table) it steps aside so the row does not wrap */
 #chrome:has(.tops:not([hidden])) button[data-a="datamodel"] { display: none; }
-#de-overlay, #dm-overlay { position: fixed; inset: 0; z-index: 1000; background: #fff; }
+#de-overlay, #dm-overlay { position: fixed; inset: 0; z-index: 1000; background: var(--ui-surface); }
 #de-overlay[hidden], #dm-overlay[hidden] { display: none; }
 #de-frame, #dm-frame { display: block; width: 100%; height: 100%; border: 0; }
 html.de-open, html.de-open body { overflow: hidden; }
-#gbar { background: #F6F9FC; border-top: 1px solid #CFDBE8; }
+#gbar { background: var(--ui-bar); border-top: 1px solid var(--ui-line); }
 .dg, .fig { cursor: pointer; user-select: none; }
 .fig .wb-board > * { cursor: pointer !important; }
 .dg:hover, .fig:hover { outline: 1px dashed #B8C2CE; outline-offset: 4px; }
@@ -66,15 +87,15 @@ html.de-open, html.de-open body { overflow: hidden; }
 .dg.ed-dsel::after, .fig.ed-dsel::after { content: 'Selected  \00B7  Ctrl+C copy  \00B7  Enter edit  \00B7  Delete'; position: absolute; left: -4px; top: -30px; padding: 2px 8px; border-radius: 4px 4px 0 0; background: #1F5FA8; color: #fff; font: 600 11px/18px system-ui, sans-serif; white-space: nowrap; pointer-events: none; }
 #gbar .dgsaid { margin-left: 8px; color: #1F5FA8; font-weight: 600; }
 #chrome #tbar { gap: 6px 2px; padding-left: 4px; padding-right: 4px; }
-#tbar .grp { gap: 2px; padding-right: 3px; border-right: 1px solid #CFDBE8; }
+#tbar .grp { gap: 2px; padding-right: 3px; border-right: 1px solid var(--ui-line); }
 #tbar .grp:has(+ #status) { border-right: 0; padding-right: 0; }
 #tbar .tops { display: flex; gap: 1px; margin-left: 3px; }
 #tbar .tops[hidden] { display: none; }
 #s-boxtype { width: 56px; }
-#chrome button.ic.lv em { position: absolute; right: -1px; bottom: 2px; font: 600 9px/1 system-ui, sans-serif; font-style: normal; color: #fff; background: #12355B; border-radius: 6px; padding: 1px 3px; }
+#chrome button.ic.lv em { position: absolute; right: -1px; bottom: 2px; font: 600 9px/1 system-ui, sans-serif; font-style: normal; color: var(--ui-on); background: var(--ui-active); border-radius: 6px; padding: 1px 3px; }
 #chrome button.ic { width: 22px; padding: 0; display: inline-flex; align-items: center; justify-content: center; position: relative; border-color: transparent; background: none; }
-#chrome button.ic:hover { background: #EAF1F8; border-color: #CFDBE8; }
-#chrome button.ic.on { background: #12355B; color: #fff; }
+#chrome button.ic:hover { background: var(--ui-hover); border-color: var(--ui-line); }
+#chrome button.ic.on { background: var(--ui-active); color: var(--ui-on); }
 #chrome button.ic svg { width: 18px; height: 18px; }
 #chrome button.ic.rot svg { transform: rotate(-90deg); }
 #chrome button.ic.minus::after { content: ''; position: absolute; right: 3px; bottom: 4px; width: 8px; height: 2px; border-radius: 1px; background: #B23C0B; box-shadow: 0 0 0 1.5px #fff; }
@@ -91,19 +112,19 @@ html.de-open, html.de-open body { overflow: hidden; }
 /* style inspector popup: opened from the toolbar, under it on the right */
 #insp { position: fixed; top: calc(var(--ch, 0px) + 10px); right: 16px; left: auto; margin: 0; width: min(380px, calc(100vw - 32px)); max-height: calc(100vh - var(--ch, 0px) - 40px); overflow: auto; padding: 12px 14px 12px; z-index: 60; border: 1.5px solid var(--ink); border-radius: 3px; box-shadow: 4px 6px 0 var(--shadow); background: var(--paper); color: #1c2b3a; font: 13px/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
 #insp .insp-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; color: var(--ink); font-size: 14px; }
-#insp button { font: inherit; color: var(--ink); background: #fff; border: 1px solid #B8C2CE; border-radius: 3px; padding: 1px 7px; cursor: pointer; }
-#insp button:hover { background: #EAF1F8; }
+#insp button { font: inherit; color: var(--ink); background: var(--ui-surface); border: 1px solid var(--ui-line2); border-radius: 3px; padding: 1px 7px; cursor: pointer; }
+#insp button:hover { background: var(--ui-hover); }
 #insp p { margin: 4px 0; color: var(--ink-soft); }
 #insp ol { margin: 6px 0; padding: 0; list-style: none; }
 #insp li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; padding: 4px 0 4px 8px; border-left: 3px solid var(--dots); margin-bottom: 3px; }
-#insp li > span { flex: 1 1 auto; color: #1c2b3a; overflow-wrap: anywhere; }
+#insp li > span { flex: 1 1 auto; color: var(--ui-ink); overflow-wrap: anywhere; }
 #insp li.odd { border-left-color: var(--redline); }
 #insp li small { flex: 1 0 100%; order: 3; color: var(--redline); font-size: 12px; }
 #insp .insp-note { font-size: 12px; }
 #insp-look { margin: 8px 0 6px; }
 #insp-look b { color: var(--ink); font-weight: 600; }
 #insp #insp-look ul { margin: 2px 0 0; padding-left: 18px; list-style: disc; }
-#insp #insp-look li { display: list-item; padding: 0; margin: 0; border: 0; color: #1c2b3a; }
+#insp #insp-look li { display: list-item; padding: 0; margin: 0; border: 0; color: var(--ui-ink); }
 #s-fmt { width: 58px; }
 #tbar select { padding-left: 4px; padding-right: 2px; }
 #tbar .tops button.ic { width: 20px; }
@@ -112,25 +133,25 @@ html.de-open, html.de-open body { overflow: hidden; }
 #tbar .grp > .tg { gap: 2px; }
 #chrome:not(.thin):not(.wrapped) #tbar { align-items: flex-start; }
 #chrome:not(.thin):not(.wrapped) #tbar .grp:not(.nol), #chrome:not(.thin):not(.wrapped) #tbar .tg { position: relative; padding-bottom: 13px; }
-#chrome:not(.thin):not(.wrapped) #tbar .grp:not(.nol)::after, #chrome:not(.thin):not(.wrapped) #tbar .tg::after { content: attr(aria-label); content: attr(aria-label) / ''; position: absolute; left: -12px; right: -12px; bottom: 0; text-align: center; font: 10px/12px system-ui, -apple-system, 'Segoe UI', sans-serif; color: #3D5A7A; white-space: nowrap; pointer-events: none; }
+#chrome:not(.thin):not(.wrapped) #tbar .grp:not(.nol)::after, #chrome:not(.thin):not(.wrapped) #tbar .tg::after { content: attr(aria-label); content: attr(aria-label) / ''; position: absolute; left: -12px; right: -12px; bottom: 0; text-align: center; font: 10px/12px system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--ui-ink2); white-space: nowrap; pointer-events: none; }
 #chrome:not(.thin):not(.wrapped) #tbar .tg::after { content: attr(data-l); content: attr(data-l) / ''; }
 #chrome:not(.thin):not(.wrapped) #tbar .tops { align-items: flex-start; }
 #chrome:not(.thin):not(.wrapped) #tbar .tops .tsep { height: 28px; }
 #chrome.thin #thin svg { transform: rotate(180deg); }
 #chrome #thin { width: 18px; }
 #chrome #thin svg { width: 14px; height: 14px; }
-#tbar .tops .tsep { width: 1px; height: 16px; background: #CFDBE8; }   /* between the table buttons that add, delete, set headers, merge and compact */
+#tbar .tops .tsep { width: 1px; height: 16px; background: var(--ui-line); }   /* between the table buttons that add, delete, set headers, merge and compact */
 /* emoji list: opened from the toolbar, under its button */
-#emoji { position: fixed; z-index: 60; display: grid; grid-template-columns: repeat(8, 30px); gap: 2px; padding: 6px; background: #fff; border: 1px solid #B8C2CE; border-radius: 4px; box-shadow: 0 4px 14px rgba(18, 53, 91, .18); }
+#emoji { position: fixed; z-index: 60; display: grid; grid-template-columns: repeat(8, 30px); gap: 2px; padding: 6px; background: var(--ui-surface); border: 1px solid var(--ui-line2); border-radius: 4px; box-shadow: 0 4px 14px rgba(18, 53, 91, .18); }
 #emoji[hidden] { display: none; }
 #emoji button { width: 30px; height: 30px; padding: 0; border: 1px solid transparent; border-radius: 3px; background: none; font: 18px/1 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; cursor: pointer; }
-#emoji button:hover, #emoji button:focus-visible { background: #EAF1F8; border-color: #CFDBE8; outline: none; }
+#emoji button:hover, #emoji button:focus-visible { background: var(--ui-hover); border-color: var(--ui-line); outline: none; }
 @media print { #emoji { display: none !important; } }
 /* Table format: a bar under the toolbar, opened from the Table format button. It stays open while the page is worked on and covers nothing. */
-#chrome #tfmt { align-items: flex-start; gap: 6px 14px; background: #F6F9FC; border-top: 1px solid #CFDBE8; }
+#chrome #tfmt { align-items: flex-start; gap: 6px 14px; background: var(--ui-bar); border-top: 1px solid var(--ui-line); }
 #tfmt .tf-col { display: flex; flex-direction: column; gap: 4px; }
 #tfmt .tf-head { width: 104px; flex: none; gap: 3px; }
-#tfmt .tf-head span { color: #3D5A7A; font-size: 12px; min-height: 15px; }
+#tfmt .tf-head span { color: var(--ui-ink2); font-size: 12px; min-height: 15px; }
 #tfmt .tf-head button { align-self: flex-start; margin-top: 2px; }
 #tfmt .tf-line { display: flex; align-items: center; gap: 4px; min-height: 26px; }
 #tfmt .tf-set { display: inline-flex; align-items: center; gap: 4px; width: 232px; }
@@ -138,17 +159,17 @@ html.de-open, html.de-open body { overflow: hidden; }
 #tfmt > .sep { align-self: stretch; height: auto; margin: 0; }
 #tfmt .tf-head + .tf-col .tf-set .tf-l { width: 54px; }
 #tfmt .tf-head:has(#tf-fancy) { width: auto; min-width: 40px; max-width: 110px; }
-#tfmt .tf-l { width: 54px; flex: none; color: #3D5A7A; }
+#tfmt .tf-l { width: 54px; flex: none; color: var(--ui-ink2); }
 #chrome #tfmt button { height: 24px; padding: 2px 8px; white-space: nowrap; flex: none; }
-#chrome #tfmt button.on, #chrome #tfmt button.go { background: #12355B; color: #fff; border-color: #12355B; }
+#chrome #tfmt button.on, #chrome #tfmt button.go { background: var(--ui-active); color: var(--ui-on); border-color: var(--ui-active); }
 #chrome #tfmt button:disabled { opacity: .4; cursor: default; }
 #chrome #tfmt .tf-x { margin-left: auto; }
 #tf-pal { display: grid; grid-template-columns: repeat(13, 16px); gap: 2px; flex: none; padding-top: 1px; }
-#tf-recent { display: flex; flex-wrap: wrap; gap: 2px; min-width: 232px; color: #3D5A7A; font-size: 12px; }
+#tf-recent { display: flex; flex-wrap: wrap; gap: 2px; min-width: 232px; color: var(--ui-ink2); font-size: 12px; }
 #chrome #tfmt button.tf-sw { width: 16px; height: 16px; padding: 0; border: 1px solid rgba(18, 53, 91, .3); border-radius: 2px; }
-#chrome #tfmt button.tf-sw:hover, #chrome #tfmt button.tf-sw:focus-visible { outline: 2px solid #12355B; outline-offset: 1px; }
-#chrome #tfmt button.tf-sw.on { outline: 2px solid #B23C0B; outline-offset: 1px; border-color: #fff; }
-#chrome #tf-color { width: 34px; flex: none; height: 24px; padding: 0 2px; border: 1px solid #B8C2CE; border-radius: 3px; background: #fff; }
+#chrome #tfmt button.tf-sw:hover, #chrome #tfmt button.tf-sw:focus-visible { outline: 2px solid var(--ui-active); outline-offset: 1px; }
+#chrome #tfmt button.tf-sw.on { outline: 2px solid #B23C0B; outline-offset: 1px; border-color: var(--ui-on); }
+#chrome #tf-color { width: 34px; flex: none; height: 24px; padding: 0 2px; border: 1px solid var(--ui-line2); border-radius: 3px; background: var(--ui-surface); }
 #chrome #tf-hex { width: 72px; height: 24px; box-sizing: border-box; padding: 2px 4px; font: 12px ui-monospace, Menlo, Consolas, monospace; }
 #tf-err { margin: 0; color: #B23C0B; font-size: 12px; max-width: 300px; }
 #tf-err:empty { display: none; }

@@ -95,7 +95,7 @@ const who = () => t2.pg.evaluate(() => { const w = document.getElementById('who'
 await t2.pg.evaluate(() => localStorage.removeItem('fle-initials')); await t2.pg.reload(); await sleep(400);
 same('with no initials the button is plain', (await who())[0], false);
 await t2.pg.click('#who'); await sleep(100);
-same('once initials are given the button is inverted', await who(), [true, 'rgb(18, 53, 91)', 'rgb(255, 255, 255)', 'AB']);
+same('once initials are given the button is inverted, in the app theme accent (Material Design by default)', await who(), [true, 'rgb(53, 104, 212)', 'rgb(255, 255, 255)', 'AB']);
 await t2.pg.click('#who'); await sleep(100);
 check('clicking it again asks for the initials again, showing the current ones', t2.dialogs.length === 2 && t2.dialogs.every(d => /Your initials/.test(d)), t2.dialogs);
 await t2.pg.reload(); await sleep(400);

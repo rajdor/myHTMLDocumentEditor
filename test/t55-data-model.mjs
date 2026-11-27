@@ -25,7 +25,7 @@ await caretIn(pg, '#doc p:last-child'); await click(pg, 'datamodel');
 check('overlay opens', await overlay());
 let f = await waitEmbed(null); check('Data Model Studio starts in embed mode', !!f);
 const ui = await f.evaluate(() => ({ skin: document.documentElement.dataset.skin, done: !document.getElementById('bDone').hidden, save: getComputedStyle(document.getElementById('bSave')).display, claude: getComputedStyle(document.getElementById('mClaude')).display, welcome: !document.getElementById('welcome').hidden }));
-same('embed mode: Blueprint, Done shown, Save and Claude-assisted hidden, welcome open', ui, { skin: 'blueprint', done: true, save: 'none', claude: 'none', welcome: true });
+same('embed mode: Material app, Done shown, Save and Claude-assisted hidden, straight to the canvas (Fly solo)', ui, { skin: 'material', done: true, save: 'none', claude: 'none', welcome: false });
 await build(f, ['Customer', 'Order']);
 check('overlay closes on Done', !(await overlay()));
 const d1 = await pg.evaluate(() => { const g = document.querySelector('#doc .dg.dm'); const s = g && g.querySelector('svg'); let model = null; try { model = JSON.parse(g.getAttribute('data-dms')); } catch (e) { }
@@ -71,6 +71,24 @@ await pg.evaluate(() => document.querySelector('#doc .dg.dm').dispatchEvent(new 
 f = await waitEmbed('Invoice');
 check('re-opened in Conceptual, with every attribute still in the model', await f.evaluate(() => detailView() === 'conceptual' && document.getElementById('bConceptual').classList.contains('on') && M.entities.find(e => e.name === 'Customer').attributes.some(a => a.name === 'customerId')));
 await f.evaluate(() => embedCancel()); await closed();
+
+// 3c. themes: the app in Material, the model in Fine Line; the content theme chosen is kept with the model and its picture
+await pg.evaluate(() => document.querySelector('#doc .dg.dm').dispatchEvent(new MouseEvent('dblclick', { bubbles: true })));
+f = await waitEmbed('Invoice');
+same('the app opens in Material and the model in Fine Line', await f.evaluate(() => [document.documentElement.dataset.skin, document.getElementById('svg').dataset.cskin]), ['material', 'blueprint']);
+const ticks = async () => f.evaluate(() => { themeMenu(document.getElementById('bTheme')); const m = document.querySelector('.menu'), out = []; let sec = ''; for (const n of m.children) { if (n.classList.contains('mh')) sec = n.textContent.startsWith('App') ? 'app' : 'content'; else if (n.querySelector('.chk') && n.querySelector('.chk').textContent) out.push(sec + ':' + n.textContent.replace('✓', '').trim()); } closeMenu(); return out; });
+check('the theme menu ticks the app theme and the content theme', JSON.stringify(await ticks()).includes('app:Material Design') && JSON.stringify(await ticks()).includes('content:Blueprint'), await ticks());
+await f.evaluate(() => applySkin('neumorphism')); await f.evaluate(() => setContentSkin('midnight')); await sleep(300);
+const t2 = await ticks();
+check('the ticks move to the themes chosen', t2.some(x => x.startsWith('app:Neumorphism')) && t2.some(x => x.startsWith('content:Midnight')), t2);
+same('the app theme dresses the app; the content theme only the model', await f.evaluate(() => [document.documentElement.dataset.skin, document.getElementById('svg').dataset.cskin]), ['neumorphism', 'midnight']);
+await f.evaluate(() => embedDone()); await closed();
+const d4 = await pg.evaluate(() => { const g = document.querySelector('#doc .dg.dm'); return { theme: JSON.parse(g.getAttribute('data-dms')).models[0].layout.theme, bg: g.querySelector('svg > rect').getAttribute('style') }; });
+check('Done keeps the content theme in the model and draws the picture in it', d4.theme === 'midnight' && /#0e1428/i.test(d4.bg), d4);
+await pg.evaluate(() => document.querySelector('#doc .dg.dm').dispatchEvent(new MouseEvent('dblclick', { bubbles: true })));
+f = await waitEmbed('Invoice');
+same('re-opened: the model keeps its theme, the app is Material again', await f.evaluate(() => [document.documentElement.dataset.skin, document.getElementById('svg').dataset.cskin]), ['material', 'midnight']);
+await f.evaluate(() => { setContentSkin('blueprint'); }); await sleep(200); await f.evaluate(() => embedDone()); await closed();
 
 // 4. save and re-open
 const html = await pg.evaluate(() => FLE.build());

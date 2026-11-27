@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob: data:; font-src data:; connect-src https://api.anthropic.com; base-uri 'none'; form-action 'none'">
 <title>Data Model Studio</title>
 <style>
-:root{
+:root,[data-cskin]{
   --bg:#ecebe5; --panel:#faf9f5; --panel-2:#f1efe8; --ink:#1c2230; --ink-2:#465063; --muted:#7c8494; --line:#dedad0; --line-2:#cbc6b8;
   --accent:#2d55c8; --accent-ink:#ffffff; --accent-soft:#e5ebfb;
   --canvas:#f6f5f0; --dot:#d4cfc2; --card:#ffffff; --card-line:#c4beaf; --shadow-c:rgba(40,36,24,.08);
@@ -26,7 +26,7 @@
     color-scheme: dark;
   }
 }
-:root[data-theme="dark"]{
+:root[data-theme="dark"],[data-cskin="dark"],[data-cskin="midnight"]{
   --bg:#0f1115; --panel:#16191f; --panel-2:#1e222a; --ink:#e7e9ee; --ink-2:#b5bbc7; --muted:#858d9b; --line:#272c35; --line-2:#363c47;
   --accent:#7f9cff; --accent-ink:#0c1120; --accent-soft:#222b44;
   --canvas:#13161b; --dot:#2a2f39; --card:#1c2027; --card-line:#3b414d; --shadow-c:rgba(0,0,0,.4);
@@ -35,24 +35,24 @@
   color-scheme: dark;
 }
 /* ---------- themes (palette + control shape). Classic, Flat / Minimal, Material Design and Neumorphism follow the UI themes in myDiagramer. ---------- */
-:root[data-skin="classic"]{
+:root[data-skin="classic"],[data-cskin="classic"]{
   --bg:#f3f4f6; --panel:#ffffff; --panel-2:#e5e7eb; --ink:#1f2937; --ink-2:#374151; --muted:#636a77; --line:#d1d5db; --line-2:#b8bec8;
   --accent:#2563eb; --accent-ink:#ffffff; --accent-soft:#dbeafe; --canvas:#ffffff; --dot:#d9dde3; --card:#ffffff; --card-line:#c3c8d0; --shadow-c:rgba(0,0,0,.08);
   --sans:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; --r-btn:6px; --r-pill:8px; --r-field:6px; --r-card:10px;
 }
-:root[data-skin="flat-minimal"]{
+:root[data-skin="flat-minimal"],[data-cskin="flat-minimal"]{
   --bg:#f7f9fc; --panel:#ffffff; --panel-2:#eef3f8; --ink:#172b4d; --ink-2:#172b4d; --muted:#61718a; --line:#e0e7ef; --line-2:#c9d3df;
   --accent:#1769aa; --accent-ink:#ffffff; --accent-soft:#e3eef8; --canvas:#ffffff; --dot:#e3e9f0; --card:#ffffff; --card-line:#cfd8e3; --shadow-c:rgba(23,43,77,.06);
   --sans:Inter, "Segoe UI", -apple-system, sans-serif; --pill-shadow:none; --card-shadow:none; --raise:none; --r-btn:5px; --r-pill:8px; --r-field:5px; --r-card:8px;
 }
-:root[data-skin="material"]{
+:root[data-skin="material"],[data-cskin="material"]{
   --bg:#f4f6fa; --panel:#ffffff; --panel-2:#e8eef8; --ink:#1a2433; --ink-2:#1a2433; --muted:#596579; --line:#e3e8f0; --line-2:#cdd5e2;
   --accent:#3568d4; --accent-ink:#ffffff; --accent-soft:#dfe7fa; --canvas:#f4f6fa; --dot:#d9dfe9; --card:#ffffff; --card-line:#d5dce7; --shadow-c:rgba(23,43,77,.12);
   --sans:Inter, Roboto, "Segoe UI", -apple-system, sans-serif; --field:#e8eef8; --ctl-border:1px solid transparent; --field-border:1px solid transparent;
   --pill-shadow:0 2px 6px #172b4d1c, 0 1px 2px #172b4d12; --raise:0 1px 3px #172b4d22; --card-shadow:0 6px 18px #172b4d26, 0 2px 4px #172b4d14;
   --r-btn:999px; --r-pill:999px; --r-field:10px; --r-card:16px;
 }
-:root[data-skin="neumorphism"]{
+:root[data-skin="neumorphism"],[data-cskin="neumorphism"]{
   --bg:#e7ebf0; --panel:#e7ebf0; --panel-2:#dfe4eb; --ink:#354052; --ink-2:#354052; --muted:#5c6677; --line:#d3d9e1; --line-2:#c4cbd5;
   --accent:#456c9d; --accent-ink:#ffffff; --accent-soft:#dbe3ee; --canvas:#e7ebf0; --dot:#d0d6de; --card:#eef1f5; --card-line:#cdd3dc; --shadow-c:rgba(140,150,165,.25);
   --sans:Inter, "Segoe UI", -apple-system, sans-serif; --field:#e7ebf0; --ctl-border:1px solid transparent; --field-border:1px solid transparent;
@@ -60,7 +60,7 @@
   --field-inset:inset 2px 2px 5px #c7ccd3, inset -2px -2px 5px #ffffff; --card-shadow:7px 7px 16px #c7ccd3, -7px -7px 16px #ffffff;
   --r-btn:12px; --r-pill:14px; --r-field:12px; --r-card:18px;
 }
-:root[data-skin="midnight"]{
+:root[data-skin="midnight"],[data-cskin="midnight"]{
   --bg:#0b1020; --panel:#111833; --panel-2:#18213f; --ink:#e6eaf5; --ink-2:#b9c2db; --muted:#8a94b0; --line:#232c4d; --line-2:#323c63;
   --accent:#8fb0ff; --accent-ink:#0b1020; --accent-soft:#1f2b52; --canvas:#0e1428; --dot:#252f57; --card:#1a2347; --card-line:#3a4677; --shadow-c:rgba(0,0,0,.45);
   --edge:#a3afcc; --edge-soft:#5b6690; --dim:.5;
@@ -68,15 +68,15 @@
 /* Blueprint follows the Fine Line Blueprint style (myDiagramer src/blueprint.js tokens): navy ink on white paper, pale blue fill,
    crisp offset shadow, Architects Daughter (Kimberly Geswein, SIL Open Font License 1.1). Used by default inside the document editor. */
 @font-face{font-family:'Architects Daughter';font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,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) format('woff2')}
-:root[data-skin="blueprint"]{
+:root[data-skin="blueprint"],[data-cskin="blueprint"]{
   --bg:#f4f7fb; --panel:#ffffff; --panel-2:#eaf1f8; --ink:#12355b; --ink-2:#3d5a7a; --muted:#5f6b7a; --line:#cfdbe8; --line-2:#a9bcd2;
   --accent:#12355b; --accent-ink:#ffffff; --accent-soft:#eaf1f8; --canvas:#ffffff; --dot:#cfdbe8; --card:#ffffff; --card-line:#12355b; --shadow-c:rgba(18,53,91,.2);
   --edge:#12355b; --edge-soft:#3d5a7a; --ix:#b23c0b; --event:#8a5300; --method:#12355b; --key:#b23c0b; --good:#1e6b45; --danger:#a1162b; --note:#b23c0b;
   --sans:'Architects Daughter', cursive; --r-btn:4px; --r-pill:6px; --r-field:4px; --r-card:6px;
 }
-:root[data-skin="blueprint"] .cframe{stroke-width:1.5}
-:root[data-skin="blueprint"] .edge .line,:root[data-skin="blueprint"] .mks,:root[data-skin="blueprint"] .mkh{stroke-width:1.8}
-:root[data-skin="high-contrast"]{
+[data-cskin="blueprint"] .cframe{stroke-width:1.5}
+[data-cskin="blueprint"] .edge .line,[data-cskin="blueprint"] .mks,[data-cskin="blueprint"] .mkh{stroke-width:1.8}
+:root[data-skin="high-contrast"],[data-cskin="high-contrast"]{
   --bg:#ffffff; --panel:#ffffff; --panel-2:#ececec; --ink:#000000; --ink-2:#000000; --muted:#333333; --line:#000000; --line-2:#000000;
   --accent:#0040c0; --accent-ink:#ffffff; --accent-soft:#d6e2ff; --canvas:#ffffff; --dot:#b5b5b5; --card:#ffffff; --card-line:#000000; --shadow-c:rgba(0,0,0,.15);
   --edge:#000000; --edge-soft:#444444; --dim:.3;
@@ -93,7 +93,7 @@
 .soloonly{display:none!important}
 
 .pill button{white-space:nowrap}
-@container (max-width: 1180px){ .toolbar .lbltxt{display:none} }
+@container (max-width: 1560px){ .toolbar .lbltxt{display:none} }   /* icons only with their tips below about 1560 px (a 1440 screen); the card views keep their words */
 body.solo .soloonly{display:inline-flex!important}
 body.solo.insp-off main,body.solo.insp-over main{grid-template-columns:1fr}
 body.solo.chatopen.insp-off main,body.solo.chatopen.insp-over main{grid-template-columns:minmax(300px,360px) 1fr}
@@ -116,6 +116,20 @@ button{cursor:pointer}
 .mname:hover{border-color:var(--line)} .mname:focus{outline:none;border-color:var(--accent);background:var(--card)}
 .rev{color:var(--muted);font-size:12px;white-space:nowrap}
 .spacer{flex:1}
+/* menu bar (as in myDiagramer): File, Edit, View, Model, Help; the toolbar keeps quick access */
+.menubar{display:flex;gap:2px;margin-left:6px}
+.menubar button{border:0;background:none;padding:5px 9px;border-radius:6px;font:inherit;font-size:13px;color:var(--ink);cursor:pointer}
+.menubar button:hover,.menubar button.open{background:var(--panel-2)}
+.top .savest{width:9px;height:9px;min-width:9px;padding:0;border-radius:50%;background:var(--note);font-size:0}
+.top .mname{text-align:right;field-sizing:content;width:auto;min-width:60px;max-width:360px}
+.pill.quick button{padding:6px 7px}
+.tbtn[hidden]{display:none}
+/* Screenshot view: only the model */
+body.shot{grid-template-rows:0 0 1fr}
+body.shot .top,body.shot .toolbar{visibility:hidden;overflow:hidden;height:0;padding:0;border:0}
+body.shot main{grid-template-columns:1fr!important}
+body.shot .insp,body.shot .chat,body.shot .pulltab,body.shot .hintbar,body.shot .mtabs,body.shot #legend,body.shot #helpPop{display:none!important}
+body.shot #svg{top:0;height:100%}
 html.embedded #bNew,html.embedded #bOpen,html.embedded #bSave,html.embedded #saveSt,html.embedded #mClaude,html.embedded #keybox,html.embedded #drop{display:none!important}
 .tbtn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .tbtn{display:inline-flex;align-items:center;gap:6px;border:var(--ctl-border,1px solid var(--line));background:var(--card);border-radius:var(--r-btn,8px);box-shadow:var(--raise,none);padding:5px 10px;font-size:13px;white-space:nowrap}
@@ -201,7 +215,7 @@ main{display:grid;grid-template-columns:minmax(330px,400px) 1fr;min-height:0}
 
 /* ---------- canvas ---------- */
 .stage{position:relative;min-height:0;min-width:0;background:var(--canvas);overflow:hidden}
-#svg{position:absolute;top:32px;left:0;right:0;bottom:0;width:100%;height:calc(100% - 32px);display:block;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+#svg{position:absolute;top:32px;left:0;right:0;bottom:0;width:100%;height:calc(100% - 32px);display:block;background:var(--canvas);touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
 #svg.panning{cursor:grabbing}
 .ctrls{position:absolute;top:12px;right:12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .pill{display:flex;align-items:center;border:var(--ctl-border,1px solid var(--line));background:color-mix(in srgb,var(--panel) 92%,transparent);backdrop-filter:blur(6px);border-radius:var(--r-pill,10px);box-shadow:var(--pill-shadow,0 1px 2px var(--shadow-c))}
@@ -329,7 +343,25 @@ svg.three .cshadow{display:none}
 .hull-lockhit{cursor:pointer}
 .hull.droptarget .hbody{stroke-width:2.6;stroke-dasharray:7 5}
 .hull.sel .hbody{stroke-width:2}
-svg.focus .node:not(.hl),svg.focus .edge:not(.hl),svg.focus .elabel:not(.hl){opacity:var(--dim,.22)}
+/* hovering highlights what is connected but dims nothing */
+.lhd{display:none;fill:var(--accent);stroke:var(--card);stroke-width:2;cursor:crosshair}
+.node:hover .lhd{display:inline}
+svg.panning .lhd,svg.three .lhd{display:none}
+.edge.esel .line{stroke:var(--accent);stroke-width:2.2}
+#gsel .ehd{fill:var(--card);stroke:var(--accent);stroke-width:2;cursor:move}
+#gsel .ebp{fill:var(--accent);stroke:var(--card);stroke-width:1.5;cursor:move}
+#gsel .ebv{fill:var(--card);stroke:var(--accent);stroke-width:1.2;cursor:copy}
+/* notes on the canvas */
+.dnote{cursor:move}
+.dnote .np{fill:#FFF4C2;stroke:#D9B84A;stroke-width:1}
+.dnote .nf{fill:#F2DE8C;stroke:#D9B84A;stroke-width:1}
+.dnote text{font:12px var(--sans);fill:#5C4A00}
+.dnote.on .np{stroke:var(--accent);stroke-width:2}
+svg.three #gnote{display:none}
+.notedit{position:fixed;z-index:60;font:12px var(--sans);color:#5C4A00;background:#FFF4C2;border:2px solid var(--accent);border-radius:2px;padding:8px 10px;resize:none;outline:none}
+#gsel .rbox{fill:color-mix(in srgb,var(--accent) 10%,transparent);stroke:var(--accent);stroke-width:1;stroke-dasharray:4 3;pointer-events:none}
+#gsel .rdraft{fill:none;stroke:var(--accent);stroke-width:1.5;stroke-dasharray:5 4;pointer-events:none}
+.node.droptgt .cframe{stroke:var(--accent);stroke-width:2.5}
 .emptybg{fill:url(#dots)}
 
 svg.three{cursor:grab}
@@ -463,6 +495,7 @@ body:not(.solo).chat-off .chat{display:none}
 .savest.dirty::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--note)}
 .savest:hover{background:var(--panel-2)}
 .modes.three{grid-template-columns:1fr 1fr 1fr}
+.mode[hidden]{display:none}
 .wlabel{font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:650;color:var(--muted);margin:0 0 6px}
 .jempty .btn{margin-top:12px}
 .mode{border:1.5px solid var(--line);background:var(--card);border-radius:14px;padding:14px;text-align:left;display:flex;flex-direction:column;gap:6px;transition:border-color .15s,box-shadow .15s}
@@ -607,31 +640,18 @@ body.jmode .jsub{display:flex}
     <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="1.5" y="2" width="9" height="7" rx="2" fill="none" stroke="var(--accent)" stroke-width="1.6"/><rect x="11.5" y="13" width="9" height="7" rx="2" fill="none" stroke="var(--ink-2)" stroke-width="1.6"/><path d="M6 9v4.5a2 2 0 0 0 2 2h3.5" fill="none" stroke="var(--ink-2)" stroke-width="1.6"/><circle cx="6" cy="5.5" r="1.3" fill="var(--accent)"/></svg>
     <span>Data Model Studio</span>
   </div>
-  <div class="sep-v"></div>
-  <input class="mname" id="mname" value="Untitled" aria-label="File name" title="File name" spellcheck="false">
-  <button class="savest" id="saveSt" hidden></button>
-  <button class="modebadge" id="modeBadge" title="Change mode">Guided</button>
+  <nav class="menubar" id="menubar" aria-label="Menu"><button type="button" data-menu="file">File</button><button type="button" data-menu="edit">Edit</button><button type="button" data-menu="view">View</button><button type="button" data-menu="model">Model</button><button type="button" data-menu="help">Help</button></nav>
+  <button class="modebadge" id="modeBadge" title="Change mode" hidden>Fly solo</button>
   <div class="spacer"></div>
-  <div class="tgroup">
-    <button class="tbtn primary embonly" id="bDone" title="Put this data model into the document" hidden><i data-ph="check1"></i><span class="lbl">Done</span></button>
-    <button class="tbtn embonly" id="bCancel" title="Close without changing the document" hidden><span class="lbl">Cancel</span></button>
-    <button class="tbtn" id="bNew" title="Start a new file"><i data-ph="new"></i><span class="lbl">New</span></button>
-    <button class="tbtn" id="bOpen" title="Open a Data Model Studio file (.dms.json) (Ctrl+O)"><i data-ph="open"></i><span class="lbl">Open</span></button>
-    <button class="tbtn" id="bSave" title="Save this file, every tab, as .dms.json (Ctrl+S). Shift-click to save as a new file"><i data-ph="save"></i><span class="lbl">Save</span></button>
-    <button class="tbtn" id="bSvg" title="Export the visible tab as SVG"><i data-ph="svg"></i><span class="lbl">SVG</span></button>
-    <button class="tbtn" id="bPng" title="Export the visible tab as PNG"><i data-ph="png"></i><span class="lbl">PNG</span></button>
-    <button class="tbtn" id="bDrawio" title="Save or copy the visible tab as draw.io"><i data-ph="drawio"></i><span class="lbl">draw.io</span></button>
-    <div class="sep-v"></div>
-    <button class="tbtn" id="bLegend" title="Legend"><i data-ph="legend"></i><span class="lbl">Legend</span></button>
-    <button class="tbtn icon" id="bHelp" title="Help"><i data-ph="help"></i></button>
-    <button class="tbtn icon" id="bTheme" title="Theme"><i data-ph="theme"></i></button>
-  </div>
+  <button class="savest" id="saveSt" hidden aria-label="Unsaved changes"></button>
+  <input class="mname" id="mname" value="Untitled" aria-label="File name" title="File name" spellcheck="false">
   <input type="file" id="file" accept=".dms.json,.json,application/json" hidden>
 </header>
 <nav class="toolbar" id="toolbar" aria-label="Tools">
-  <div class="pill"><button id="tabEnt" class="on">Entities</button><button id="tabJ">Journeys</button></div>
+  <div class="pill quick"><button id="bNew" title="New model (a new file)" aria-label="New"><i data-ph="new"></i></button><button id="bOpen" title="Open a .dms.json file (Ctrl+O)" aria-label="Open"><i data-ph="open"></i></button><button id="bSave" title="Save (Ctrl+S). Shift-click to save as a new file" aria-label="Save"><i data-ph="save"></i></button><span class="div"></span><button id="bSvg" title="Export the visible tab as SVG" aria-label="Export SVG"><i data-ph="svg"></i></button><button id="bPng" title="Export the visible tab as PNG" aria-label="Export PNG"><i data-ph="png"></i></button><button id="bDrawio" title="Save or copy the visible tab as draw.io" aria-label="Export draw.io"><i data-ph="drawio"></i></button></div>
+  <div class="pill"><button id="tabEnt" class="on" title="Entities: the data model (J switches)"><i data-ph="table"></i><span class="lbltxt">Entities</span></button><button id="tabJ" title="Journeys: who does what, in order (J switches)"><i data-ph="path"></i><span class="lbltxt">Journeys</span></button></div>
   <div class="jsub"><div class="pill"><button data-t="map" class="on">Map</button><button data-t="story">Storyboard</button><button data-t="matrix">Matrix</button></div></div>
-  <div class="pill solotools" id="soloTools"><button id="tAddEnt" title="Add an entity to the canvas"><i data-ph="entity"></i><span class="lbltxt">Entity</span></button><button id="tAddAct" title="Add an actor to the canvas"><i data-ph="actor"></i><span class="lbltxt">Actor</span></button><button id="tAddDom" title="Add a domain area to the canvas"><i data-ph="domain"></i><span class="lbltxt">Domain</span></button><button id="tLink" title="Add a connector: drag each end onto a table or an attribute row"><i data-ph="link"></i><span class="lbltxt">Link</span></button></div>
+  <div class="pill solotools" id="soloTools"><button id="tAddEnt" title="Add an entity to the canvas"><i data-ph="entity"></i><span class="lbltxt">Entity</span></button><button id="tAddAct" title="Add an actor to the canvas"><i data-ph="actor"></i><span class="lbltxt">Actor</span></button><button id="tAddDom" title="Add a domain area to the canvas"><i data-ph="domain"></i><span class="lbltxt">Domain</span></button><button id="tLink" title="Add a connector: drag each end onto a table or an attribute row"><i data-ph="link"></i><span class="lbltxt">Link</span></button><button id="tAddNote" title="Add a note to the canvas: double-click it to write, drag to move, Delete to remove"><i data-ph="note"></i><span class="lbltxt">Note</span></button></div>
   <div class="pill" id="guideTools"><button id="tCheck" class="soloonlyb" title="List gaps against the spec's completeness checks"><i data-ph="check"></i><span class="lbltxt">Check model</span></button><button id="tFind" title="Work out journeys from the model"><i data-ph="journeys"></i><span class="lbltxt">Find journeys</span></button><button id="bPin" class="pinbtn guideonly" title="Follow: the canvas moves to whatever the current question is about. Click to stop following"><i data-ph="pin"></i><span class="lbltxt" id="pinLbl">Follow</span></button></div>
   <div class="spacer"></div>
   <div class="pill">
@@ -643,8 +663,8 @@ body.jmode .jsub{display:flex}
     <button id="bLabels" title="Connector labels (click to cycle): verb, keys (the attribute names each end joins), none"><i data-ph="labels"></i><span class="lbltxt" id="labelsLbl">Verb</span></button>
     <span class="div"></span>
     <button id="bDetails" data-detail="details" title="Details: each entity with its attributes (the logical view)"><i data-ph="details"></i><span>Details</span></button>
-    <button id="bCompact" data-detail="compact" title="Compact: each entity with a count of what it holds"><span>Compact</span></button>
-    <button id="bConceptual" data-detail="conceptual" title="Conceptual: each entity with its description, for business readers"><span>Conceptual</span></button>
+    <button id="bCompact" data-detail="compact" title="Compact: each entity with a count of what it holds"><i data-ph="rows"></i><span>Compact</span></button>
+    <button id="bConceptual" data-detail="conceptual" title="Conceptual: each entity with its description, for business readers"><i data-ph="article"></i><span>Conceptual</span></button>
   </div>
   <div class="pill">
     <button id="bZoomOut" title="Zoom out" aria-label="Zoom out"><i data-ph="zoomOut"></i></button>
@@ -653,6 +673,9 @@ body.jmode .jsub{display:flex}
     <span class="div"></span>
     <button id="bFit" title="Fit to screen (F)"><i data-ph="fit"></i><span class="lbltxt">Fit</span></button>
   </div>
+  <div class="pill"><button id="bShot" title="Screenshot view: only the model, for a clean screenshot (Esc returns)"><i data-ph="camera"></i><span class="lbltxt">Screenshot</span></button><button id="bTheme" title="Themes: the app's, and the model's own" aria-label="Themes"><i data-ph="theme"></i></button><button id="bHelp" title="Help and keyboard shortcuts" aria-label="Help"><i data-ph="help"></i></button></div>
+  <button class="tbtn embonly" id="bCancel" title="Close without changing the document" hidden><span class="lbl">Cancel</span></button>
+  <button class="tbtn primary embonly" id="bDone" title="Put this data model into the document" hidden><i data-ph="check1"></i><span class="lbl">Done</span></button>
 </nav>
 
 <main>
@@ -678,7 +701,7 @@ body.jmode .jsub{display:flex}
       </defs>
       <rect class="emptybg" x="0" y="0" width="100%" height="100%"/>
       <g id="gview">
-        <g id="gfloor"></g><g id="ghull"></g><g id="gedge"></g><g id="gnode"></g><g id="gpath"></g><g id="glabel"></g><g id="gconn"></g>
+        <g id="gfloor"></g><g id="ghull"></g><g id="gedge"></g><g id="gnode"></g><g id="gpath"></g><g id="glabel"></g><g id="gnote"></g><g id="gconn"></g><g id="gsel"></g>
       </g>
     </svg>
     <div class="empty" id="empty"><div><div class="big">Your data model will grow here</div><div>Describe your system on the left, or import a .dms.json file.</div></div></div>
@@ -695,10 +718,10 @@ body.jmode .jsub{display:flex}
   <div class="wcard" role="dialog" aria-modal="true" aria-labelledby="wtitle">
     <h1 id="wtitle">Data Model Studio</h1>
     <p class="sub" id="wsub">Be guided through journeys, with or without Claude, or fly solo and model it yourself.</p>
-    <div class="modes three">
-      <button class="mode on" id="mGuided" type="button"><span class="tagline">Offline</span><b>Guided</b><span>Rule-based questions, no AI. Nothing you type leaves this computer.</span></button>
+    <div class="modes">
+      <button class="mode" id="mGuided" type="button" hidden><span class="tagline">Offline</span><b>Guided</b><span>Rule-based questions, no AI. Nothing you type leaves this computer.</span></button>
       <button class="mode" id="mClaude" type="button"><span class="tagline">Needs internet + API key</span><b>Claude-assisted</b><span>Claude reads your descriptions and the model. The same rules decide what to ask next.</span></button>
-      <button class="mode" id="mSolo" type="button"><span class="tagline">Offline · no guide</span><b>Fly solo</b><span>Model entities, relationships and actions directly on the canvas. Nothing asks you anything.</span></button>
+      <button class="mode on" id="mSolo" type="button"><span class="tagline">Offline · no guide</span><b>Fly solo</b><span>Model entities, relationships and actions directly on the canvas. Nothing asks you anything.</span></button>
     </div>
     <div class="keybox" id="keybox" hidden>
       <div class="keyrow"><input class="inp" id="apikey" type="password" autocomplete="off" spellcheck="false" placeholder="Anthropic API key (sk-ant-...)" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other"><select class="sel" id="apimodel"><option value="claude-sonnet-5-5">Sonnet 5.5</option><option value="claude-opus-5-5">Opus 5.5</option><option value="claude-haiku-5-5">Haiku 5.5</option></select><button class="btn" id="apitest" type="button">Test</button></div>
@@ -936,7 +959,10 @@ function looksLikeAttr(name) {
 
 /* ---------------- model ---------------- */
 const APPROACHES = ['journeys', 'solo'];
-const defaultApproach = () => { try { const v = localStorage.getItem('dms.approach'); if (APPROACHES.includes(v)) return v; } catch (e) { } return 'journeys'; };
+// Guided (the rule-based journeys guide) is set aside for now: a model is modelled on the canvas (Fly solo), or with Claude when
+// it runs on its own with a key. A model saved as journeys opens in Fly solo unless Claude is in use; its journeys are kept.
+const defaultApproach = () => 'solo';
+function noGuided() { if (M && M.meta && M.meta.approach !== 'solo' && (EMBED.on || AI.mode !== 'claude')) M.meta.approach = 'solo'; }
 const solo = () => M.meta.approach === 'solo';
 function emptyModel() {
   return { format: 'data-model-studio', version: 1, meta: { name: 'Untitled model', description: '', approach: defaultApproach(), revision: 0, created: nowIso(), updated: nowIso(), sources: [] }, classes: DEFAULT_CLASSES.map(c => ({ ...c })), domains: [], entities: [], actors: [], journeys: [], relationships: [], methods: [], events: [], rules: [], questions: [], feedback: [], layout: { positions: {} } };
@@ -949,7 +975,8 @@ let M = emptyModel();
 // set when the page runs inside a host (the document editor) that sent dm:init; see the embed section
 const EMBED = { on: false, title: '', base: null, dirtySent: false };
 const session = { candidates: null, orphanAttrs: [], current: null, doneShown: false, proposal: null, focusJourney: null, recent: new Set(), prefer: null };
-const undoStack = [];
+const undoStack = [], redoStack = [], UNDO = { keepRedo: false };
+{ const push = undoStack.push.bind(undoStack); undoStack.push = (...a) => { if (!UNDO.keepRedo) redoStack.length = 0; return push(...a); }; }   // a new change ends what can be redone
 let turn = null;
 
 function beginTurn() { turn = { snap: JSON.stringify(M), changed: new Set(), notes: [], counts: {} }; }
@@ -2868,24 +2895,27 @@ async function send(text) {
 }
 
 /* ---------------- diagram ---------------- */
+const gNote = $('#gnote');
 const svg = $('#svg'), gView = $('#gview'), gHull = $('#ghull'), gEdge = $('#gedge'), gNode = $('#gnode'), gLabel = $('#glabel'), stage = $('#stage');
-const view = { labelMode: (() => { try { return localStorage.getItem('dms.labels') || 'verb'; } catch (e) { return 'verb'; } })(), nodes: new Map(), edges: new Map(), hulls: new Map(), tf: { x: 0, y: 0, k: 1 }, tfTween: null, compact: false, focus: null, first: true,
+const view = { multi: new Set(), labelMode: (() => { try { return localStorage.getItem('dms.labels') || 'verb'; } catch (e) { return 'verb'; } })(), nodes: new Map(), edges: new Map(), hulls: new Map(), tf: { x: 0, y: 0, k: 1 }, tfTween: null, compact: false, focus: null, first: true,
   mode3d: false, lift: 0, cam: null, camTween: null, zsig: '', saved3d: null };
 const mctx = document.createElement('canvas').getContext('2d');
-let SANS = getComputedStyle(document.documentElement).getPropertyValue('--sans') || 'sans-serif';
+// the content (the diagram and its picture) has its own theme on #svg (data-cskin); the app theme is on the page (data-skin)
+const CEL = () => document.getElementById('svg') || document.documentElement;
+let SANS = getComputedStyle(CEL()).getPropertyValue('--sans') || 'sans-serif';
 // the theme can change the font, so widths are measured with the current one; a web font is measured again once it has loaded
 function refreshFonts(rerender) {
-  SANS = getComputedStyle(document.documentElement).getPropertyValue('--sans').trim() || 'sans-serif';
+  SANS = getComputedStyle(CEL()).getPropertyValue('--sans').trim() || 'sans-serif';
   if (/Architects Daughter/.test(SANS) && document.fonts && !document.fonts.check("12px 'Architects Daughter'")) document.fonts.load("12px 'Architects Daughter'").then(() => { if (rerender !== false) { render(); buildLegend(); } });
 }
-const MONO = getComputedStyle(document.documentElement).getPropertyValue('--mono') || 'monospace';
+const MONO = getComputedStyle(CEL()).getPropertyValue('--mono') || 'monospace';
 function tw(text, size = 12, weight = 400, mono = false) { mctx.font = `${weight} ${size}px ${mono ? MONO : SANS}`; return mctx.measureText(String(text)).width; }
 function fit(text, maxW, size = 12, weight = 400, mono = false) {
   text = String(text); if (tw(text, size, weight, mono) <= maxW) return text;
   let lo = 0, hi = text.length; while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (tw(text.slice(0, mid) + '…', size, weight, mono) <= maxW) lo = mid; else hi = mid - 1; }
   return text.slice(0, lo) + '…';
 }
-const isDark = () => { const t = document.documentElement.dataset.theme; return t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches); };
+const isDark = () => ['dark', 'midnight'].includes(CEL().dataset.cskin);   // the content's theme decides
 function hexHue(hex) {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex || ''); if (!m) return null;
   const n = parseInt(m[1], 16); const r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
@@ -2894,7 +2924,7 @@ function hexHue(hex) {
 }
 function domainColors(domId) {
   const i = M.domains.findIndex(d => d.id === domId);
-  if (document.documentElement.dataset.skin === 'blueprint' && !(i >= 0 && isHex(M.domains[i].color))) return { head: '#eaf1f8', headText: '#12355b', headLine: '#12355b', fill: 'rgba(234,241,248,.55)', stroke: 'rgba(18,53,91,.45)', label: '#12355b' };
+  if (CEL().dataset.cskin === 'blueprint' && !(i >= 0 && isHex(M.domains[i].color))) return { head: '#eaf1f8', headText: '#12355b', headLine: '#12355b', fill: 'rgba(234,241,248,.55)', stroke: 'rgba(18,53,91,.45)', label: '#12355b' };
   if (i < 0) return { head: 'var(--panel-2)', headText: 'var(--ink)', headLine: 'var(--line)', fill: 'none', stroke: 'var(--line)', label: 'var(--muted)' };
   const d = M.domains[i]; const hue = hexHue(d.color) ?? HUES[i % HUES.length];
   return isDark()
@@ -2911,7 +2941,7 @@ const solidHeads = () => styleOf().header === 'solid';
 const keyCols = () => styleOf().keys === 'column';
 const classOf = e => e && e.class ? (M.classes || []).find(c => c.id === e.class) || null : null;
 function entityHex(e) { if (isHex(e.color)) return e.color; const c = classOf(e); return c && isHex(c.color) ? c.color : null; }
-function cardHex(light) { if (!light) { const v = getComputedStyle(document.documentElement).getPropertyValue('--card').trim(); if (isHex(v)) return v; } return light || !isDark() ? '#ffffff' : '#1c2027'; }
+function cardHex(light) { if (!light) { const v = getComputedStyle(CEL()).getPropertyValue('--card').trim(); if (isHex(v)) return v; } return light || !isDark() ? '#ffffff' : '#1c2027'; }
 // a table's header colours: its own colour, else its class, else its domain; light tint or solid by the model's header style
 function entityColors(e, light) {
   let hex = entityHex(e);
@@ -3076,6 +3106,7 @@ function drawEntity(n) {
     y += rh;
   }
   g.append(s('rect', { class: 'cframe' + (e.status === 'proposed' ? ' proposed' : '') + (dc.frame ? ' solidf' : ''), x: x0, y: y0, width: w, height: hh, rx: 10, style: dc.frame ? `stroke:${dc.frame}` : null }));
+  if (solo() && !view.forExport) for (const [hx, hy] of [[0, y0], [x0 + w, 0], [0, y0 + hh], [x0, 0]]) g.append(s('circle', { class: 'lhd', cx: hx, cy: hy, r: 5.5 }));   // drag from one to another entity to link them
   n.fogEl = s('rect', { class: 'fogr', x: x0, y: y0, width: w, height: hh, rx: 10 }); g.append(n.fogEl);
 }
 function drawActor(n) {
@@ -3162,7 +3193,7 @@ function resolveOverlaps(fresh) {
   }
 }
 function render(changed = new Set()) {
-  updateApproachUI(); updateDetailUI();
+  noGuided(); syncContentSkin(); renderNotes(); updateApproachUI(); updateDetailUI();
   const want = new Map();
   for (const e of M.entities) want.set(e.id, { type: 'entity', obj: e });
   if (solo()) for (const a of M.actors) want.set(a.id, { type: 'actor', obj: a });
@@ -3326,7 +3357,14 @@ function updateEdge(E) {
   const a = G(A), b = G(B), sc = three ? (a.s + b.s) / 2 : 1;
   let p1, p2, c = null, mid, u1, u2, path, keyed = false;
   const ya = E.keys && E.keys.length ? rowY(A, E.keys[0].from) : null, yb = E.keys && E.keys.length ? rowY(B, E.keys[0].to) : null;
-  if (ya != null && yb != null) {
+  // bend points the person placed (layout.routes): straight segments through them, ends on the side facing the first and last point
+  const RT = !three && E.rel && E.kind !== 'interaction' && E.kind !== 'represents' && M.layout.routes ? M.layout.routes[E.id] : null, rp = RT && RT.pts && RT.pts.length ? RT.pts : null;
+  const un = v => { const L = Math.hypot(v.x, v.y) || 1; return { x: v.x / L, y: v.y / L }; };
+  if (rp) {
+    const f0 = rp[0], fl = rp[rp.length - 1];
+    if (ya != null && yb != null) { const s1 = f0.x >= a.x ? 1 : -1, s2 = fl.x >= b.x ? 1 : -1; p1 = { x: a.x + s1 * a.w / 2, y: a.y + ya }; p2 = { x: b.x + s2 * b.w / 2, y: b.y + yb }; u1 = { x: s1, y: 0 }; u2 = { x: s2, y: 0 }; }
+    else { p1 = clipRect(a, f0.x, f0.y); p2 = clipRect(b, fl.x, fl.y); u1 = un({ x: f0.x - p1.x, y: f0.y - p1.y }); u2 = un({ x: fl.x - p2.x, y: fl.y - p2.y }); }
+  } else if (ya != null && yb != null) {
     keyed = true;
     const sa = a.s || 1, sb = b.s || 1;
     let side1, side2;
@@ -3357,7 +3395,11 @@ function updateEdge(E) {
   else if (E.kind === 'inheritance') s2 = 'tri';
   else { s1 = E.kind === 'composition' ? 'dia-s' : E.kind === 'aggregation' ? 'dia-h' : E.rel.fromCardinality; s2 = E.rel.toCardinality; }
   const m1 = endMarker(p1, u1, s1, sc), m2 = endMarker(p2, u2, s2, sc);
-  if (keyed) {
+  if (rp) {
+    const q1 = m1.cut ? { x: p1.x + u1.x * m1.cut, y: p1.y + u1.y * m1.cut } : p1, q2 = m2.cut ? { x: p2.x + u2.x * m2.cut, y: p2.y + u2.y * m2.cut } : p2;
+    path = `M${f1(q1.x)} ${f1(q1.y)}` + rp.map(q => `L${f1(q.x)} ${f1(q.y)}`).join('') + `L${f1(q2.x)} ${f1(q2.y)}`;
+    const all = [p1, ...rp, p2], k = Math.floor((all.length - 1) / 2); mid = { x: (all[k].x + all[k + 1].x) / 2, y: (all[k].y + all[k + 1].y) / 2 };
+  } else if (keyed) {
     const q1 = m1.cut ? { x: p1.x + u1.x * m1.cut, y: p1.y } : p1, q2 = m2.cut ? { x: p2.x + u2.x * m2.cut, y: p2.y } : p2;
     const kk = Math.max(40 * sc, Math.abs(q2.x - q1.x) / 2, A === B ? 60 * sc : 0);
     const c1 = { x: q1.x + u1.x * kk, y: q1.y }, c2 = { x: q2.x + u2.x * kk, y: q2.y };
@@ -3369,6 +3411,8 @@ function updateEdge(E) {
     mid = c ? { x: (p1.x + 2 * c.x + p2.x) / 4, y: (p1.y + 2 * c.y + p2.y) / 4 } : { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
   }
   d.line.setAttribute('d', path); d.hit.setAttribute('d', path);
+  E.geo = { p1, p2, pts: rp ? rp.map(q => ({ ...q })) : [], mid };
+  if (E.id === selEdgeId()) renderEdgeHandles(E);
   d.mks.setAttribute('d', (m1.st || '') + (m2.st || '')); d.mkh.setAttribute('d', (m1.hol || '') + (m2.hol || '')); d.mkf.setAttribute('d', (m1.sol || '') + (m2.sol || ''));
   const sw = three ? (1.4 * sc).toFixed(2) : '', op = three ? E.fog.toFixed(3) : '';
   for (const el of [d.line, d.mks, d.mkh, d.mkf]) { el.style.strokeWidth = sw; el.style.opacity = op; }
@@ -3386,6 +3430,184 @@ function updateEdge(E) {
   const showLbl = !three || d.g.classList.contains('hl') || sc >= view.cam.k * .97;
   d.lg.style.display = showLbl ? '' : 'none';
   if (showLbl) { d.lg.setAttribute('transform', `translate(${f1(mid.x)},${f1(mid.y)}) scale(${sc.toFixed(3)})`); d.lg.style.opacity = three ? E.fog.toFixed(3) : ''; }
+}
+/* --- notes: sticky notes on the canvas, kept in the model's layout (layout.notes) and drawn in its picture --- */
+const noteById = id => (M.layout.notes || []).find(n => n.id === id);
+function noteSize(nt) { const w = nt.w || 200, lines = String(nt.text || ' ').split(/\n/).flatMap(par => par.trim() ? wrapText(par, w - 20, 12, 40) : ['']).slice(0, 40); return { w, h: Math.max(44, 14 + lines.length * 16 + 10), lines }; }
+function renderNotes() {
+  if (!gNote) return; gNote.textContent = ''; if (view.mode3d) return;
+  for (const nt of M.layout.notes || []) {
+    const { w, h, lines } = noteSize(nt), f = 14;
+    const g = s('g', { class: 'dnote' + (view.selNote === nt.id && !view.forExport ? ' on' : ''), 'data-id': nt.id, transform: `translate(${nt.x},${nt.y})` });
+    g.append(s('path', { class: 'np', d: `M0 0H${w - f}L${w} ${f}V${h}H0Z` }), s('path', { class: 'nf', d: `M${w - f} 0V${f}H${w}Z` }));
+    lines.forEach((l, i) => g.append(s('text', { x: 10, y: 22 + i * 16 }, l)));
+    gNote.append(g);
+  }
+}
+function addNote(x, y) {
+  undoStack.push(JSON.stringify(M));
+  if (!M.layout.notes) M.layout.notes = [];
+  const id = 'note_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  M.layout.notes.push({ id, text: 'Note', x: Math.round(x), y: Math.round(y), w: 200 });
+  selectItem(null); view.selNote = id; render(); save(); setTimeout(() => editNote(id), 30);
+}
+function deleteNote(id) { undoStack.push(JSON.stringify(M)); M.layout.notes = (M.layout.notes || []).filter(n => n.id !== id); if (!M.layout.notes.length) delete M.layout.notes; view.selNote = null; render(); save(); }
+function editNote(id) {
+  const nt = noteById(id), el = gNote.querySelector(`[data-id="${id}"]`); if (!nt || !el) return;
+  const r = el.getBoundingClientRect(), ta = h('textarea', { class: 'notedit' }); ta.value = nt.text || '';
+  Object.assign(ta.style, { left: r.left + 'px', top: r.top + 'px', width: Math.max(160, r.width) + 'px', height: Math.max(80, r.height + 30) + 'px', fontSize: (12 * view.tf.k).toFixed(1) + 'px' });
+  document.body.append(ta); ta.focus(); ta.select();
+  let done = false;
+  const fin = keep => { if (done) return; done = true; const v = ta.value.trim(); ta.remove(); if (keep && v !== (nt.text || '')) { undoStack.push(JSON.stringify(M)); nt.text = v || 'Note'; render(); save(); } };
+  ta.addEventListener('blur', () => fin(true));
+  ta.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Escape') { e.preventDefault(); fin(false); } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); fin(true); } });
+}
+
+/* --- selecting several, moving, aligning, copying and pasting --- */
+const GRID = 10;
+function setMulti(ids) {
+  ids = [...new Set(ids)].filter(id => view.nodes.has(id));
+  if (ids.length === 1) { const id = ids[0]; selectItem({ type: entityOf(id) ? 'entity' : 'actor', id }); return; }
+  view.multi = new Set(ids); insp.sel = null; insp.check = false; closePopover(); if (view.selNote) { view.selNote = null; renderNotes(); }
+  setFocus(ids.length ? ids : null); renderEdgeHandles(); renderInspector();
+}
+const selectedNodes = () => { const ids = view.multi && view.multi.size ? [...view.multi] : insp.sel && (insp.sel.type === 'entity' || insp.sel.type === 'actor') ? [insp.sel.id] : []; return ids.map(id => view.nodes.get(id)).filter(Boolean); };
+function drawBox(d) {
+  const g = $('#gsel'); let r = g.querySelector('.rbox'); if (!r) { r = s('rect', { class: 'rbox' }); g.append(r); }
+  r.setAttribute('x', f1(Math.min(d.x0, d.x1))); r.setAttribute('y', f1(Math.min(d.y0, d.y1))); r.setAttribute('width', f1(Math.abs(d.x1 - d.x0))); r.setAttribute('height', f1(Math.abs(d.y1 - d.y0)));
+}
+function moveNodes(fn) {
+  const ns = selectedNodes(); if (!ns.length) return;
+  undoStack.push(JSON.stringify(M));
+  for (const n of ns) { const p = fn(n); n.tween = null; n.tx = n.cx = p.x; n.ty = n.cy = p.y; n.pinned = true; }
+  kick(); syncLayout(); save(); updateHulls();
+}
+const nudge = (dx, dy) => moveNodes(n => ({ x: n.tx + dx, y: n.ty + dy }));
+function alignSelected(how) {
+  const ns = selectedNodes(); if (ns.length < 2) return;
+  const L = Math.min(...ns.map(n => n.tx - n.w / 2)), R = Math.max(...ns.map(n => n.tx + n.w / 2)), T = Math.min(...ns.map(n => n.ty - n.h / 2)), B = Math.max(...ns.map(n => n.ty + n.h / 2));
+  moveNodes(n => ({ x: how === 'left' ? L + n.w / 2 : how === 'right' ? R - n.w / 2 : how === 'centre' ? (L + R) / 2 : n.tx, y: how === 'top' ? T + n.h / 2 : how === 'bottom' ? B - n.h / 2 : how === 'middle' ? (T + B) / 2 : n.ty }));
+}
+function distributeSelected(axis) {
+  const ns = selectedNodes().slice().sort((a, b) => axis === 'h' ? a.tx - b.tx : a.ty - b.ty); if (ns.length < 3) return toast('Select three or more to distribute');
+  const k = axis === 'h' ? 'w' : 'h', c = axis === 'h' ? 'tx' : 'ty', first = ns[0], last = ns[ns.length - 1];
+  const span = (last[c] + last[k] / 2) - (first[c] - first[k] / 2), total = ns.reduce((a, n) => a + n[k], 0), gap = (span - total) / (ns.length - 1);
+  let at = first[c] - first[k] / 2; const to = new Map(); for (const n of ns) { to.set(n, at + n[k] / 2); at += n[k] + gap; }
+  moveNodes(n => axis === 'h' ? { x: to.get(n), y: n.ty } : { x: n.tx, y: to.get(n) });
+}
+function removeSelected() {
+  const ids = [...view.multi]; if (!ids.length) return;
+  soloEdit(null, () => { for (const id of ids) { const x = byId(id); if (x) removeTarget({ type: entityOf(id) ? 'entity' : 'actor', id }); } });
+  setMulti([]); toast(`Deleted ${ids.length}`);
+}
+// what is copied: the entities with their attributes, the relationships among them, their places and bend points
+function clipOf(ids) {
+  const set = new Set(ids.filter(id => entityOf(id))); if (!set.size) return null;
+  const rels = M.relationships.filter(r => set.has(r.from) && set.has(r.to)), routes = {};
+  for (const r of rels) if (M.layout.routes && M.layout.routes[r.id]) routes[r.id] = M.layout.routes[r.id];
+  const pos = {}; for (const id of set) { const n = view.nodes.get(id); if (n) pos[id] = { x: Math.round(n.tx), y: Math.round(n.ty) }; }
+  return JSON.parse(JSON.stringify({ format: 'dms-clip', version: 1, entities: M.entities.filter(e => set.has(e.id)), relationships: rels, positions: pos, routes }));
+}
+let DMS_CLIP = null;
+function pasteClip(c, off = 40) {
+  if (!c || c.format !== 'dms-clip' || !Array.isArray(c.entities) || !c.entities.length) return false;
+  const map = {}, made = [];
+  soloEdit(null, () => {
+    for (const e of c.entities) { const name = findEntity(e.name) ? nextName(e.name + ' Copy', n => !!findEntity(n)) : e.name; const id = uniqueId(name); map[e.id] = id; M.entities.push({ id, name, kind: 'entity', attributes: [] }); }
+    for (const r of c.relationships || []) map[r.id] = uniqueId('rel ' + r.id);
+    // every id in the copy is swapped for its new one, so keys and references inside it point at the copies
+    const swap = v => JSON.parse(JSON.stringify(v).replace(/"((?:\\.|[^"\\])*)"/g, (m, k) => Object.hasOwn(map, k) ? JSON.stringify(map[k]) : m));
+    for (const e of c.entities) { const ne = swap(e), slot = M.entities.find(x => x.id === map[e.id]); Object.assign(slot, ne, { id: map[e.id], name: slot.name }); if (slot.domain && !M.domains.some(d => d.id === slot.domain)) slot.domain = null; made.push(slot.id); touch(slot.id, `pasted **${slot.name}**`, 'entities'); }
+    for (const r of c.relationships || []) { const nr = swap(r); nr.id = map[r.id]; M.relationships.push(nr); }
+    for (const id in c.positions || {}) if (map[id]) M.layout.positions[map[id]] = { x: c.positions[id].x + off, y: c.positions[id].y + off, pinned: true };
+    for (const id in c.routes || {}) if (map[id]) { if (!M.layout.routes) M.layout.routes = {}; M.layout.routes[map[id]] = { pts: (c.routes[id].pts || []).map(q => ({ x: q.x + off, y: q.y + off })) }; }
+  });
+  setTimeout(() => setMulti(made), 60); toast(`Pasted ${made.length}`); return true;
+}
+function copySelected(cut) {
+  const c = clipOf(selectedNodes().map(n => n.id)); if (!c) return null;
+  DMS_CLIP = c; const txt = JSON.stringify(c);
+  try { navigator.clipboard && navigator.clipboard.writeText(txt).catch(() => { }); } catch (e) { }
+  if (cut) { const ids = c.entities.map(e => e.id); view.multi = new Set(ids); removeSelected(); } else toast(`Copied ${c.entities.length}`);
+  return txt;
+}
+function duplicateSelected() { const c = clipOf(selectedNodes().map(n => n.id)); if (c) pasteClip(c, 30); }
+function renderMultiPanel(root) {
+  const ns = selectedNodes(), b = (t, fn, tip) => h('button', { class: 'btn ghost small', type: 'button', title: tip || t, onclick: fn }, t);
+  root.append(isec(ns.length + ' selected',
+    h('div', { class: 'btnrow' }, b('Align left', () => alignSelected('left')), b('Centre', () => alignSelected('centre'), 'Align centres'), b('Align right', () => alignSelected('right'))),
+    h('div', { class: 'btnrow' }, b('Align top', () => alignSelected('top')), b('Middle', () => alignSelected('middle'), 'Align middles'), b('Align bottom', () => alignSelected('bottom'))),
+    h('div', { class: 'btnrow' }, b('Distribute across', () => distributeSelected('h'), 'Even gaps, left to right'), b('Distribute down', () => distributeSelected('v'), 'Even gaps, top to bottom'))),
+    isec(null, h('div', { class: 'btnrow' }, b('Copy', () => copySelected(false), 'Copy (Ctrl+C)'), b('Duplicate', duplicateSelected, 'Duplicate (Ctrl+D)'), b('Delete', removeSelected, 'Delete (Del)'))));
+}
+function contextMenuAt(e) {
+  if (!solo() || view.mode3d) return;
+  const hit = document.elementFromPoint(e.clientX, e.clientY), nodeEl = hit && hit.closest && hit.closest('.node'), edgeEl = hit && hit.closest && hit.closest('.edge');
+  const a = h('div', { style: `position:fixed;left:${e.clientX}px;top:${e.clientY - 6}px;width:1px;height:1px` }); document.body.append(a);
+  let items;
+  const noteEl = hit && hit.closest && hit.closest('.dnote');
+  if (noteEl) { const id = noteEl.dataset.id; selectItem(null); view.selNote = id; renderNotes(); items = [{ label: 'Edit note', fn: () => editNote(id) }, { label: 'Delete note', sub: 'Del', fn: () => deleteNote(id) }]; }
+  else if (nodeEl) {
+    const id = nodeEl.dataset.id; if (!view.multi.has(id)) setMulti([id]);
+    const many = view.multi.size > 1;
+    items = [{ label: 'Copy', sub: 'Ctrl+C', fn: () => copySelected(false) }, { label: 'Cut', sub: 'Ctrl+X', fn: () => copySelected(true) }, { label: 'Duplicate', sub: 'Ctrl+D', fn: duplicateSelected },
+      { label: 'Delete', sub: 'Del', fn: () => many ? removeSelected() : soloRemove(insp.sel) }];
+    if (many) items.push('-', { label: 'Align left', fn: () => alignSelected('left') }, { label: 'Align centres', fn: () => alignSelected('centre') }, { label: 'Align right', fn: () => alignSelected('right') }, { label: 'Align top', fn: () => alignSelected('top') }, { label: 'Align middles', fn: () => alignSelected('middle') }, { label: 'Align bottom', fn: () => alignSelected('bottom') }, { label: 'Distribute across', fn: () => distributeSelected('h') }, { label: 'Distribute down', fn: () => distributeSelected('v') });
+  } else if (edgeEl && byId(edgeEl.dataset.id) && M.relationships.some(r => r.id === edgeEl.dataset.id)) {
+    const id = edgeEl.dataset.id; selectItem({ type: 'relationship', id });
+    items = [{ label: 'Delete relationship', sub: 'Del', fn: () => soloRemove({ type: 'relationship', id }) }];
+    if (routeOf(id)) items.push({ label: 'Remove bends', fn: () => { undoStack.push(JSON.stringify(M)); delete M.layout.routes[id]; render(); save(); } });
+  } else {
+    const r = svg.getBoundingClientRect(), wx = (e.clientX - r.left - view.tf.x) / view.tf.k, wy = (e.clientY - r.top - view.tf.y) / view.tf.k;
+    items = [{ label: 'Paste', sub: 'Ctrl+V', fn: () => { if (!pasteClip(DMS_CLIP)) toast('Nothing copied yet'); } }, { label: 'Select all', sub: 'Ctrl+A', fn: () => setMulti(liveNodes().map(n => n.id)) }, '-', { label: 'Add note here', fn: () => addNote(wx, wy) }, { label: 'Add entity here', fn: () => { soloAddEntity(); setTimeout(() => { const n = view.nodes.get(insp.sel && insp.sel.id); if (n) { n.tx = n.cx = wx; n.ty = n.cy = wy; n.pinned = true; kick(); syncLayout(); save(); } }, 50); } }];
+  }
+  openMenu(a, items); a.remove();
+  if (openMenuEl) { openMenuEl.style.left = Math.min(window.innerWidth - openMenuEl.offsetWidth - 8, e.clientX) + 'px'; }
+}
+document.addEventListener('copy', e => { if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) || !solo() || getSelection().toString()) return; const t = copySelected(false); if (t) { e.preventDefault(); e.clipboardData.setData('text/plain', t); } });
+document.addEventListener('cut', e => { if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) || !solo() || getSelection().toString()) return; const t = copySelected(true); if (t) { e.preventDefault(); e.clipboardData.setData('text/plain', t); } });
+document.addEventListener('paste', e => {
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) || !solo() || jv.which !== 'entities') return;
+  let c = null; try { c = JSON.parse(e.clipboardData.getData('text/plain')); } catch (x) { }
+  if (c && c.format === 'dms-clip') { e.preventDefault(); pasteClip(c); }
+});
+
+/* --- a selected relationship: handles for its ends and bend points --- */
+const selEdgeId = () => (solo() && insp.sel && insp.sel.type === 'relationship' && view.edges.has(insp.sel.id)) ? insp.sel.id : null;
+function routeOf(id, make) { if (!M.layout.routes) { if (!make) return null; M.layout.routes = {}; } if (!M.layout.routes[id] && make) M.layout.routes[id] = { pts: [] }; return M.layout.routes[id] || null; }
+function renderEdgeHandles(E) {
+  const g = $('#gsel'); if (!g) return; g.textContent = '';
+  const id = selEdgeId(); for (const X of view.edges.values()) X.dom.g.classList.toggle('esel', X.id === id);
+  if (!id || view.mode3d) return; E = E || view.edges.get(id); if (!E || !E.geo) return;
+  const { p1, p2, pts, mid } = E.geo, all = [p1, ...pts, p2];
+  if (pts.length) for (let i = 0; i + 1 < all.length; i++) g.append(s('circle', { class: 'ebv', 'data-rh': 'virt', 'data-i': i, cx: f1((all[i].x + all[i + 1].x) / 2), cy: f1((all[i].y + all[i + 1].y) / 2), r: 4 }));
+  else if (mid) g.append(s('circle', { class: 'ebv', 'data-rh': 'virt', 'data-i': 0, cx: f1(mid.x), cy: f1(mid.y), r: 4 }));
+  pts.forEach((q, i) => g.append(s('circle', { class: 'ebp', 'data-rh': 'bend', 'data-i': i, cx: q.x, cy: q.y, r: 5 })));
+  g.append(s('circle', { class: 'ehd', 'data-rh': 'end', 'data-end': 'a', cx: f1(p1.x), cy: f1(p1.y), r: 6 }), s('circle', { class: 'ehd', 'data-rh': 'end', 'data-end': 'b', cx: f1(p2.x), cy: f1(p2.y), r: 6 }));
+  if (drag && drag.type === 'rhandle' && drag.kind === 'end' && drag.tx != null) { const o = drag.end === 'a' ? p2 : p1; g.append(s('path', { class: 'rdraft', d: `M${f1(o.x)} ${f1(o.y)}L${drag.tx} ${drag.ty}` })); }
+}
+function routeDrag(d, x, y, e) {
+  const E = view.edges.get(d.id); if (!E) return;
+  if (d.kind === 'end') {
+    d.tx = x; d.ty = y;
+    const hit = document.elementFromPoint(e.clientX, e.clientY), tn = hit && hit.closest && hit.closest('.node');
+    for (const n of view.nodes.values()) n.el.classList.toggle('droptgt', !!tn && n.id === tn.dataset.id && !!entityOf(n.id));
+    renderEdgeHandles(E); return;
+  }
+  if (!d.pushed) { undoStack.push(d.snap); d.pushed = true; }
+  const R = routeOf(d.id, true);
+  if (d.kind === 'virt') { R.pts.splice(d.i, 0, { x, y }); d.kind = 'bend'; } else R.pts[d.i] = { x, y };
+  updateEdge(E);
+}
+function routeDrop(d, e) {
+  for (const n of view.nodes.values()) n.el.classList.remove('droptgt');
+  if (!d.moved) return;
+  if (d.kind === 'end') {
+    const hit = document.elementFromPoint(e.clientX, e.clientY), tn = hit && hit.closest && hit.closest('.node'), rel = byId(d.id), nid = tn && tn.dataset.id;
+    if (rel && nid && entityOf(nid) && (d.end === 'a' ? rel.from : rel.to) !== nid) soloEdit(null, () => { if (d.end === 'a') rel.from = nid; else rel.to = nid; delete rel.keys; });   // its keys were the old entity's attributes
+    render(); return;
+  }
+  render(); save();
 }
 function rowY(n, attrName) {
   if (!n || !n.spec || !attrName) return null;
@@ -3709,9 +3931,11 @@ function applyTf() {
 }
 function contentBounds(useTarget = true) {
   const ns = liveNodes(); const doms = view.mode3d ? [] : M.domains.map(d => domPos(d.id) && hullRect(d.id)).filter(Boolean);
-  if (!ns.length && !doms.length) return null;
+  const nts = view.mode3d ? [] : (M.layout.notes || []);
+  if (!ns.length && !doms.length && !nts.length) return null;
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const n of ns) { const b = boxOf(n, useTarget); x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y); x1 = Math.max(x1, b.x + b.w); y1 = Math.max(y1, b.y + b.h); }
+  for (const nt of nts) { const z = noteSize(nt); x0 = Math.min(x0, nt.x + 30); y0 = Math.min(y0, nt.y + 46); x1 = Math.max(x1, nt.x + z.w - 30); y1 = Math.max(y1, nt.y + z.h - 30); }
   for (const r of doms) { x0 = Math.min(x0, r.x0 + 30); y0 = Math.min(y0, r.y0 + 46); x1 = Math.max(x1, r.x1 - 30); y1 = Math.max(y1, r.y1 - 30); }
   return { x0: x0 - 30, y0: y0 - 46, x1: x1 + 30, y1: y1 + 30 };
 }
@@ -3760,12 +3984,18 @@ function setFocus(ids) { view.focus = ids; for (const n of view.nodes.values()) 
 let drag = null;
 svg.addEventListener('contextmenu', e => e.preventDefault());
 svg.addEventListener('pointerdown', e => {
-  if (!view.mode3d && (e.button === 1 || e.button === 2)) { e.preventDefault(); drag = { sx: e.clientX, sy: e.clientY, moved: false, type: 'pan', ox: view.tf.x, oy: view.tf.y }; view.tfTween = null; svg.setPointerCapture(e.pointerId); return; }
+  if (!view.mode3d && (e.button === 1 || e.button === 2)) { e.preventDefault(); drag = { sx: e.clientX, sy: e.clientY, moved: false, type: 'pan', button: e.button, ox: view.tf.x, oy: view.tf.y }; view.tfTween = null; svg.setPointerCapture(e.pointerId); return; }
   if (e.button !== 0 && !(view.mode3d && e.button === 2)) return;
   const nodeEl = e.target.closest('.node'), hullEl = !view.mode3d ? e.target.closest('.hull-label,.hbody') : e.target.closest('.hull-label'), edgeEl = e.target.closest('.edge,.elabel');
-  const base = { sx: e.clientX, sy: e.clientY, moved: false };
+  const base = { sx: e.clientX, sy: e.clientY, moved: false, shift: e.shiftKey, ctrl: e.ctrlKey || e.metaKey, button: e.button };
   if (view.mode3d) view.camTween && view.camTween.to.lift === 1 && (view.camTween = null, view.lift = 1);
   closeInline(true);
+  const rh = !view.mode3d && e.button === 0 ? e.target.closest('#gsel [data-rh]') : null;
+  if (rh && selEdgeId()) { drag = { ...base, type: 'rhandle', id: selEdgeId(), kind: rh.dataset.rh, i: +(rh.dataset.i || 0), end: rh.dataset.end, snap: JSON.stringify(M) }; svg.setPointerCapture(e.pointerId); return; }
+  const noteEl = solo() && !view.mode3d && e.button === 0 ? e.target.closest('.dnote') : null;
+  if (noteEl && noteById(noteEl.dataset.id)) { const nt = noteById(noteEl.dataset.id); drag = { ...base, type: 'note', id: nt.id, ox: nt.x, oy: nt.y, snap: JSON.stringify(M) }; svg.setPointerCapture(e.pointerId); return; }
+  const lhd = solo() && !view.mode3d && nodeEl && e.button === 0 ? e.target.closest('.lhd') : null;
+  if (lhd) { drag = { ...base, type: 'link', id: nodeEl.dataset.id, attr: null }; svg.setPointerCapture(e.pointerId); return; }
   const cEnd = view.conn && e.button === 0 ? e.target.closest('.cend') : null, cHit = view.conn && e.button === 0 ? e.target.closest('.chit') : null;
   if (cEnd) { drag = { ...base, type: 'cend', end: cEnd.dataset.end }; svg.setPointerCapture(e.pointerId); return; }
   if (cHit) { drag = { ...base, type: 'cmove', a0: connEndPos(view.conn.a), b0: connEndPos(view.conn.b) }; svg.setPointerCapture(e.pointerId); return; }
@@ -3777,10 +4007,11 @@ svg.addEventListener('pointerdown', e => {
   if (actEl) { drag = { ...base, type: 'act', id: nodeEl.dataset.id, act: actEl.dataset.act }; svg.setPointerCapture(e.pointerId); return; }
   const rowDrag = solo() && !view.mode3d && nodeEl && e.target.closest('[data-row^="a:"]');
   if (nodeEl && e.button === 0 && solo() && !view.mode3d && (e.shiftKey || view.linkMode || rowDrag)) { const n = view.nodes.get(nodeEl.dataset.id); if (!n) return; const ar = e.target.closest('[data-row^="a:"]'); drag = { ...base, type: 'link', id: n.id, attr: ar ? +ar.dataset.row.slice(2) : null }; }
-  else if (nodeEl && e.button === 0) { const n = view.nodes.get(nodeEl.dataset.id); if (!n) return; drag = { ...base, type: 'node', id: n.id, ox: n.tx, oy: n.ty, oz: n.tz, ps: n.ps }; }
+  else if (nodeEl && e.button === 0) { const n = view.nodes.get(nodeEl.dataset.id); if (!n) return; drag = { ...base, type: 'node', id: n.id, ox: n.tx, oy: n.ty, oz: n.tz, ps: n.ps, others: !view.mode3d && view.multi && view.multi.size > 1 && view.multi.has(n.id) ? [...view.multi].filter(id => id !== n.id).map(id => view.nodes.get(id)).filter(Boolean).map(m => ({ m, ox: m.tx, oy: m.ty })) : [] }; }
   else if (hullEl && e.button === 0) { const id = hullEl.dataset.id || hullEl.closest('.hull').dataset.id; drag = { ...base, type: 'hull', id, p0: domPos(id) ? { ...domPos(id) } : null, mem: liveNodes().filter(n => n.type === 'entity' && n.obj.domain === id).map(n => ({ n, ox: n.tx, oy: n.ty, oz: n.tz })), ps: view.mode3d ? view.cam.k : 1 }; }
   else if (edgeEl && e.button === 0) drag = { ...base, type: 'edge', id: edgeEl.dataset.id };
   else if (view.mode3d) drag = { ...base, type: (e.shiftKey || e.button === 2) ? 'pan3' : 'orbit', cam: { ...view.cam } };
+  else if (e.shiftKey && solo()) { const r = svg.getBoundingClientRect(); drag = { ...base, type: 'box', x0: (e.clientX - r.left - view.tf.x) / view.tf.k, y0: (e.clientY - r.top - view.tf.y) / view.tf.k }; }   // Shift+drag on the canvas: a selection box
   else { drag = { ...base, type: 'pan', ox: view.tf.x, oy: view.tf.y }; view.tfTween = null; }
   svg.setPointerCapture(e.pointerId);
 });
@@ -3791,6 +4022,9 @@ svg.addEventListener('pointermove', e => {
   if (!drag.moved) return;
   const toWorld = (ps) => { if (!view.mode3d) { const k = view.tf.k; return { x: dx / k, y: dy / k, z: 0 }; } const b = camBasis(view.cam); const L = Math.max(view.lift, .2); return { x: (dx * b.right.x + dy * b.up.x) / ps, y: (dx * b.right.y + dy * b.up.y) / ps, z: (dx * b.right.z + dy * b.up.z) / ps / L }; };
   if (drag.type === 'act') return;
+  if (drag.type === 'note') { const nt = noteById(drag.id); if (!nt) return; if (!drag.pushed) { undoStack.push(drag.snap); drag.pushed = true; } let nx = drag.ox + dx / view.tf.k, ny = drag.oy + dy / view.tf.k; if (!e.altKey) { nx = Math.round(nx / GRID) * GRID; ny = Math.round(ny / GRID) * GRID; } nt.x = Math.round(nx); nt.y = Math.round(ny); renderNotes(); return; }
+  if (drag.type === 'box') { const r = svg.getBoundingClientRect(); drag.x1 = (e.clientX - r.left - view.tf.x) / view.tf.k; drag.y1 = (e.clientY - r.top - view.tf.y) / view.tf.k; drawBox(drag); return; }
+  if (drag.type === 'rhandle') { const r = svg.getBoundingClientRect(); routeDrag(drag, Math.round((e.clientX - r.left - view.tf.x) / view.tf.k), Math.round((e.clientY - r.top - view.tf.y) / view.tf.k), e); return; }
   if (drag.type === 'cend' || drag.type === 'cmove') {
     const r = svg.getBoundingClientRect(), k = view.tf.k;
     if (drag.type === 'cend') view.conn[drag.end] = { x: (e.clientX - r.left - view.tf.x) / k, y: (e.clientY - r.top - view.tf.y) / k };
@@ -3809,7 +4043,14 @@ svg.addEventListener('pointermove', e => {
   if (drag.type === 'link') { const n = view.nodes.get(drag.id); const r = svg.getBoundingClientRect(); const wx = (e.clientX - r.left - view.tf.x) / view.tf.k, wy = (e.clientY - r.top - view.tf.y) / view.tf.k; if (!drag.el) { drag.el = s('path', { class: 'linkdraft' }); gView.append(drag.el); } drag.el.setAttribute('d', `M${f1(n.tx)},${f1(n.ty)}L${f1(wx)},${f1(wy)}`); return; }
   if (drag.type === 'node' && !view.mode3d && view.dragId !== drag.id) { freezeDomainOf(drag.id); view.dragId = drag.id; }
   if (drag.type === 'node' && !view.mode3d) { const n0 = view.nodes.get(drag.id); const tg = n0 && domainAt(n0.tx, n0.ty, drag.id); for (const [hid, H] of view.hulls) H.g.classList.toggle('droptarget', !!tg && tg.id === hid); }
-  if (drag.type === 'node') { const n = view.nodes.get(drag.id); if (!n) return; const w = toWorld(drag.ps); n.tween = null; n.tx = n.cx = drag.ox + w.x; n.ty = n.cy = drag.oy + w.y; n.tz = n.cz = drag.oz + w.z; n.pinned = true; kick(); }
+  if (drag.type === 'node') {
+    const n = view.nodes.get(drag.id); if (!n) return; const w = toWorld(drag.ps); n.tween = null;
+    let nx = drag.ox + w.x, ny = drag.oy + w.y;
+    if (!view.mode3d && !e.altKey) { nx = Math.round((nx - n.w / 2) / GRID) * GRID + n.w / 2; ny = Math.round((ny - n.h / 2) / GRID) * GRID + n.h / 2; }   // the box's corner on the grid; Alt moves freely
+    n.tx = n.cx = nx; n.ty = n.cy = ny; n.tz = n.cz = drag.oz + w.z; n.pinned = true;
+    for (const o of drag.others || []) { o.m.tween = null; o.m.tx = o.m.cx = o.ox + (nx - drag.ox); o.m.ty = o.m.cy = o.oy + (ny - drag.oy); o.m.pinned = true; }
+    kick();
+  }
   else if (drag.type === 'hull') { const w = toWorld(drag.ps); if (drag.p0 && !view.mode3d) M.layout.positions[drag.id] = { ...drag.p0, x: Math.round(drag.p0.x + w.x), y: Math.round(drag.p0.y + w.y) }; for (const m of drag.mem) { m.n.tween = null; m.n.tx = m.n.cx = m.ox + w.x; m.n.ty = m.n.cy = m.oy + w.y; m.n.tz = m.n.cz = m.oz + w.z; m.n.pinned = true; } kick(); }
   else if (drag.type === 'pan') { view.tf.x = drag.ox + dx; view.tf.y = drag.oy + dy; applyTf(); }
   else if (drag.type === 'orbit') { view.cam.yaw = drag.cam.yaw + dx * .006; view.cam.pitch = clamp(drag.cam.pitch + dy * .006, -1.45, 1.45); kick(); }
@@ -3819,6 +4060,11 @@ svg.addEventListener('pointerup', e => {
   if (!drag) return;
   const d = drag; drag = null; svg.classList.remove('panning');
   if (d.type === 'act') { if (!d.moved) rowAction(d.id, d.act); return; }
+  if (d.type === 'rhandle') { routeDrop(d, e); return; }
+  if (d.type === 'note') { if (d.moved) { save(); updateSaveUI(); } else { selectItem(null); view.selNote = d.id; renderNotes(); } return; }
+  if (d.type === 'box') { $('#gsel').querySelectorAll('.rbox').forEach(x => x.remove()); if (d.moved) { const x0 = Math.min(d.x0, d.x1), x1 = Math.max(d.x0, d.x1), y0 = Math.min(d.y0, d.y1), y1 = Math.max(d.y0, d.y1); const ids = liveNodes().filter(n => n.tx + n.w / 2 >= x0 && n.tx - n.w / 2 <= x1 && n.ty + n.h / 2 >= y0 && n.ty - n.h / 2 <= y1).map(n => n.id); setMulti([...view.multi, ...ids]); } return; }
+  if (d.type === 'pan' && d.button === 2) { if (!d.moved) contextMenuAt(e); return; }
+  if (!d.moved && (d.type === 'link' || d.type === 'node') && (d.shift || d.ctrl) && solo()) { if (d.el) d.el.remove(); const set = new Set(view.multi); if (set.has(d.id)) set.delete(d.id); else set.add(d.id); setMulti([...set]); return; }   // Shift or Ctrl+click adds to or takes from the selection
   if (d.type === 'cmove') return;
   if (d.type === 'cend') {
     if (!d.moved || !view.conn) return;
@@ -3833,11 +4079,13 @@ svg.addEventListener('pointerup', e => {
   if (d.type === 'node') { const n = view.nodes.get(d.id); openPopover({ type: n.type, id: d.id }, e.clientX, e.clientY); }
   else if (d.type === 'hull') openPopover({ type: 'domain', id: d.id }, e.clientX, e.clientY);
   else if (d.type === 'edge') { if (d.id.startsWith('ix:')) openPopover({ type: 'actor', id: d.id.split(':')[1] }, e.clientX, e.clientY); else if (d.id.startsWith('rep:')) openPopover({ type: 'actor', id: d.id.slice(4) }, e.clientX, e.clientY); else openPopover({ type: 'relationship', id: d.id }, e.clientX, e.clientY); }
-  else closePopover();
+  else { closePopover(); if (solo() && !d.moved && d.type === 'pan') selectItem(null); }   // a click on the empty canvas clears the selection
 });
 svg.addEventListener('pointercancel', () => { if (drag && drag.el) drag.el.remove(); view.dragId = null; drag = null; svg.classList.remove('panning'); });
 svg.addEventListener('dblclick', e => {
   const tgt = (document.elementFromPoint(e.clientX, e.clientY) || e.target);
+  const dn = tgt.closest && tgt.closest('.dnote'); if (dn && solo()) { editNote(dn.dataset.id); return; }
+  const bp = tgt.closest && tgt.closest('#gsel .ebp'); if (bp && selEdgeId()) { const R = routeOf(selEdgeId()); if (R) { undoStack.push(JSON.stringify(M)); R.pts.splice(+bp.dataset.i, 1); if (!R.pts.length) delete M.layout.routes[selEdgeId()]; render(); save(); } return; }
   const hlab = tgt.closest && tgt.closest('.hull-label'); if (hlab && !view.mode3d) { renameDomainInline(hlab.dataset.id); return; }
   const nodeEl = tgt.closest && tgt.closest('.node'); if (!nodeEl) return;
   if (solo()) { if (tgt.closest('[data-act]')) return; const row = tgt.closest('[data-row]'); if (row && entityOf(nodeEl.dataset.id)) { e.preventDefault(); startRowEdit(nodeEl.dataset.id, row.dataset.row); } return; }
@@ -3940,11 +4188,13 @@ const TYPES = ['string', 'text', 'integer', 'decimal', 'money', 'boolean', 'date
 const CARDS = ['1', '0..1', '1..*', '0..*'];
 function scheduleInspector() { clearTimeout(insp.timer); insp.timer = setTimeout(renderInspector, 0); }
 function selectItem(t) {
+  if (view.selNote) { view.selNote = null; renderNotes(); }
+  view.multi = new Set(t && (t.type === 'entity' || t.type === 'actor') ? [t.id] : []);
   insp.sel = t; insp.check = false; closePopover();
   const x = t && byId(t.id);
   if (!x) insp.sel = null;
   const ids = !insp.sel ? null : t.type === 'relationship' ? [x.from, x.to] : t.type === 'method' ? [x.owner, ...(x.effects || []).map(f => f.entity)] : t.type === 'actor' ? [x.represents, ...M.methods.filter(m => m.actor === x.id).flatMap(m => (m.effects || []).map(f => f.entity))].filter(Boolean) : t.type === 'domain' ? M.entities.filter(e => e.domain === x.id).map(e => e.id) : [t.id];
-  setFocus(ids);
+  setFocus(ids); renderEdgeHandles();
   renderInspector();
 }
 function soloEdit(id, fn, note) {
@@ -4037,7 +4287,8 @@ function renderInspector() {
   const root = $('#insp'); if (!root || !solo()) return;
   const act = document.activeElement, ak = act && root.contains(act) ? act.dataset.k : null;
   root.textContent = '';
-  if (insp.check) renderCheck(root);
+  if (view.multi && view.multi.size > 1 && !insp.sel) renderMultiPanel(root);
+  else if (insp.check) renderCheck(root);
   else {
     const t = insp.sel, x = t && byId(t.id);
     if (!x) { insp.sel = null; renderModelPanel(root); }
@@ -4456,13 +4707,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-const PHI = {"open":"<path d=\"M245,110.64A16,16,0,0,0,232,104H216V88a16,16,0,0,0-16-16H130.67L102.94,51.2a16.14,16.14,0,0,0-9.6-3.2H40A16,16,0,0,0,24,64V208h0a8,8,0,0,0,8,8H211.1a8,8,0,0,0,7.59-5.47l28.49-85.47A16.05,16.05,0,0,0,245,110.64ZM93.34,64,123.2,86.4A8,8,0,0,0,128,88h72v16H69.77a16,16,0,0,0-15.18,10.94L40,158.7V64Zm112,136H43.1l26.67-80H232Z\"/>","help":"<path d=\"M140,180a12,12,0,1,1-12-12A12,12,0,0,1,140,180ZM128,72c-22.06,0-40,16.15-40,36v4a8,8,0,0,0,16,0v-4c0-11,10.77-20,24-20s24,9,24,20-10.77,20-24,20a8,8,0,0,0-8,8v8a8,8,0,0,0,16,0v-.72c18.24-3.35,32-17.9,32-35.28C168,88.15,150.06,72,128,72Zm104,56A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z\"/>","hideLeft":"<path d=\"M205.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L131.31,128ZM51.31,128l74.35-74.34a8,8,0,0,0-11.32-11.32l-80,80a8,8,0,0,0,0,11.32l80,80a8,8,0,0,0,11.32-11.32Z\"/>","showRight":"<path d=\"M141.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L124.69,128,50.34,53.66A8,8,0,0,1,61.66,42.34l80,80A8,8,0,0,1,141.66,133.66Zm80-11.32-80-80a8,8,0,0,0-11.32,11.32L204.69,128l-74.35,74.34a8,8,0,0,0,11.32,11.32l80-80A8,8,0,0,0,221.66,122.34Z\"/>","showLeft":"<path d=\"M205.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L131.31,128ZM51.31,128l74.35-74.34a8,8,0,0,0-11.32-11.32l-80,80a8,8,0,0,0,0,11.32l80,80a8,8,0,0,0,11.32-11.32Z\"/>","hideRight":"<path d=\"M141.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L124.69,128,50.34,53.66A8,8,0,0,1,61.66,42.34l80,80A8,8,0,0,1,141.66,133.66Zm80-11.32-80-80a8,8,0,0,0-11.32,11.32L204.69,128l-74.35,74.34a8,8,0,0,0,11.32,11.32l80-80A8,8,0,0,0,221.66,122.34Z\"/>","dots":"<path d=\"M140,128a12,12,0,1,1-12-12A12,12,0,0,1,140,128Zm56-12a12,12,0,1,0,12,12A12,12,0,0,0,196,116ZM60,116a12,12,0,1,0,12,12A12,12,0,0,0,60,116Z\"/>","plus":"<path d=\"M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z\"/>","x":"<path d=\"M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z\"/>","new":"<path d=\"M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-40-64a8,8,0,0,1-8,8H136v16a8,8,0,0,1-16,0V160H104a8,8,0,0,1,0-16h16V128a8,8,0,0,1,16,0v16h16A8,8,0,0,1,160,152Z\"/>","import":"<path d=\"M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0Zm-101.66,5.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0-11.32-11.32L136,124.69V32a8,8,0,0,0-16,0v92.69L93.66,98.34a8,8,0,0,0-11.32,11.32Z\"/>","export":"<path d=\"M216,112v96a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V112A16,16,0,0,1,56,96H80a8,8,0,0,1,0,16H56v96H200V112H176a8,8,0,0,1,0-16h24A16,16,0,0,1,216,112ZM93.66,69.66,120,43.31V136a8,8,0,0,0,16,0V43.31l26.34,26.35a8,8,0,0,0,11.32-11.32l-40-40a8,8,0,0,0-11.32,0l-40,40A8,8,0,0,0,93.66,69.66Z\"/>","svg":"<path d=\"M87.82,196.31a20.82,20.82,0,0,1-9.19,15.23C73.44,215,67,216,61.14,216A61.23,61.23,0,0,1,46,214a8,8,0,0,1,4.3-15.41c4.38,1.2,14.95,2.7,19.55-.36.88-.59,1.83-1.52,2.14-3.93.35-2.67-.71-4.1-12.78-7.59-9.35-2.7-25-7.23-23-23.11a20.55,20.55,0,0,1,9-14.95c11.84-8,30.72-3.31,32.83-2.76a8,8,0,0,1-4.07,15.48c-4.48-1.17-15.23-2.56-19.83.56a4.54,4.54,0,0,0-2,3.67c-.11.9-.14,1.09,1.12,1.9,2.31,1.49,6.44,2.68,10.45,3.84C73.5,174.17,90.06,179,87.82,196.31ZM216,88v24a8,8,0,0,1-16,0V96H152a8,8,0,0,1-8-8V40H56v72a8,8,0,1,1-16,0V40A16,16,0,0,1,56,24h96a8,8,0,0,1,5.65,2.34l56,56A8,8,0,0,1,216,88Zm-56-8h28.69L160,51.31Zm-13.3,64.47a8,8,0,0,0-10.23,4.84L124,184.21l-12.47-34.9a8,8,0,1,0-15.06,5.38l20,56a8,8,0,0,0,15.07,0l20-56A8,8,0,0,0,146.7,144.47ZM208,176h-8a8,8,0,0,0,0,16v5.29a13.38,13.38,0,0,1-8,2.71c-8.82,0-16-9-16-20s7.18-20,16-20a13.27,13.27,0,0,1,7.53,2.38,8,8,0,0,0,8.95-13.26A29.38,29.38,0,0,0,192,144c-17.64,0-32,16.15-32,36s14.36,36,32,36a30.06,30.06,0,0,0,21.78-9.6,8,8,0,0,0,2.22-5.53V184A8,8,0,0,0,208,176Z\"/>","png":"<path d=\"M60,144H44a8,8,0,0,0-8,8v56a8,8,0,0,0,16,0v-8h8a28,28,0,0,0,0-56Zm0,40H52V160h8a12,12,0,0,1,0,24Zm164,16.87a8,8,0,0,1-2.22,5.53A30.06,30.06,0,0,1,200,216c-17.65,0-32-16.15-32-36s14.35-36,32-36a29.45,29.45,0,0,1,16.48,5.11,8,8,0,0,1-9,13.27A13.21,13.21,0,0,0,200,160c-8.82,0-16,9-16,20s7.18,20,16,20a13.57,13.57,0,0,0,8-2.72V192a8,8,0,0,1,0-16h8a8,8,0,0,1,8,8ZM156,152v56a8,8,0,0,1-5.56,7.62A7.91,7.91,0,0,1,148,216a8,8,0,0,1-6.51-3.35L116,177v31a8,8,0,0,1-16,0V152a8,8,0,0,1,14.51-4.65L140,183V152a8,8,0,0,1,16,0ZM48,120a8,8,0,0,0,8-8V40h88V88a8,8,0,0,0,8,8h48v16a8,8,0,0,0,16,0V88a8,8,0,0,0-2.34-5.66l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40v72A8,8,0,0,0,48,120ZM160,51.31,188.69,80H160Z\"/>","theme":"<path d=\"M200.77,53.89A103.27,103.27,0,0,0,128,24h-1.07A104,104,0,0,0,24,128c0,43,26.58,79.06,69.36,94.17A32,32,0,0,0,136,192a16,16,0,0,1,16-16h46.21a31.81,31.81,0,0,0,31.2-24.88,104.43,104.43,0,0,0,2.59-24A103.28,103.28,0,0,0,200.77,53.89Zm13,93.71A15.89,15.89,0,0,1,198.21,160H152a32,32,0,0,0-32,32,16,16,0,0,1-21.31,15.07C62.49,194.3,40,164,40,128a88,88,0,0,1,87.09-88h.9a88.35,88.35,0,0,1,88,87.25A88.86,88.86,0,0,1,213.81,147.6ZM140,76a12,12,0,1,1-12-12A12,12,0,0,1,140,76ZM96,100A12,12,0,1,1,84,88,12,12,0,0,1,96,100Zm0,56a12,12,0,1,1-12-12A12,12,0,0,1,96,156Zm88-56a12,12,0,1,1-12-12A12,12,0,0,1,184,100Z\"/>","cube":"<path d=\"M223.68,66.15,135.68,18h0a15.88,15.88,0,0,0-15.36,0l-88,48.17a16,16,0,0,0-8.32,14v95.64a16,16,0,0,0,8.32,14l88,48.17a15.88,15.88,0,0,0,15.36,0l88-48.17a16,16,0,0,0,8.32-14V80.18A16,16,0,0,0,223.68,66.15ZM128,32h0l80.34,44L128,120,47.66,76ZM40,90l80,43.78v85.79L40,175.82Zm96,129.57V133.82L216,90v85.78Z\"/>","reset":"<path d=\"M224,128a96,96,0,0,1-94.71,96H128A95.38,95.38,0,0,1,62.1,197.8a8,8,0,0,1,11-11.63A80,80,0,1,0,71.43,71.39a3.07,3.07,0,0,1-.26.25L44.59,96H72a8,8,0,0,1,0,16H24a8,8,0,0,1-8-8V56a8,8,0,0,1,16,0V85.8L60.25,60A96,96,0,0,1,224,128Z\"/>","arrange":"<path d=\"M200,152a31.84,31.84,0,0,0-19.53,6.68l-23.11-18A31.65,31.65,0,0,0,160,128c0-.74,0-1.48-.08-2.21l13.23-4.41A32,32,0,1,0,168,104c0,.74,0,1.48.08,2.21l-13.23,4.41A32,32,0,0,0,128,96a32.59,32.59,0,0,0-5.27.44L115.89,81A32,32,0,1,0,96,88a32.59,32.59,0,0,0,5.27-.44l6.84,15.4a31.92,31.92,0,0,0-8.57,39.64L73.83,165.44a32.06,32.06,0,1,0,10.63,12l25.71-22.84a31.91,31.91,0,0,0,37.36-1.24l23.11,18A31.65,31.65,0,0,0,168,184a32,32,0,1,0,32-32Zm0-64a16,16,0,1,1-16,16A16,16,0,0,1,200,88ZM80,56A16,16,0,1,1,96,72,16,16,0,0,1,80,56ZM56,208a16,16,0,1,1,16-16A16,16,0,0,1,56,208Zm56-80a16,16,0,1,1,16,16A16,16,0,0,1,112,128Zm88,72a16,16,0,1,1,16-16A16,16,0,0,1,200,200Z\"/>","labels":"<path d=\"M243.31,136,144,36.69A15.86,15.86,0,0,0,132.69,32H40a8,8,0,0,0-8,8v92.69A15.86,15.86,0,0,0,36.69,144L136,243.31a16,16,0,0,0,22.63,0l84.68-84.68a16,16,0,0,0,0-22.63Zm-96,96L48,132.69V48h84.69L232,147.31ZM96,84A12,12,0,1,1,84,72,12,12,0,0,1,96,84Z\"/>","details":"<path d=\"M208,136H48a16,16,0,0,0-16,16v40a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V152A16,16,0,0,0,208,136Zm0,56H48V152H208v40Zm0-144H48A16,16,0,0,0,32,64v40a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V64A16,16,0,0,0,208,48Zm0,56H48V64H208v40Z\"/>","zoomOut":"<path d=\"M152,112a8,8,0,0,1-8,8H80a8,8,0,0,1,0-16h64A8,8,0,0,1,152,112Zm77.66,117.66a8,8,0,0,1-11.32,0l-50.06-50.07a88.11,88.11,0,1,1,11.31-11.31l50.07,50.06A8,8,0,0,1,229.66,229.66ZM112,184a72,72,0,1,0-72-72A72.08,72.08,0,0,0,112,184Z\"/>","zoomIn":"<path d=\"M152,112a8,8,0,0,1-8,8H120v24a8,8,0,0,1-16,0V120H80a8,8,0,0,1,0-16h24V80a8,8,0,0,1,16,0v24h24A8,8,0,0,1,152,112Zm77.66,117.66a8,8,0,0,1-11.32,0l-50.06-50.07a88.11,88.11,0,1,1,11.31-11.31l50.07,50.06A8,8,0,0,1,229.66,229.66ZM112,184a72,72,0,1,0-72-72A72.08,72.08,0,0,0,112,184Z\"/>","fit":"<path d=\"M216,48V88a8,8,0,0,1-16,0V56H168a8,8,0,0,1,0-16h40A8,8,0,0,1,216,48ZM88,200H56V168a8,8,0,0,0-16,0v40a8,8,0,0,0,8,8H88a8,8,0,0,0,0-16Zm120-40a8,8,0,0,0-8,8v32H168a8,8,0,0,0,0,16h40a8,8,0,0,0,8-8V168A8,8,0,0,0,208,160ZM88,40H48a8,8,0,0,0-8,8V88a8,8,0,0,0,16,0V56H88a8,8,0,0,0,0-16Z\"/>","legend":"<path d=\"M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm16-40a8,8,0,0,1-8,8,16,16,0,0,1-16-16V128a8,8,0,0,1,0-16,16,16,0,0,1,16,16v40A8,8,0,0,1,144,176ZM112,84a12,12,0,1,1,12,12A12,12,0,0,1,112,84Z\"/>","pin":"<path d=\"M235.32,81.37,174.63,20.69a16,16,0,0,0-22.63,0L98.37,74.49c-10.66-3.34-35-7.37-60.4,13.14a16,16,0,0,0-1.29,23.78L85,159.71,42.34,202.34a8,8,0,0,0,11.32,11.32L96.29,171l48.29,48.29A16,16,0,0,0,155.9,224c.38,0,.75,0,1.13,0a15.93,15.93,0,0,0,11.64-6.33c19.64-26.1,17.75-47.32,13.19-60L235.33,104A16,16,0,0,0,235.32,81.37ZM224,92.69h0l-57.27,57.46a8,8,0,0,0-1.49,9.22c9.46,18.93-1.8,38.59-9.34,48.62L48,100.08c12.08-9.74,23.64-12.31,32.48-12.31A40.13,40.13,0,0,1,96.81,91a8,8,0,0,0,9.25-1.51L163.32,32,224,92.68Z\"/>","send":"<path d=\"M205.66,117.66a8,8,0,0,1-11.32,0L136,59.31V216a8,8,0,0,1-16,0V59.31L61.66,117.66a8,8,0,0,1-11.32-11.32l72-72a8,8,0,0,1,11.32,0l72,72A8,8,0,0,1,205.66,117.66Z\"/>","drawio":"<path d=\"M245.66,74.34l-32-32a8,8,0,0,0-11.32,11.32L220.69,72H208c-49.33,0-61.05,28.12-71.38,52.92-9.38,22.51-16.92,40.59-49.48,42.84a40,40,0,1,0,.1,16c43.26-2.65,54.34-29.15,64.14-52.69C161.41,107,169.33,88,208,88h12.69l-18.35,18.34a8,8,0,0,0,11.32,11.32l32-32A8,8,0,0,0,245.66,74.34ZM48,200a24,24,0,1,1,24-24A24,24,0,0,1,48,200Z\"/>","copy":"<path d=\"M216,32H88a8,8,0,0,0-8,8V80H40a8,8,0,0,0-8,8V216a8,8,0,0,0,8,8H168a8,8,0,0,0,8-8V176h40a8,8,0,0,0,8-8V40A8,8,0,0,0,216,32ZM160,208H48V96H160Zm48-48H176V88a8,8,0,0,0-8-8H96V48H208Z\"/>","save":"<path d=\"M219.31,72,184,36.69A15.86,15.86,0,0,0,172.69,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V83.31A15.86,15.86,0,0,0,219.31,72ZM168,208H88V152h80Zm40,0H184V152a16,16,0,0,0-16-16H88a16,16,0,0,0-16,16v56H48V48H172.69L208,83.31ZM160,72a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h56A8,8,0,0,1,160,72Z\"/>","panel":"<path d=\"M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM40,56H80V200H40ZM216,200H96V56H216V200Z\"/>","entity":"<path d=\"M224,48H32a8,8,0,0,0-8,8V192a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A8,8,0,0,0,224,48ZM40,112H80v32H40Zm56,0H216v32H96ZM216,64V96H40V64ZM40,160H80v32H40Zm176,32H96V160H216v32Z\"/>","actor":"<path d=\"M256,136a8,8,0,0,1-8,8H232v16a8,8,0,0,1-16,0V144H200a8,8,0,0,1,0-16h16V112a8,8,0,0,1,16,0v16h16A8,8,0,0,1,256,136Zm-57.87,58.85a8,8,0,0,1-12.26,10.3C165.75,181.19,138.09,168,108,168s-57.75,13.19-77.87,37.15a8,8,0,0,1-12.25-10.3c14.94-17.78,33.52-30.41,54.17-37.17a68,68,0,1,1,71.9,0C164.6,164.44,183.18,177.07,198.13,194.85ZM108,152a52,52,0,1,0-52-52A52.06,52.06,0,0,0,108,152Z\"/>","domain":"<path d=\"M152,40a8,8,0,0,1-8,8H112a8,8,0,0,1,0-16h32A8,8,0,0,1,152,40Zm-8,168H112a8,8,0,0,0,0,16h32a8,8,0,0,0,0-16ZM208,48V72a8,8,0,0,0,16,0V48a16,16,0,0,0-16-16H184a8,8,0,0,0,0,16Zm8,56a8,8,0,0,0-8,8v32a8,8,0,0,0,16,0V112A8,8,0,0,0,216,104ZM40,152a8,8,0,0,0,8-8V112a8,8,0,0,0-16,0v32A8,8,0,0,0,40,152Zm32,56H48V184a8,8,0,0,0-16,0v24a16,16,0,0,0,16,16H72a8,8,0,0,0,0-16ZM72,32H48A16,16,0,0,0,32,48V72a8,8,0,0,0,16,0V48H72a8,8,0,0,0,0-16ZM240,208H224V192a8,8,0,0,0-16,0v16H192a8,8,0,0,0,0,16h16v16a8,8,0,0,0,16,0V224h16a8,8,0,0,0,0-16Z\"/>","link":"<path d=\"M165.66,90.34a8,8,0,0,1,0,11.32l-64,64a8,8,0,0,1-11.32-11.32l64-64A8,8,0,0,1,165.66,90.34ZM215.6,40.4a56,56,0,0,0-79.2,0L106.34,70.45a8,8,0,0,0,11.32,11.32l30.06-30a40,40,0,0,1,56.57,56.56l-30.07,30.06a8,8,0,0,0,11.31,11.32L215.6,119.6a56,56,0,0,0,0-79.2ZM138.34,174.22l-30.06,30.06a40,40,0,1,1-56.56-56.57l30.05-30.05a8,8,0,0,0-11.32-11.32L40.4,136.4a56,56,0,0,0,79.2,79.2l30.06-30.07a8,8,0,0,0-11.32-11.31Z\"/>","check":"<path d=\"M224,128a8,8,0,0,1-8,8H128a8,8,0,0,1,0-16h88A8,8,0,0,1,224,128ZM128,72h88a8,8,0,0,0,0-16H128a8,8,0,0,0,0,16Zm88,112H128a8,8,0,0,0,0,16h88a8,8,0,0,0,0-16ZM82.34,42.34,56,68.69,45.66,58.34A8,8,0,0,0,34.34,69.66l16,16a8,8,0,0,0,11.32,0l32-32A8,8,0,0,0,82.34,42.34Zm0,64L56,132.69,45.66,122.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32,0l32-32a8,8,0,0,0-11.32-11.32Zm0,64L56,196.69,45.66,186.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32,0l32-32a8,8,0,0,0-11.32-11.32Z\"/>","journeys":"<path d=\"M200,168a32.06,32.06,0,0,0-31,24H72a32,32,0,0,1,0-64h96a40,40,0,0,0,0-80H72a8,8,0,0,0,0,16h96a24,24,0,0,1,0,48H72a48,48,0,0,0,0,96h97a32,32,0,1,0,31-40Zm0,48a16,16,0,1,1,16-16A16,16,0,0,1,200,216Z\"/>","undo":"<path d=\"M232,144a64.07,64.07,0,0,1-64,64H80a8,8,0,0,1,0-16h88a48,48,0,0,0,0-96H51.31l34.35,34.34a8,8,0,0,1-11.32,11.32l-48-48a8,8,0,0,1,0-11.32l48-48A8,8,0,0,1,85.66,45.66L51.31,80H168A64.07,64.07,0,0,1,232,144Z\"/>","check1":"<path d=\"M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z\"/>","eye":"<path d=\"M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z\"/>","eyeSlash":"<path d=\"M53.92,34.62A8,8,0,1,0,42.08,45.38L61.32,66.55C25,88.84,9.38,123.2,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208a127.11,127.11,0,0,0,52.07-10.83l22,24.21a8,8,0,1,0,11.84-10.76Zm47.33,75.84,41.67,45.85a32,32,0,0,1-41.67-45.85ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.16,133.16,0,0,1,25,128c4.69-8.79,19.66-33.39,47.35-49.38l18,19.75a48,48,0,0,0,63.66,70l14.73,16.2A112,112,0,0,1,128,192Zm6-95.43a8,8,0,0,1,3-15.72,48.16,48.16,0,0,1,38.77,42.64,8,8,0,0,1-7.22,8.71,6.39,6.39,0,0,1-.75,0,8,8,0,0,1-8-7.26A32.09,32.09,0,0,0,134,96.57Zm113.28,34.69c-.42.94-10.55,23.37-33.36,43.8a8,8,0,1,1-10.67-11.92A132.77,132.77,0,0,0,231.05,128a133.15,133.15,0,0,0-23.12-30.77C185.67,75.19,158.78,64,128,64a118.37,118.37,0,0,0-19.36,1.57A8,8,0,1,1,106,49.79,134,134,0,0,1,128,48c34.88,0,66.57,13.26,91.66,38.35,18.83,18.83,27.3,37.62,27.65,38.41A8,8,0,0,1,247.31,131.26Z\"/>","hide":"<path d=\"M189.66,122.34a8,8,0,0,1,0,11.32l-72,72a8,8,0,0,1-11.32-11.32L164.69,136H32a8,8,0,0,1,0-16H164.69L106.34,61.66a8,8,0,0,1,11.32-11.32ZM216,32a8,8,0,0,0-8,8V216a8,8,0,0,0,16,0V40A8,8,0,0,0,216,32Z\"/>","show":"<path d=\"M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM40,56H80V200H40ZM216,200H96V56H216V200Z\"/>"};
+const PHI = {"open":"<path d=\"M245,110.64A16,16,0,0,0,232,104H216V88a16,16,0,0,0-16-16H130.67L102.94,51.2a16.14,16.14,0,0,0-9.6-3.2H40A16,16,0,0,0,24,64V208h0a8,8,0,0,0,8,8H211.1a8,8,0,0,0,7.59-5.47l28.49-85.47A16.05,16.05,0,0,0,245,110.64ZM93.34,64,123.2,86.4A8,8,0,0,0,128,88h72v16H69.77a16,16,0,0,0-15.18,10.94L40,158.7V64Zm112,136H43.1l26.67-80H232Z\"/>","help":"<path d=\"M140,180a12,12,0,1,1-12-12A12,12,0,0,1,140,180ZM128,72c-22.06,0-40,16.15-40,36v4a8,8,0,0,0,16,0v-4c0-11,10.77-20,24-20s24,9,24,20-10.77,20-24,20a8,8,0,0,0-8,8v8a8,8,0,0,0,16,0v-.72c18.24-3.35,32-17.9,32-35.28C168,88.15,150.06,72,128,72Zm104,56A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z\"/>","hideLeft":"<path d=\"M205.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L131.31,128ZM51.31,128l74.35-74.34a8,8,0,0,0-11.32-11.32l-80,80a8,8,0,0,0,0,11.32l80,80a8,8,0,0,0,11.32-11.32Z\"/>","showRight":"<path d=\"M141.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L124.69,128,50.34,53.66A8,8,0,0,1,61.66,42.34l80,80A8,8,0,0,1,141.66,133.66Zm80-11.32-80-80a8,8,0,0,0-11.32,11.32L204.69,128l-74.35,74.34a8,8,0,0,0,11.32,11.32l80-80A8,8,0,0,0,221.66,122.34Z\"/>","showLeft":"<path d=\"M205.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L131.31,128ZM51.31,128l74.35-74.34a8,8,0,0,0-11.32-11.32l-80,80a8,8,0,0,0,0,11.32l80,80a8,8,0,0,0,11.32-11.32Z\"/>","hideRight":"<path d=\"M141.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L124.69,128,50.34,53.66A8,8,0,0,1,61.66,42.34l80,80A8,8,0,0,1,141.66,133.66Zm80-11.32-80-80a8,8,0,0,0-11.32,11.32L204.69,128l-74.35,74.34a8,8,0,0,0,11.32,11.32l80-80A8,8,0,0,0,221.66,122.34Z\"/>","dots":"<path d=\"M140,128a12,12,0,1,1-12-12A12,12,0,0,1,140,128Zm56-12a12,12,0,1,0,12,12A12,12,0,0,0,196,116ZM60,116a12,12,0,1,0,12,12A12,12,0,0,0,60,116Z\"/>","plus":"<path d=\"M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z\"/>","x":"<path d=\"M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z\"/>","new":"<path d=\"M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Zm-40-64a8,8,0,0,1-8,8H136v16a8,8,0,0,1-16,0V160H104a8,8,0,0,1,0-16h16V128a8,8,0,0,1,16,0v16h16A8,8,0,0,1,160,152Z\"/>","import":"<path d=\"M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0Zm-101.66,5.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0-11.32-11.32L136,124.69V32a8,8,0,0,0-16,0v92.69L93.66,98.34a8,8,0,0,0-11.32,11.32Z\"/>","export":"<path d=\"M216,112v96a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V112A16,16,0,0,1,56,96H80a8,8,0,0,1,0,16H56v96H200V112H176a8,8,0,0,1,0-16h24A16,16,0,0,1,216,112ZM93.66,69.66,120,43.31V136a8,8,0,0,0,16,0V43.31l26.34,26.35a8,8,0,0,0,11.32-11.32l-40-40a8,8,0,0,0-11.32,0l-40,40A8,8,0,0,0,93.66,69.66Z\"/>","svg":"<path d=\"M87.82,196.31a20.82,20.82,0,0,1-9.19,15.23C73.44,215,67,216,61.14,216A61.23,61.23,0,0,1,46,214a8,8,0,0,1,4.3-15.41c4.38,1.2,14.95,2.7,19.55-.36.88-.59,1.83-1.52,2.14-3.93.35-2.67-.71-4.1-12.78-7.59-9.35-2.7-25-7.23-23-23.11a20.55,20.55,0,0,1,9-14.95c11.84-8,30.72-3.31,32.83-2.76a8,8,0,0,1-4.07,15.48c-4.48-1.17-15.23-2.56-19.83.56a4.54,4.54,0,0,0-2,3.67c-.11.9-.14,1.09,1.12,1.9,2.31,1.49,6.44,2.68,10.45,3.84C73.5,174.17,90.06,179,87.82,196.31ZM216,88v24a8,8,0,0,1-16,0V96H152a8,8,0,0,1-8-8V40H56v72a8,8,0,1,1-16,0V40A16,16,0,0,1,56,24h96a8,8,0,0,1,5.65,2.34l56,56A8,8,0,0,1,216,88Zm-56-8h28.69L160,51.31Zm-13.3,64.47a8,8,0,0,0-10.23,4.84L124,184.21l-12.47-34.9a8,8,0,1,0-15.06,5.38l20,56a8,8,0,0,0,15.07,0l20-56A8,8,0,0,0,146.7,144.47ZM208,176h-8a8,8,0,0,0,0,16v5.29a13.38,13.38,0,0,1-8,2.71c-8.82,0-16-9-16-20s7.18-20,16-20a13.27,13.27,0,0,1,7.53,2.38,8,8,0,0,0,8.95-13.26A29.38,29.38,0,0,0,192,144c-17.64,0-32,16.15-32,36s14.36,36,32,36a30.06,30.06,0,0,0,21.78-9.6,8,8,0,0,0,2.22-5.53V184A8,8,0,0,0,208,176Z\"/>","png":"<path d=\"M60,144H44a8,8,0,0,0-8,8v56a8,8,0,0,0,16,0v-8h8a28,28,0,0,0,0-56Zm0,40H52V160h8a12,12,0,0,1,0,24Zm164,16.87a8,8,0,0,1-2.22,5.53A30.06,30.06,0,0,1,200,216c-17.65,0-32-16.15-32-36s14.35-36,32-36a29.45,29.45,0,0,1,16.48,5.11,8,8,0,0,1-9,13.27A13.21,13.21,0,0,0,200,160c-8.82,0-16,9-16,20s7.18,20,16,20a13.57,13.57,0,0,0,8-2.72V192a8,8,0,0,1,0-16h8a8,8,0,0,1,8,8ZM156,152v56a8,8,0,0,1-5.56,7.62A7.91,7.91,0,0,1,148,216a8,8,0,0,1-6.51-3.35L116,177v31a8,8,0,0,1-16,0V152a8,8,0,0,1,14.51-4.65L140,183V152a8,8,0,0,1,16,0ZM48,120a8,8,0,0,0,8-8V40h88V88a8,8,0,0,0,8,8h48v16a8,8,0,0,0,16,0V88a8,8,0,0,0-2.34-5.66l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40v72A8,8,0,0,0,48,120ZM160,51.31,188.69,80H160Z\"/>","theme":"<path d=\"M200.77,53.89A103.27,103.27,0,0,0,128,24h-1.07A104,104,0,0,0,24,128c0,43,26.58,79.06,69.36,94.17A32,32,0,0,0,136,192a16,16,0,0,1,16-16h46.21a31.81,31.81,0,0,0,31.2-24.88,104.43,104.43,0,0,0,2.59-24A103.28,103.28,0,0,0,200.77,53.89Zm13,93.71A15.89,15.89,0,0,1,198.21,160H152a32,32,0,0,0-32,32,16,16,0,0,1-21.31,15.07C62.49,194.3,40,164,40,128a88,88,0,0,1,87.09-88h.9a88.35,88.35,0,0,1,88,87.25A88.86,88.86,0,0,1,213.81,147.6ZM140,76a12,12,0,1,1-12-12A12,12,0,0,1,140,76ZM96,100A12,12,0,1,1,84,88,12,12,0,0,1,96,100Zm0,56a12,12,0,1,1-12-12A12,12,0,0,1,96,156Zm88-56a12,12,0,1,1-12-12A12,12,0,0,1,184,100Z\"/>","cube":"<path d=\"M223.68,66.15,135.68,18h0a15.88,15.88,0,0,0-15.36,0l-88,48.17a16,16,0,0,0-8.32,14v95.64a16,16,0,0,0,8.32,14l88,48.17a15.88,15.88,0,0,0,15.36,0l88-48.17a16,16,0,0,0,8.32-14V80.18A16,16,0,0,0,223.68,66.15ZM128,32h0l80.34,44L128,120,47.66,76ZM40,90l80,43.78v85.79L40,175.82Zm96,129.57V133.82L216,90v85.78Z\"/>","reset":"<path d=\"M224,128a96,96,0,0,1-94.71,96H128A95.38,95.38,0,0,1,62.1,197.8a8,8,0,0,1,11-11.63A80,80,0,1,0,71.43,71.39a3.07,3.07,0,0,1-.26.25L44.59,96H72a8,8,0,0,1,0,16H24a8,8,0,0,1-8-8V56a8,8,0,0,1,16,0V85.8L60.25,60A96,96,0,0,1,224,128Z\"/>","arrange":"<path d=\"M200,152a31.84,31.84,0,0,0-19.53,6.68l-23.11-18A31.65,31.65,0,0,0,160,128c0-.74,0-1.48-.08-2.21l13.23-4.41A32,32,0,1,0,168,104c0,.74,0,1.48.08,2.21l-13.23,4.41A32,32,0,0,0,128,96a32.59,32.59,0,0,0-5.27.44L115.89,81A32,32,0,1,0,96,88a32.59,32.59,0,0,0,5.27-.44l6.84,15.4a31.92,31.92,0,0,0-8.57,39.64L73.83,165.44a32.06,32.06,0,1,0,10.63,12l25.71-22.84a31.91,31.91,0,0,0,37.36-1.24l23.11,18A31.65,31.65,0,0,0,168,184a32,32,0,1,0,32-32Zm0-64a16,16,0,1,1-16,16A16,16,0,0,1,200,88ZM80,56A16,16,0,1,1,96,72,16,16,0,0,1,80,56ZM56,208a16,16,0,1,1,16-16A16,16,0,0,1,56,208Zm56-80a16,16,0,1,1,16,16A16,16,0,0,1,112,128Zm88,72a16,16,0,1,1,16-16A16,16,0,0,1,200,200Z\"/>","labels":"<path d=\"M243.31,136,144,36.69A15.86,15.86,0,0,0,132.69,32H40a8,8,0,0,0-8,8v92.69A15.86,15.86,0,0,0,36.69,144L136,243.31a16,16,0,0,0,22.63,0l84.68-84.68a16,16,0,0,0,0-22.63Zm-96,96L48,132.69V48h84.69L232,147.31ZM96,84A12,12,0,1,1,84,72,12,12,0,0,1,96,84Z\"/>","details":"<path d=\"M208,136H48a16,16,0,0,0-16,16v40a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V152A16,16,0,0,0,208,136Zm0,56H48V152H208v40Zm0-144H48A16,16,0,0,0,32,64v40a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V64A16,16,0,0,0,208,48Zm0,56H48V64H208v40Z\"/>","zoomOut":"<path d=\"M152,112a8,8,0,0,1-8,8H80a8,8,0,0,1,0-16h64A8,8,0,0,1,152,112Zm77.66,117.66a8,8,0,0,1-11.32,0l-50.06-50.07a88.11,88.11,0,1,1,11.31-11.31l50.07,50.06A8,8,0,0,1,229.66,229.66ZM112,184a72,72,0,1,0-72-72A72.08,72.08,0,0,0,112,184Z\"/>","zoomIn":"<path d=\"M152,112a8,8,0,0,1-8,8H120v24a8,8,0,0,1-16,0V120H80a8,8,0,0,1,0-16h24V80a8,8,0,0,1,16,0v24h24A8,8,0,0,1,152,112Zm77.66,117.66a8,8,0,0,1-11.32,0l-50.06-50.07a88.11,88.11,0,1,1,11.31-11.31l50.07,50.06A8,8,0,0,1,229.66,229.66ZM112,184a72,72,0,1,0-72-72A72.08,72.08,0,0,0,112,184Z\"/>","fit":"<path d=\"M216,48V88a8,8,0,0,1-16,0V56H168a8,8,0,0,1,0-16h40A8,8,0,0,1,216,48ZM88,200H56V168a8,8,0,0,0-16,0v40a8,8,0,0,0,8,8H88a8,8,0,0,0,0-16Zm120-40a8,8,0,0,0-8,8v32H168a8,8,0,0,0,0,16h40a8,8,0,0,0,8-8V168A8,8,0,0,0,208,160ZM88,40H48a8,8,0,0,0-8,8V88a8,8,0,0,0,16,0V56H88a8,8,0,0,0,0-16Z\"/>","legend":"<path d=\"M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm16-40a8,8,0,0,1-8,8,16,16,0,0,1-16-16V128a8,8,0,0,1,0-16,16,16,0,0,1,16,16v40A8,8,0,0,1,144,176ZM112,84a12,12,0,1,1,12,12A12,12,0,0,1,112,84Z\"/>","pin":"<path d=\"M235.32,81.37,174.63,20.69a16,16,0,0,0-22.63,0L98.37,74.49c-10.66-3.34-35-7.37-60.4,13.14a16,16,0,0,0-1.29,23.78L85,159.71,42.34,202.34a8,8,0,0,0,11.32,11.32L96.29,171l48.29,48.29A16,16,0,0,0,155.9,224c.38,0,.75,0,1.13,0a15.93,15.93,0,0,0,11.64-6.33c19.64-26.1,17.75-47.32,13.19-60L235.33,104A16,16,0,0,0,235.32,81.37ZM224,92.69h0l-57.27,57.46a8,8,0,0,0-1.49,9.22c9.46,18.93-1.8,38.59-9.34,48.62L48,100.08c12.08-9.74,23.64-12.31,32.48-12.31A40.13,40.13,0,0,1,96.81,91a8,8,0,0,0,9.25-1.51L163.32,32,224,92.68Z\"/>","send":"<path d=\"M205.66,117.66a8,8,0,0,1-11.32,0L136,59.31V216a8,8,0,0,1-16,0V59.31L61.66,117.66a8,8,0,0,1-11.32-11.32l72-72a8,8,0,0,1,11.32,0l72,72A8,8,0,0,1,205.66,117.66Z\"/>","drawio":"<path d=\"M245.66,74.34l-32-32a8,8,0,0,0-11.32,11.32L220.69,72H208c-49.33,0-61.05,28.12-71.38,52.92-9.38,22.51-16.92,40.59-49.48,42.84a40,40,0,1,0,.1,16c43.26-2.65,54.34-29.15,64.14-52.69C161.41,107,169.33,88,208,88h12.69l-18.35,18.34a8,8,0,0,0,11.32,11.32l32-32A8,8,0,0,0,245.66,74.34ZM48,200a24,24,0,1,1,24-24A24,24,0,0,1,48,200Z\"/>","copy":"<path d=\"M216,32H88a8,8,0,0,0-8,8V80H40a8,8,0,0,0-8,8V216a8,8,0,0,0,8,8H168a8,8,0,0,0,8-8V176h40a8,8,0,0,0,8-8V40A8,8,0,0,0,216,32ZM160,208H48V96H160Zm48-48H176V88a8,8,0,0,0-8-8H96V48H208Z\"/>","save":"<path d=\"M219.31,72,184,36.69A15.86,15.86,0,0,0,172.69,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V83.31A15.86,15.86,0,0,0,219.31,72ZM168,208H88V152h80Zm40,0H184V152a16,16,0,0,0-16-16H88a16,16,0,0,0-16,16v56H48V48H172.69L208,83.31ZM160,72a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h56A8,8,0,0,1,160,72Z\"/>","panel":"<path d=\"M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM40,56H80V200H40ZM216,200H96V56H216V200Z\"/>","entity":"<path d=\"M224,48H32a8,8,0,0,0-8,8V192a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A8,8,0,0,0,224,48ZM40,112H80v32H40Zm56,0H216v32H96ZM216,64V96H40V64ZM40,160H80v32H40Zm176,32H96V160H216v32Z\"/>","actor":"<path d=\"M256,136a8,8,0,0,1-8,8H232v16a8,8,0,0,1-16,0V144H200a8,8,0,0,1,0-16h16V112a8,8,0,0,1,16,0v16h16A8,8,0,0,1,256,136Zm-57.87,58.85a8,8,0,0,1-12.26,10.3C165.75,181.19,138.09,168,108,168s-57.75,13.19-77.87,37.15a8,8,0,0,1-12.25-10.3c14.94-17.78,33.52-30.41,54.17-37.17a68,68,0,1,1,71.9,0C164.6,164.44,183.18,177.07,198.13,194.85ZM108,152a52,52,0,1,0-52-52A52.06,52.06,0,0,0,108,152Z\"/>","domain":"<path d=\"M152,40a8,8,0,0,1-8,8H112a8,8,0,0,1,0-16h32A8,8,0,0,1,152,40Zm-8,168H112a8,8,0,0,0,0,16h32a8,8,0,0,0,0-16ZM208,48V72a8,8,0,0,0,16,0V48a16,16,0,0,0-16-16H184a8,8,0,0,0,0,16Zm8,56a8,8,0,0,0-8,8v32a8,8,0,0,0,16,0V112A8,8,0,0,0,216,104ZM40,152a8,8,0,0,0,8-8V112a8,8,0,0,0-16,0v32A8,8,0,0,0,40,152Zm32,56H48V184a8,8,0,0,0-16,0v24a16,16,0,0,0,16,16H72a8,8,0,0,0,0-16ZM72,32H48A16,16,0,0,0,32,48V72a8,8,0,0,0,16,0V48H72a8,8,0,0,0,0-16ZM240,208H224V192a8,8,0,0,0-16,0v16H192a8,8,0,0,0,0,16h16v16a8,8,0,0,0,16,0V224h16a8,8,0,0,0,0-16Z\"/>","link":"<path d=\"M165.66,90.34a8,8,0,0,1,0,11.32l-64,64a8,8,0,0,1-11.32-11.32l64-64A8,8,0,0,1,165.66,90.34ZM215.6,40.4a56,56,0,0,0-79.2,0L106.34,70.45a8,8,0,0,0,11.32,11.32l30.06-30a40,40,0,0,1,56.57,56.56l-30.07,30.06a8,8,0,0,0,11.31,11.32L215.6,119.6a56,56,0,0,0,0-79.2ZM138.34,174.22l-30.06,30.06a40,40,0,1,1-56.56-56.57l30.05-30.05a8,8,0,0,0-11.32-11.32L40.4,136.4a56,56,0,0,0,79.2,79.2l30.06-30.07a8,8,0,0,0-11.32-11.31Z\"/>","check":"<path d=\"M224,128a8,8,0,0,1-8,8H128a8,8,0,0,1,0-16h88A8,8,0,0,1,224,128ZM128,72h88a8,8,0,0,0,0-16H128a8,8,0,0,0,0,16Zm88,112H128a8,8,0,0,0,0,16h88a8,8,0,0,0,0-16ZM82.34,42.34,56,68.69,45.66,58.34A8,8,0,0,0,34.34,69.66l16,16a8,8,0,0,0,11.32,0l32-32A8,8,0,0,0,82.34,42.34Zm0,64L56,132.69,45.66,122.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32,0l32-32a8,8,0,0,0-11.32-11.32Zm0,64L56,196.69,45.66,186.34a8,8,0,0,0-11.32,11.32l16,16a8,8,0,0,0,11.32,0l32-32a8,8,0,0,0-11.32-11.32Z\"/>","journeys":"<path d=\"M200,168a32.06,32.06,0,0,0-31,24H72a32,32,0,0,1,0-64h96a40,40,0,0,0,0-80H72a8,8,0,0,0,0,16h96a24,24,0,0,1,0,48H72a48,48,0,0,0,0,96h97a32,32,0,1,0,31-40Zm0,48a16,16,0,1,1,16-16A16,16,0,0,1,200,216Z\"/>","undo":"<path d=\"M232,144a64.07,64.07,0,0,1-64,64H80a8,8,0,0,1,0-16h88a48,48,0,0,0,0-96H51.31l34.35,34.34a8,8,0,0,1-11.32,11.32l-48-48a8,8,0,0,1,0-11.32l48-48A8,8,0,0,1,85.66,45.66L51.31,80H168A64.07,64.07,0,0,1,232,144Z\"/>","check1":"<path d=\"M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z\"/>","eye":"<path d=\"M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z\"/>","eyeSlash":"<path d=\"M53.92,34.62A8,8,0,1,0,42.08,45.38L61.32,66.55C25,88.84,9.38,123.2,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208a127.11,127.11,0,0,0,52.07-10.83l22,24.21a8,8,0,1,0,11.84-10.76Zm47.33,75.84,41.67,45.85a32,32,0,0,1-41.67-45.85ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.16,133.16,0,0,1,25,128c4.69-8.79,19.66-33.39,47.35-49.38l18,19.75a48,48,0,0,0,63.66,70l14.73,16.2A112,112,0,0,1,128,192Zm6-95.43a8,8,0,0,1,3-15.72,48.16,48.16,0,0,1,38.77,42.64,8,8,0,0,1-7.22,8.71,6.39,6.39,0,0,1-.75,0,8,8,0,0,1-8-7.26A32.09,32.09,0,0,0,134,96.57Zm113.28,34.69c-.42.94-10.55,23.37-33.36,43.8a8,8,0,1,1-10.67-11.92A132.77,132.77,0,0,0,231.05,128a133.15,133.15,0,0,0-23.12-30.77C185.67,75.19,158.78,64,128,64a118.37,118.37,0,0,0-19.36,1.57A8,8,0,1,1,106,49.79,134,134,0,0,1,128,48c34.88,0,66.57,13.26,91.66,38.35,18.83,18.83,27.3,37.62,27.65,38.41A8,8,0,0,1,247.31,131.26Z\"/>","hide":"<path d=\"M189.66,122.34a8,8,0,0,1,0,11.32l-72,72a8,8,0,0,1-11.32-11.32L164.69,136H32a8,8,0,0,1,0-16H164.69L106.34,61.66a8,8,0,0,1,11.32-11.32ZM216,32a8,8,0,0,0-8,8V216a8,8,0,0,0,16,0V40A8,8,0,0,0,216,32Z\"/>","show":"<path d=\"M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM40,56H80V200H40ZM216,200H96V56H216V200Z\"/>","camera":"<path d=\"M208,56H180.28L166.65,35.56A8,8,0,0,0,160,32H96a8,8,0,0,0-6.65,3.56L75.71,56H48A24,24,0,0,0,24,80V192a24,24,0,0,0,24,24H208a24,24,0,0,0,24-24V80A24,24,0,0,0,208,56Zm8,136a8,8,0,0,1-8,8H48a8,8,0,0,1-8-8V80a8,8,0,0,1,8-8H80a8,8,0,0,0,6.66-3.56L100.28,48h55.43l13.63,20.44A8,8,0,0,0,176,72h32a8,8,0,0,1,8,8ZM128,88a44,44,0,1,0,44,44A44.05,44.05,0,0,0,128,88Zm0,72a28,28,0,1,1,28-28A28,28,0,0,1,128,160Z\"/>","table":"<path d=\"M224,48H32a8,8,0,0,0-8,8V192a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A8,8,0,0,0,224,48ZM40,112H80v32H40Zm56,0H216v32H96ZM216,64V96H40V64ZM40,160H80v32H40Zm176,32H96V160H216v32Z\"/>","path":"<path d=\"M200,168a32.06,32.06,0,0,0-31,24H72a32,32,0,0,1,0-64h96a40,40,0,0,0,0-80H72a8,8,0,0,0,0,16h96a24,24,0,0,1,0,48H72a48,48,0,0,0,0,96h97a32,32,0,1,0,31-40Zm0,48a16,16,0,1,1,16-16A16,16,0,0,1,200,216Z\"/>","rows":"<path d=\"M208,136H48a16,16,0,0,0-16,16v40a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V152A16,16,0,0,0,208,136Zm0,56H48V152H208v40Zm0-144H48A16,16,0,0,0,32,64v40a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V64A16,16,0,0,0,208,48Zm0,56H48V64H208v40Z\"/>","article":"<path d=\"M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,160H40V56H216V200ZM184,96a8,8,0,0,1-8,8H80a8,8,0,0,1,0-16h96A8,8,0,0,1,184,96Zm0,32a8,8,0,0,1-8,8H80a8,8,0,0,1,0-16h96A8,8,0,0,1,184,128Zm0,32a8,8,0,0,1-8,8H80a8,8,0,0,1,0-16h96A8,8,0,0,1,184,160Z\"/>","sidebar":"<path d=\"M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM40,56H80V200H40ZM216,200H96V56H216V200Z\"/>","copy2":"<path d=\"M216,32H88a8,8,0,0,0-8,8V80H40a8,8,0,0,0-8,8V216a8,8,0,0,0,8,8H168a8,8,0,0,0,8-8V176h40a8,8,0,0,0,8-8V40A8,8,0,0,0,216,32ZM160,208H48V96H160Zm48-48H176V88a8,8,0,0,0-8-8H96V48H208Z\"/>","treeView":"<path d=\"M176,152h32a16,16,0,0,0,16-16V104a16,16,0,0,0-16-16H176a16,16,0,0,0-16,16v8H88V80h8a16,16,0,0,0,16-16V32A16,16,0,0,0,96,16H64A16,16,0,0,0,48,32V64A16,16,0,0,0,64,80h8V192a24,24,0,0,0,24,24h64v8a16,16,0,0,0,16,16h32a16,16,0,0,0,16-16V192a16,16,0,0,0-16-16H176a16,16,0,0,0-16,16v8H96a8,8,0,0,1-8-8V128h72v8A16,16,0,0,0,176,152ZM64,32H96V64H64ZM176,192h32v32H176Zm0-88h32v32H176Z\"/>","note":"<path d=\"M88,96a8,8,0,0,1,8-8h64a8,8,0,0,1,0,16H96A8,8,0,0,1,88,96Zm8,40h64a8,8,0,0,0,0-16H96a8,8,0,0,0,0,16Zm32,16H96a8,8,0,0,0,0,16h32a8,8,0,0,0,0-16ZM224,48V156.69A15.86,15.86,0,0,1,219.31,168L168,219.31A15.86,15.86,0,0,1,156.69,224H48a16,16,0,0,1-16-16V48A16,16,0,0,1,48,32H208A16,16,0,0,1,224,48ZM48,208H152V160a8,8,0,0,1,8-8h48V48H48Zm120-40v28.7L196.69,168Z\"/>"};
 const phi = n => PHI[n] ? `<svg class="phi" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">${PHI[n]}</svg>` : '';
 function paintIcons(root = document) { root.querySelectorAll('i[data-ph]').forEach(el => { el.outerHTML = phi(el.dataset.ph); }); }
 
 /* ---------------- small menus ---------------- */
 let openMenuEl = null;
-function closeMenu() { if (openMenuEl) { openMenuEl.remove(); openMenuEl = null; } }
+function closeMenu() { if (openMenuEl) { openMenuEl.remove(); openMenuEl = null; } document.querySelectorAll('#menubar button.open').forEach(b => b.classList.remove('open')); }
 function openMenu(anchor, items) {
   closeMenu();
   const m = h('div', { class: 'menu', role: 'menu' });
@@ -4489,16 +4740,30 @@ const SKINS = [
   { id: 'midnight', label: 'Midnight', dark: true }, { id: 'high-contrast', label: 'High contrast', dark: false },
   { id: 'blueprint', label: 'Blueprint', sub: 'Fine Line documents', dark: false }
 ];
+/* Two themes. The app theme dresses the app (menus, panels, controls): Material Design unless chosen, kept between sessions only
+   when the app runs on its own. The content theme dresses the model itself, on the canvas and in its picture: Fine Line
+   (Blueprint) unless chosen, kept in the model (layout.theme), so a model looks the same wherever it is opened. */
+const DEFAULT_APP_SKIN = 'material', DEFAULT_CONTENT_SKIN = 'blueprint';
+const APP = { skin: null };
+const validSkin = id => SKINS.some(t => t.id === id);
 function applySkin(id, quiet) {
-  const t = SKINS.find(x => x.id === id) || SKINS[0]; const de = document.documentElement;
+  const t = SKINS.find(x => x.id === id) || SKINS.find(x => x.id === DEFAULT_APP_SKIN); const de = document.documentElement;
   if (t.id === 'system') delete de.dataset.theme; else de.dataset.theme = t.dark ? 'dark' : 'light';
   if (['system', 'light', 'dark'].includes(t.id)) delete de.dataset.skin; else de.dataset.skin = t.id;
-  if (!EMBED.on) try { localStorage.setItem('dms.skin', t.id); localStorage.removeItem('dms.theme'); } catch (e) { }
-  refreshFonts(!quiet);
+  APP.skin = t.id;
+  if (!EMBED.on) try { localStorage.setItem('dms.appTheme', t.id); } catch (e) { }
   if (!quiet) { render(); buildLegend(); }
 }
-const currentSkin = () => { try { return localStorage.getItem('dms.skin') || ({ light: 'light', dark: 'dark' })[localStorage.getItem('dms.theme')] || 'system'; } catch (e) { return 'system'; } };
-function themeMenu(anchor) { const cur = currentSkin(); openMenu(anchor, [{ head: 'Theme' }, ...SKINS.map(t => ({ label: t.label, sub: t.sub || (t.dark ? 'dark' : ''), check: cur === t.id, fn: () => applySkin(t.id) }))]); }
+const currentSkin = () => { if (APP.skin) return APP.skin; try { const v = localStorage.getItem('dms.appTheme'); if (validSkin(v)) return v; } catch (e) { } return DEFAULT_APP_SKIN; };
+const contentSkin = () => (M && M.layout && validSkin(M.layout.theme)) ? M.layout.theme : DEFAULT_CONTENT_SKIN;
+const resolveCskin = id => id === 'system' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : id;
+// the content element takes the model's theme; widths are measured again in its font
+function syncContentSkin() { const el = CEL(), v = resolveCskin(contentSkin()); if (el.dataset.cskin !== v) { el.dataset.cskin = v; refreshFonts(true); } }
+function setContentSkin(id) { if (!validSkin(id)) return; M.layout.theme = id; render(); buildLegend(); save(); }
+function themeMenu(anchor) {
+  const app = currentSkin(), con = contentSkin(), item = (t, cur, fn) => ({ label: t.label, sub: t.sub || (t.dark ? 'dark' : ''), check: cur === t.id, fn });
+  openMenu(anchor, [{ head: 'App theme' }, ...SKINS.map(t => item(t, app, () => applySkin(t.id))), { head: 'Content theme (this model and its picture)' }, ...SKINS.map(t => item(t, con, () => setContentSkin(t.id)))]);
+}
 
 /* ---------------- right-hand panel (Fly solo): show, hide, auto-hide, auto-show ---------------- */
 const PANEL_MODES = [['show', 'Show', 'always docked'], ['hide', 'Hide', 'open it from this button'], ['autohide', 'Auto-hide', 'slides in at the right edge'], ['autoshow', 'Auto-show', 'opens when you select something']];
@@ -4620,7 +4885,7 @@ function cssToHex(c) {
   const f = n => { const k = (n + hh * 12) % 12, a = ss * Math.min(ll, 1 - ll); const v = ll - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); return Math.round(v * 255).toString(16).padStart(2, '0'); };
   return '#' + f(0) + f(8) + f(4);
 }
-function lightDomainColors(domId) { const de = document.documentElement, t = de.dataset.theme; de.dataset.theme = 'light'; const c = domainColors(domId); if (t === undefined) delete de.dataset.theme; else de.dataset.theme = t; return c; }
+function lightDomainColors(domId) { const el = CEL(), t = el.dataset.cskin; el.dataset.cskin = 'light'; const c = domainColors(domId); if (t === undefined) delete el.dataset.cskin; else el.dataset.cskin = t; return c; }
 const ER_END = { '1': 'ERmandOne', '0..1': 'ERzeroToOne', '1..*': 'ERoneToMany', '0..*': 'ERzeroToMany' };
 function buildDrawio(asFile) {
   syncLayout();
@@ -4972,7 +5237,7 @@ const FORMAT_HINT = 'Data Model Studio opens .dms.json files: JSON with "format"
 // What counts as a change: the models (including where things sit), not zoom, panning or the 3D camera.
 function wsSig() {
   syncWs();
-  return JSON.stringify([WS.named ? WS.name : '', WS.models.map(m => { const { layout, meta, ...rest } = m; const { updated, revision, created, ...mt } = meta || {}; return [mt, rest, (layout || {}).positions, (layout || {}).locked, (layout || {}).detail || 'details']; })]);
+  return JSON.stringify([WS.named ? WS.name : '', WS.models.map(m => { const { layout, meta, ...rest } = m; const { updated, revision, created, ...mt } = meta || {}; return [mt, rest, (layout || {}).positions, (layout || {}).locked, (layout || {}).detail || 'details', (layout || {}).theme || '', (layout || {}).routes || null, (layout || {}).notes || null]; })]);
 }
 function markSaved() { WS.savedSig = wsSig(); WS.everSaved = true; updateSaveUI(); save(); }
 function isDirty() { return WS.savedSig != null && wsSig() !== WS.savedSig; }
@@ -4981,8 +5246,7 @@ function updateSaveUI() {
   const el = $('#saveSt'); if (!el) return;
   const dirty = isDirty(), anything = WS.models.some(m => !tabEmpty(m));
   el.className = 'savest' + (dirty ? ' dirty' : '');
-  el.textContent = dirty ? 'Unsaved changes' : (WS.everSaved ? 'Saved' : '');
-  el.hidden = !dirty && !WS.everSaved || (!anything && !WS.everSaved);
+  el.textContent = ''; el.hidden = !dirty;   // a dot before the file name while there are unsaved changes, as in myDiagramer
   el.title = (dirty ? 'You have changes that are not saved to a file. Click to save (Ctrl+S).' : 'Everything is saved' + (WS.handle ? ' to ' + WS.handle.name : '') + '.') + ` Revision ${M.meta.revision || 0}.`;
 }
 function looksLikeDms(j) { return j && typeof j === 'object' && !Array.isArray(j) && (j.format === 'data-model-studio' || Array.isArray(j.models) || Array.isArray(j.entities)); }
@@ -5376,6 +5640,7 @@ function autoLayout() {
 function arrangeAll() {
   if (!liveNodes().length) return;
   undoStack.push(JSON.stringify(M));
+  if (M.layout.routes) delete M.layout.routes;   // bend points belong to the old arrangement
   const sig = M.entities.map(e => e.id).join(',') + '|' + M.relationships.map(r => r.id + r.from + r.to + r.kind).join(',') + '|' + M.entities.map(e => e.domain || '').join(',');
   view.arrIdx = sig === view.arrSig ? (view.arrIdx + 1) % LAYOUTS.length : 0; view.arrSig = sig;
   for (const d of M.domains) if (domPos(d.id)) delete M.layout.positions[d.id];
@@ -5576,7 +5841,7 @@ function updateApproachUI() {
   applyPanel();
 }
 function pickMode(m) {
-  if (EMBED.on && m === 'claude') m = 'guided';
+  if (m === 'guided' || (EMBED.on && m === 'claude')) m = 'solo';
   if (m === 'solo') wApproach = 'solo'; else { AI.mode = m; wApproach = 'journeys'; }
   $('#mGuided').classList.toggle('on', m === 'guided'); $('#mClaude').classList.toggle('on', m === 'claude'); $('#mSolo').classList.toggle('on', m === 'solo');
   $('#keybox').hidden = m !== 'claude';
@@ -5598,7 +5863,7 @@ async function testKey() {
   }
 }
 function startFromWelcome() {
-  if (wApproach !== 'solo' && AI.mode === 'claude') { readKeyField(); AI.model = $('#apimodel').value; if (!KEY.get()) { $('#keystatus').textContent = 'Paste your API key, or choose Guided.'; $('#keystatus').className = 'keystatus bad'; return; } }
+  if (wApproach !== 'solo' && AI.mode === 'claude') { readKeyField(); AI.model = $('#apimodel').value; if (!KEY.get()) { $('#keystatus').textContent = 'Paste your API key, or choose Fly solo.'; $('#keystatus').className = 'keystatus bad'; return; } }
   $('#welcome').hidden = true;
   try { localStorage.setItem('dms.engine', AI.mode); localStorage.setItem('dms.approach', wApproach); } catch (e) { }
   if (M.meta.approach !== wApproach) { if (hasContent() || M.journeys.length) setApproach(wApproach); else { M.meta.approach = wApproach; save(); updateApproachUI(); if (session.started) { log.textContent = ''; welcome(); } } }
@@ -5608,7 +5873,7 @@ function startFromWelcome() {
 }
 function updateModeBadge() {
   const b = $('#modeBadge'); const on = AI.on() && !solo();
-  b.textContent = solo() ? 'Fly solo' : on ? 'Claude · ' + $('#apimodel').selectedOptions[0].textContent : 'Guided';
+  b.textContent = solo() ? 'Fly solo' : on ? 'Claude · ' + $('#apimodel').selectedOptions[0].textContent : 'Guided'; b.hidden = solo();
   b.classList.toggle('claude', on);
 }
 
@@ -5661,6 +5926,7 @@ function orderedModel() {
   deriveMethods();
   for (const k of ['meta', 'domains', 'entities', 'actors', 'journeys', 'relationships', 'methods', 'events', 'rules', 'questions', 'feedback']) o[k] = M[k];
   for (const k in M) if (!(k in o) && k !== 'layout') o[k] = M[k];
+  if (M.layout.routes) { const ids = new Set(M.relationships.map(r => r.id)); for (const k in M.layout.routes) if (!ids.has(k) || !(M.layout.routes[k].pts || []).length) delete M.layout.routes[k]; if (!Object.keys(M.layout.routes).length) delete M.layout.routes; }
   o.layout = { ...M.layout, viewport: { x: Math.round(view.tf.x), y: Math.round(view.tf.y), k: +view.tf.k.toFixed(3) }, mode: view.mode3d ? '3d' : '2d' };
   const c = view.cam || (M.layout.viewport3d ? null : null);
   if (c) o.layout.viewport3d = { yaw: +c.yaw.toFixed(3), pitch: +c.pitch.toFixed(3), k: +c.k.toFixed(3), target: [Math.round(c.tx), Math.round(c.ty), Math.round(c.tz)] };
@@ -5670,7 +5936,7 @@ const fileBase = () => (idOf(M.meta.name || 'model') || 'model').replace(/_/g, '
 const wsBase = () => (idOf(fileName()) || 'model').replace(/_/g, '-');
 function exportJSON() { download(wsBase() + '.dms.json', JSON.stringify(workspaceJSON(), null, 2), 'application/json'); toast('Exported ' + wsBase() + '.dms.json' + (WS.models.length > 1 ? ` (${WS.models.length} tabs)` : '')); }
 function resolveVars(str) {
-  const cs = getComputedStyle(document.documentElement);
+  const cs = getComputedStyle(CEL());
   return str.replace(/var\((--[\w-]+)\)/g, (m, v) => cs.getPropertyValue(v).trim() || '#888');
 }
 function buildExportSVG(opt = {}) {
@@ -5686,7 +5952,7 @@ function buildExportSVG(opt = {}) {
   out.append(s('style', {}, css + '\n*{animation:none!important;transition:none!important}.hit{display:none}'));
   out.append(s('rect', { x: b.x0 - pad, y: b.y0 - pad - 30, width: w, height: hh, style: 'fill:var(--canvas)' }));
   out.append(s('text', { x: b.x0, y: b.y0 - pad + 4, style: 'font:650 15px ' + SANS + ';fill:var(--ink)' }, (M.meta.name || 'Data model') + '  ·  rev ' + (M.meta.revision || 0)));
-  for (const g of [gHull, gEdge, gNode, gLabel]) { const c = g.cloneNode(true); c.querySelectorAll('.leaving,.addrow,.rowx,.mop:not(.on),.hull-h,.hull-lock,.hull-lockhit').forEach(x => x.remove()); c.querySelectorAll('.hl,.sel,.changed,.enter').forEach(x => x.classList.remove('hl', 'sel', 'changed', 'enter'));
+  for (const g of [gHull, gEdge, gNode, gLabel, gNote]) { const c = g.cloneNode(true); c.querySelectorAll('.dnote.on').forEach(x => x.classList.remove('on')); c.querySelectorAll('.leaving,.addrow,.rowx,.mop:not(.on),.hull-h,.hull-lock,.hull-lockhit,.lhd').forEach(x => x.remove()); c.querySelectorAll('.hl,.sel,.changed,.enter').forEach(x => x.classList.remove('hl', 'sel', 'changed', 'enter'));
     if (view.mode3d) { c.querySelectorAll('.hull rect,.hull-svc').forEach(x => x.remove()); c.querySelectorAll('.hull-label').forEach(x => x.setAttribute('style', (x.getAttribute('style') || '') + ';paint-order:stroke;stroke:var(--canvas);stroke-width:5px;font-size:12px')); }
     out.append(c); }
   return resolveVars(new XMLSerializer().serializeToString(out));
@@ -5708,8 +5974,15 @@ function exportPNG() {
 const LS = 'dms.autosave.v1', LS2 = 'dms.autosave.v2';
 const save = debounce(() => { if (EMBED.on) return; try { syncLayout(); syncWs(); localStorage.setItem(LS2, JSON.stringify({ name: WS.name, named: WS.named, active: WS.active, models: WS.models, savedSig: WS.savedSig, everSaved: WS.everSaved })); } catch (e) { /* storage unavailable */ } updateSaveUI(); }, 250);
 function loadSaved() { try { const t2 = localStorage.getItem(LS2); if (t2) return JSON.parse(t2); const t = localStorage.getItem(LS); return t ? { models: [JSON.parse(t)] } : null; } catch (e) { return null; } }
+function redo() {
+  const snap = redoStack.pop(); if (!snap) return toast('Nothing to redo');
+  UNDO.keepRedo = true; undoStack.push(JSON.stringify(M)); UNDO.keepRedo = false;
+  M = JSON.parse(snap); if (!M.journeys) M.journeys = []; renderTabs(); view.zsig = ''; view.multi = new Set();
+  render(new Set()); save(); toast('Redone');
+}
 function undo() {
   const snap = undoStack.pop(); if (!snap) return toast('Nothing to undo');
+  redoStack.push(JSON.stringify(M));
   M = JSON.parse(snap); if (!M.journeys) M.journeys = []; renderTabs(); view.zsig = ''; session.proposal = null;
   if (session.current) { closeCard(session.current, 'Undone', true); session.current = null; }
   render(new Set()); save(); toast('Undone'); setTimeout(askNext, 200);
@@ -5763,7 +6036,7 @@ function buildLegend() {
 /* ---------------- embed mode (inside the document editor) ----------------
    The same shape as myDiagramer's embed mode, with dm: messages. Switches on only inside an iframe AND after the parent sends dm:init.
    editor to host: dm:ready (loaded), dm:save { model, svg, width, height, title } on Done, dm:cancel, dm:dirty { dirty }
-   host to editor: dm:init { model, title, theme }: model is a .dms.json file (text or object), or empty for a new model
+   host to editor: dm:init { model, title, theme, appTheme }: model is a .dms.json file (text or object), or empty for a new model; theme is the content theme a new model starts in (a model keeps its own); appTheme dresses the app (Material when absent) and is not kept
    While embedded: Done and Cancel replace New, Open and Save; nothing is autosaved; Claude-assisted is not offered (the host allows no network).
    The picture is the visible tab in 2D, with every style written on its element (no <style> block, so nothing leaks into the host page). */
 const IN_FRAME = (() => { try { return window.parent !== window; } catch (e) { return true; } })();
@@ -5771,8 +6044,8 @@ function embedPost(m) { if (IN_FRAME) try { window.parent.postMessage(m, '*'); }
 function embedStart(msg) {
   EMBED.on = true; EMBED.settled = false; EMBED.title = String(msg.title || 'Data model').slice(0, 200); EMBED.dirtySent = false;
   document.documentElement.classList.add('embedded'); document.querySelectorAll('.embonly').forEach(b => b.hidden = false);
-  applySkin(SKINS.some(t => t.id === msg.theme) ? msg.theme : 'blueprint', true);
-  if (AI.mode === 'claude') AI.mode = 'guided';
+  applySkin(validSkin(msg.appTheme) ? msg.appTheme : DEFAULT_APP_SKIN, true);   // the app theme is not kept here; the model keeps its own content theme
+  if (AI.mode === 'claude') AI.mode = 'guided';   // the engine; with Guided set aside the model is always Fly solo here
   resetWorkspace();
   let opened = false; EMBED.hadModel = false;
   if (msg.model) {
@@ -5780,11 +6053,12 @@ function embedStart(msg) {
     catch (e) { toast("The document's data model could not be read; starting a new one.", 6000); }
   }
   if (!WS.named) { WS.name = EMBED.title; WS.named = true; }
+  if (!opened && validSkin(msg.theme)) M.layout.theme = msg.theme;   // a new model starts in the host's content theme; a model that has one keeps it
   renderTabs(); render(); buildLegend(); setTimeout(() => fitView(true), 80);
   // the baseline for "changed" is taken once the layout has settled, then the host is told it is clean
   WS.savedSig = wsSig(); setTimeout(() => { syncLayout(); WS.savedSig = wsSig(); EMBED.settled = true; EMBED.dirtySent = false; updateSaveUI(); }, 900);
-  if (opened) { pickMode(M.meta.approach === 'journeys' ? 'guided' : 'solo'); startFromWelcome(); }
-  else { session.started = false; openWelcome(null); }
+  if (opened) { noGuided(); pickMode('solo'); startFromWelcome(); }
+  else { session.started = false; noGuided(); pickMode('solo'); startFromWelcome(); }   // one way to model here (Fly solo), so no welcome to choose from
 }
 function embedDone() {
   if (!EMBED.on) return;
@@ -5811,13 +6085,13 @@ function inlineSVG(b, opt) {
   const pad = 16, w = Math.ceil(b.x1 - b.x0 + pad * 2), hh = Math.ceil(b.y1 - b.y0 + pad * 2);
   const out = s('svg', { xmlns: SVGNS, width: w, height: hh, viewBox: `${f1(b.x0 - pad)} ${f1(b.y0 - pad)} ${w} ${hh}`, role: 'img', 'aria-label': WS.name || 'Data model', 'font-family': SANS });
   out.append(s('title', {}, WS.name || 'Data model'));
-  const bg = getComputedStyle(document.documentElement).getPropertyValue('--canvas').trim() || '#ffffff';
+  const bg = getComputedStyle(CEL()).getPropertyValue('--canvas').trim() || '#ffffff';
   out.append(s('rect', { x: b.x0 - pad, y: b.y0 - pad, width: w, height: hh, style: `fill:${bg}` }));
-  for (const g of [gHull, gEdge, gNode, gLabel]) {
+  for (const g of [gHull, gEdge, gNode, gLabel, gNote]) {
     const c = g.cloneNode(true), A = [g, ...g.querySelectorAll('*')], B = [c, ...c.querySelectorAll('*')], drop = [];
     A.forEach((el, i) => {
       const cl = B[i], cs = getComputedStyle(el);
-      if (cs.display === 'none' || cs.visibility === 'hidden' || el.matches('.leaving,.addrow,.rowx,.mop:not(.on),.hull-h,.hull-lock,.hull-lockhit,.hit,.rowhit,.fogr')) { drop.push(cl); return; }
+      if (cs.display === 'none' || cs.visibility === 'hidden' || el.matches('.leaving,.addrow,.rowx,.mop:not(.on),.hull-h,.hull-lock,.hull-lockhit,.hit,.rowhit,.fogr,.lhd')) { drop.push(cl); return; }
       const tag = el.tagName.toLowerCase(), st = [];
       if (tag === 'g') { if (cs.opacity !== '1') st.push('opacity:' + cs.opacity); }
       else { for (const k of INLINE_PROPS) { const v = cs.getPropertyValue(k); if (v && v !== 'none' || k === 'fill' || k === 'stroke') st.push(k + ':' + v); } if (tag === 'text' || tag === 'tspan') for (const k of INLINE_TEXT) st.push(k + ':' + cs.getPropertyValue(k)); }
@@ -5883,6 +6157,7 @@ $('#tAddEnt').onclick = () => soloAddEntity();
 $('#tAddAct').onclick = soloAddActor;
 $('#tAddDom').onclick = soloAddDomain;
 $('#tLink').onclick = dropConnector;
+$('#tAddNote').onclick = () => { const c = viewCentre(); addNote(c.x - 100, c.y - 30); };
 $('#tCheck').onclick = openCheck;
 $('#tFind').onclick = runFindJourneys;
 $('#bHideChat').onclick = hideChat;
@@ -5905,16 +6180,56 @@ $('#bRevisit').onclick = () => {
   if (!n) { toast('No skipped questions'); return; }
   toast(`${n} skipped question${n > 1 ? 's' : ''} back in the queue`); session.doneShown = false; askNext();
 };
-$('#bLegend').onclick = e => { e.stopPropagation(); togglePop('legend'); };
+/* menu bar */
+function menuItems(name) {
+  const E = EMBED.on, sel = selectedNodes().length, lm = view.labelMode, dv = detailView();
+  const M_ = {
+    file: [!E && { label: 'New', fn: newModel }, !E && { label: 'Open…', sub: 'Ctrl+O', fn: openFile }, !E && { label: 'Save', sub: 'Ctrl+S', fn: () => saveFile(false) }, !E && { label: 'Save as…', sub: 'Ctrl+Shift+S', fn: () => saveFile(true) }, !E && '-',
+      { label: 'Export SVG', fn: exportSVG }, { label: 'Export PNG', fn: exportPNG }, { label: 'Export draw.io…', fn: () => drawioMenu($('#bDrawio')) },
+      E && '-', E && { label: 'Done', sub: 'put it into the document', fn: embedDone }, E && { label: 'Cancel', fn: embedCancel }],
+    edit: [{ label: 'Undo', sub: 'Ctrl+Z', fn: undo }, { label: 'Redo', sub: 'Ctrl+Y', fn: redo }, '-',
+      { label: 'Cut', sub: 'Ctrl+X', fn: () => copySelected(true) }, { label: 'Copy', sub: 'Ctrl+C', fn: () => copySelected(false) }, { label: 'Paste', sub: 'Ctrl+V', fn: () => { if (!pasteClip(DMS_CLIP)) toast('Nothing copied yet'); } },
+      { label: 'Duplicate', sub: 'Ctrl+D', fn: duplicateSelected }, { label: 'Delete', sub: 'Del', fn: () => (view.multi.size > 1 ? removeSelected() : insp.sel && soloRemove(insp.sel)) }, '-',
+      { label: 'Select all', sub: 'Ctrl+A', fn: () => setMulti(liveNodes().map(n => n.id)) }],
+    view: [{ label: 'Entities', check: jv.which === 'entities', fn: () => setView('entities') }, { label: 'Journeys', check: jv.which === 'journeys', fn: () => setView('journeys') }, '-',
+      { label: 'Details', sub: 'attributes', check: dv === 'details', fn: () => setDetail('details') }, { label: 'Compact', sub: 'counts', check: dv === 'compact', fn: () => setDetail('compact') }, { label: 'Conceptual', sub: 'descriptions', check: dv === 'conceptual', fn: () => setDetail('conceptual') }, '-',
+      { label: 'Line labels: verb', check: lm === 'verb', fn: () => setLabelMode('verb') }, { label: 'Line labels: keys', check: lm === 'attrs', fn: () => setLabelMode('attrs') }, { label: 'Line labels: none', check: lm === 'none', fn: () => setLabelMode('none') }, '-',
+      { label: '3D', sub: '3', check: view.mode3d, fn: () => view.mode3d ? exit3D() : enter3D() }, '-',
+      { label: 'Zoom in', sub: '+', fn: () => zoomBy(1.2) }, { label: 'Zoom out', sub: '-', fn: () => zoomBy(1 / 1.2) }, { label: 'Fit to screen', sub: 'F', fn: () => fitView(true) }, '-',
+      { label: 'Screenshot view', sub: 'Esc returns', fn: () => setShot(true) }, { label: 'Themes…', fn: () => themeMenu($('#menubar [data-menu="view"]')) }],
+    model: [{ label: 'Add entity', fn: () => soloAddEntity() }, { label: 'Add actor', fn: soloAddActor }, { label: 'Add domain', fn: soloAddDomain }, { label: 'Add link', fn: dropConnector }, { label: 'Add note', fn: () => { const c = viewCentre(); addNote(c.x - 100, c.y - 30); } }, '-',
+      { label: 'Auto-arrange', fn: arrangeAll }, sel > 1 && '-', sel > 1 && { label: 'Align left', fn: () => alignSelected('left') }, sel > 1 && { label: 'Align centres', fn: () => alignSelected('centre') }, sel > 1 && { label: 'Align right', fn: () => alignSelected('right') },
+      sel > 1 && { label: 'Align top', fn: () => alignSelected('top') }, sel > 1 && { label: 'Align middles', fn: () => alignSelected('middle') }, sel > 1 && { label: 'Align bottom', fn: () => alignSelected('bottom') },
+      sel > 2 && { label: 'Distribute across', fn: () => distributeSelected('h') }, sel > 2 && { label: 'Distribute down', fn: () => distributeSelected('v') }, '-',
+      { label: 'Check model', fn: openCheck }, { label: 'Find journeys', fn: runFindJourneys }],
+    help: [{ label: 'Help and shortcuts', fn: () => togglePop('helpPop') }, { label: 'Legend', fn: () => togglePop('legend') }]
+  };
+  const out = []; for (const it of M_[name] || []) { if (!it) continue; if (it === '-' && (!out.length || out[out.length - 1] === '-')) continue; out.push(it); } while (out[out.length - 1] === '-') out.pop();
+  return out;
+}
+document.querySelectorAll('#menubar [data-menu]').forEach(b => {
+  const show = () => { openMenu(b, menuItems(b.dataset.menu)); document.querySelectorAll('#menubar button').forEach(x => x.classList.toggle('open', x === b)); if (openMenuEl) openMenuEl.style.left = b.getBoundingClientRect().left + 'px'; };
+  b.onclick = e => { e.stopPropagation(); if (openMenuEl && b.classList.contains('open')) { closeMenu(); b.classList.remove('open'); } else show(); };
+  b.onmouseenter = () => { if (openMenuEl && document.querySelector('#menubar button.open') && !b.classList.contains('open')) show(); };   // a menu is open: hovering the next opens it
+});
+function setShot(on) { document.body.classList.toggle('shot', !!on); closeMenu(); closePops(); if (on) toast('Screenshot view: press Esc to return'); setTimeout(() => fitView(true), 60); }
+$('#bShot').onclick = () => setShot(true);
 $('#legend').onclick = () => $('#legend').classList.remove('open');
 document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); if (EMBED.on) toast('Press Done to put the data model into the document'); else saveFile(e.shiftKey); return; }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') { e.preventDefault(); if (!EMBED.on) openFile(); return; }
   const inField = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+  if (e.key === 'Escape' && document.body.classList.contains('shot')) { setShot(false); return; }
   if (e.key === 'Escape') { closeMenu(); closePopover(); closePops(); if (view.conn) { view.conn = null; renderConn(); } if (!$('#welcome').hidden && session.started) $('#welcome').hidden = true; }
   if (e.key === 'Escape' && solo() && !inField && (insp.sel || insp.check)) { insp.check = false; selectItem(null); }
   if (inField) return;
+  if (solo() && (e.key === 'Delete' || e.key === 'Backspace') && view.selNote && !e.target.closest('.chat')) { e.preventDefault(); deleteNote(view.selNote); return; }
+  if (solo() && (e.key === 'Delete' || e.key === 'Backspace') && view.multi && view.multi.size > 1 && !e.target.closest('.chat')) { e.preventDefault(); removeSelected(); return; }
   if (solo() && (e.key === 'Delete' || e.key === 'Backspace') && insp.sel && !e.target.closest('.chat')) { e.preventDefault(); soloRemove(insp.sel); return; }
+  if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) { e.preventDefault(); redo(); return; }
+  if (solo() && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && jv.which === 'entities') { e.preventDefault(); setMulti(liveNodes().map(n => n.id)); return; }
+  if (solo() && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') { e.preventDefault(); duplicateSelected(); return; }
+  if (solo() && !view.mode3d && /^Arrow(Left|Right|Up|Down)$/.test(e.key) && selectedNodes().length) { e.preventDefault(); const st = e.shiftKey ? GRID : 1; nudge(e.key === 'ArrowLeft' ? -st : e.key === 'ArrowRight' ? st : 0, e.key === 'ArrowUp' ? -st : e.key === 'ArrowDown' ? st : 0); return; }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); }
   else if (e.key === 'f' || e.key === 'F') fitView(true);
   else if (e.key === '3' && jv.which === 'entities') view.mode3d ? exit3D() : enter3D();

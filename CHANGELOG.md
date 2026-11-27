@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Diagrams, in both programs: an Entity card in the diagram editor's Containers (header band with a white title, outline in the header colour, a tinted body with text), kept in its colours in the Blueprint style (latest myDiagramer).
 - Data models, in both programs: Data Model Studio has three card views on its toolbar, Details (attributes), Compact (a count of what each entity holds) and Conceptual (each entity's description, for business readers). Every view keeps the whole model; the model remembers the view it was left in, and Done places a picture of that view. Switching view alone counts as a change, so Done updates the picture. In Conceptual an entity with no description says so while editing, and the picture leaves that out.
 - Tests: t55 data model views.
 - Pictures made into diagrams, in both programs: a box whose text is set out in rows and columns (a data model entity: key, name and type on each row) becomes one table in its label, so each row stays a row, each column keeps its side (types to the right), and each piece keeps its own colour, size, bold and italic. A title in a header band stays in the band. Text that is not in rows and columns converts line by line as before.
